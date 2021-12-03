@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">QPlayerDemo</string>
+    <string name="title_activity_demo">DemoActivity</string>
+    <string name="title_activity_login">LoginActivity</string>
+    <string name="title_activity_player">PlayerActivity</string>
+    <string name="title_activity_song_display">SongDisplayActivity</string>
+    <string name="title_activity_folder">FolderActivity</string>
+</resources>
