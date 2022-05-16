@@ -1,6 +1,7 @@
 package com.tencent.qqmusic.qplayer.ui.activity.login
 
 import android.app.Activity
+import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -41,8 +42,17 @@ fun MinePage() {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
+                    val hasLogin = OpenApiSDK.getLoginApi().hasLogin()
                     text.value = "是否登录 :\n" +
-                            "${OpenApiSDK.getLoginApi().hasLogin()}"
+                            "$hasLogin"
+                    if (hasLogin) {
+                        OpenApiSDK.getOpenApi().fetchUserInfo {
+                            if (it.isSuccess()) {
+                                text.value = "是否登录 :\n" +
+                                        "$hasLogin, 昵称：${it.data!!.nickName}"
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -55,9 +65,11 @@ fun MinePage() {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
-    Column(modifier = Modifier.fillMaxSize(),
+    Column(
+        modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally) {
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(text.value)
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -72,14 +84,19 @@ fun MinePage() {
 
 @Composable
 fun LoginButton(activity: Activity, info: MutableState<String>) {
-    Row {
+    Column {
         Button(
             onClick = {
                 OpenApiSDK.getLoginApi().wxLogin(activity, MustInitConfig.WX_APP_ID) { ret, msg ->
                     Log.i(TAG, "LoginPage: wechat ret $ret")
-                    Toast.makeText(activity, "微信登录成功", Toast.LENGTH_SHORT).show()
+                    if (ret) {
+                        Toast.makeText(activity, "微信登录成功", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(activity, "微信登录失败: $msg", Toast.LENGTH_SHORT).show()
+                    }
 
-                    info.value = "微信已登录:\n"
+                    info.value = "微信已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                    HomeViewModel.clearRequestState()
                 }
             },
             modifier = Modifier.padding(8.dp)
@@ -87,13 +104,18 @@ fun LoginButton(activity: Activity, info: MutableState<String>) {
             Text(text = "微信登录")
         }
         Button(onClick = {
-            OpenApiSDK.getLoginApi().qqLogin(
-                activity, MustInitConfig.QQ_APP_ID
-            ) { ret, msg ->
-                Log.i(TAG, "LoginPage: qq ret $ret")
-                Toast.makeText(activity, "QQ登录成功", Toast.LENGTH_SHORT).show()
+            OpenApiSDK.getLoginApi().qqLoginWeb(activity) { ret, msg ->
+                activity.runOnUiThread {
+                    Log.i(TAG, "LoginPage: qq ret $ret, msg: $msg")
+                    if (ret) {
+                        Toast.makeText(activity, "QQ登录成功", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(activity, "QQ登录失败: $msg", Toast.LENGTH_SHORT).show()
+                    }
+                    HomeViewModel.clearRequestState()
 
-                info.value = "QQ已登录:\n"
+                    info.value = "QQ已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                }
             }
         }, modifier = Modifier.padding(8.dp)) {
             Text(text = "QQ登录")
@@ -103,37 +125,41 @@ fun LoginButton(activity: Activity, info: MutableState<String>) {
                 if (b) {
                     Toast.makeText(activity, "登录成功", Toast.LENGTH_SHORT).show()
 
-                    info.value = "QQ音乐已登录:\n"
+                    info.value = "QQ音乐已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
                 } else {
                     Toast.makeText(activity, "登录失败: $msg", Toast.LENGTH_SHORT).show()
                 }
+                HomeViewModel.clearRequestState()
             }
         }, modifier = Modifier.padding(8.dp)) {
             Text(text = "QQ音乐登录")
         }
-//        Button(onClick = {
-//            val refresh = OpenApiSDK.getLoginApi().openIdInfo?.refreshToken
-//            if (refresh != null) {
-//                OpenApiSDK.getOpenApi().refreshToken(refresh) {
-//                    if (it.isSuccess()) {
-//                        Log.i(TAG, "刷新成功: ${it.data}")
-//                    } else {
-//                        Log.i(TAG, "刷新失败: ${it.errorMsg}")
-//                    }
-//                }
-//            }
-//        }, modifier = Modifier.padding(16.dp)) {
-//            Text(text = "刷新token")
-//        }
+        Button(onClick = {
+            OpenApiSDK.getLoginApi().qrCodeLogin(activity) { b, msg ->
+                if (b) {
+                    Toast.makeText(activity, "登录成功", Toast.LENGTH_SHORT).show()
+
+                    info.value = "扫码已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                } else {
+                    Toast.makeText(activity, "登录失败: $msg", Toast.LENGTH_SHORT).show()
+                }
+                HomeViewModel.clearRequestState()
+            }
+            info.value = "扫码登录结果:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+        }, modifier = Modifier.padding(16.dp)) {
+            Text(text = "扫码登录")
+        }
     }
 }
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun MineSongList(viewModel: HomeViewModel) {
-    val pages = mutableListOf("自建歌单",
+    val pages = mutableListOf(
+        "自建歌单",
         "收藏歌单",
-        "最近播放")
+        "最近播放"
+    )
 
     val pagerState = rememberPagerState()
     val composableScope = rememberCoroutineScope()
@@ -184,10 +210,10 @@ fun MineSongList(viewModel: HomeViewModel) {
             }
             2 -> {
                 // 最近播放
-                viewModel.fetchRecentPlaySong()
-                SongListPage(viewModel.recentSongs)
+                SongListPage(viewModel.pagingRecentSong())
             }
-            else -> {}
+            else -> {
+            }
         }
     }
 }

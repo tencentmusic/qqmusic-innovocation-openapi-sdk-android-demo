@@ -9,12 +9,14 @@ object MustInitConfig {
 
     const val APP_ID = ""
     const val APP_KEY = ""
+    const val APP_PRIVATE_KEY = ""
     const val QQ_APP_ID = ""
     const val WX_APP_ID = ""
+    const val MATCH_ID = ""
 
     fun check() {
         val condition =
-            APP_ID.isEmpty() || APP_KEY.isEmpty() || QQ_APP_ID.isEmpty() || WX_APP_ID.isEmpty()
+            APP_ID.isEmpty() || APP_KEY.isEmpty() || QQ_APP_ID.isEmpty() || WX_APP_ID.isEmpty() || APP_PRIVATE_KEY.isEmpty() || MATCH_ID.isEmpty()
         assert(!condition) {
             "请先设置对应ID/Key值！"
         }

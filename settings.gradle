@@ -1,2 +1,2 @@
-rootProject.name = "OpenApiSdk-demo"
+rootProject.name = "QPlayer"
 include ':demo'

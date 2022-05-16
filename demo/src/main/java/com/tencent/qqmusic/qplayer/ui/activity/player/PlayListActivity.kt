@@ -3,8 +3,9 @@ package com.tencent.qqmusic.qplayer.ui.activity.player
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import androidx.activity.viewModels
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListScreen
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListViewModel
 
 //
 // Created by tylertan on 2021/11/25
@@ -13,11 +14,12 @@ import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListScreen
 
 class PlayListActivity : ComponentActivity() {
 
+    private val vm: SongListViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val playList = OpenApiSDK.getPlayerApi().getPlaySongList()
-            SongListScreen(playList, true)
+            SongListScreen(vm.pagingPlayList(), true)
         }
     }
 

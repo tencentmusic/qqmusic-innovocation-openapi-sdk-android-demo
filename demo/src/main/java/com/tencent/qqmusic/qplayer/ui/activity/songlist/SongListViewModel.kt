@@ -1,14 +1,9 @@
 package com.tencent.qqmusic.qplayer.ui.activity.songlist
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
-import com.tencent.qqmusic.openapisdk.model.SongInfo
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayListPagingSource
 
 //
 // Created by tylertan on 2021/11/2
@@ -17,22 +12,12 @@ import kotlinx.coroutines.launch
 
 class SongListViewModel : ViewModel() {
 
-    var songs: List<SongInfo> by mutableStateOf(emptyList())
+    fun pagingFolderSongs(folderId: String) = Pager(PagingConfig(pageSize = 50)) {
+        FolderSongPagingSource(folderId)
+    }.flow
 
-    fun fetchSongInfoByFolder(folderId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val ret = OpenApiSDK.getOpenApi().blockingGet<List<SongInfo>> {
-                OpenApiSDK.getOpenApi().fetchSongOfFolder(folderId, callback = it)
-            }
-            if (ret.isSuccess()) {
-                val pre = ret.data ?: emptyList()
-//                val after = pre.refreshSelf()
-                songs = pre
-            } else {
-
-            }
-        }
-
-    }
+    fun pagingPlayList() = Pager(PagingConfig(pageSize = 50)) {
+        PlayListPagingSource()
+    }.flow
 
 }

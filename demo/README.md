@@ -1,4 +1,4 @@
-#OpenApiSDK 使用指南
+#QPlayer SDK 接入指南
 
 ##1. 编译配置
 

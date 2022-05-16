@@ -5,11 +5,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.Folder
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 //
@@ -23,7 +27,17 @@ class HomeViewModel : ViewModel() {
 
     var mineFolders: List<Folder> by mutableStateOf(emptyList())
     var favFolders: List<Folder> by mutableStateOf(emptyList())
-    var recentSongs: List<SongInfo> by mutableStateOf(emptyList())
+
+    companion object {
+        var myFolderRequested = false
+        var myFavRequested = false
+        var myRecentRequested = false
+        fun clearRequestState() {
+            myFolderRequested = false
+            myFavRequested = false
+            myRecentRequested = false
+        }
+    }
 
     init {
         // 进来直接加载分类
@@ -42,38 +56,40 @@ class HomeViewModel : ViewModel() {
     }
 
     fun fetchMineFolder() {
-        viewModelScope.launch(Dispatchers.IO) {
-            OpenApiSDK.getOpenApi().fetchPersonalFolder {
-                if (it.isSuccess()) {
-                    mineFolders = it.data ?: emptyList()
-                } else {
+        if (!myFolderRequested) {
+            viewModelScope.launch(Dispatchers.IO) {
+                OpenApiSDK.getOpenApi().fetchPersonalFolder {
+                    if (it.isSuccess()) {
+                        mineFolders = it.data ?: emptyList()
+                    } else {
+                    }
                 }
             }
+            myFolderRequested = true
         }
     }
 
     fun fetchCollectedFolder() {
-        viewModelScope.launch(Dispatchers.IO) {
-            OpenApiSDK.getOpenApi().fetchCollectedFolder {
-                if (it.isSuccess()) {
-                    favFolders = it.data ?: emptyList()
-                } else {
-                }
+        if (!myFavRequested) {
+            viewModelScope.launch(Dispatchers.IO) {
+                OpenApiSDK.getOpenApi().fetchCollectedFolder {
+                    if (it.isSuccess()) {
+                        favFolders = it.data ?: emptyList()
+                    } else {
+                    }
 
+                }
             }
+            myFavRequested = true
         }
     }
 
-    fun fetchRecentPlaySong() {
-        viewModelScope.launch(Dispatchers.IO) {
-            OpenApiSDK.getOpenApi().fetchRecentPlaySong {
-                if (it.isSuccess()) {
-                    recentSongs = it.data ?: emptyList()
-                } else {
-                }
-
-            }
+    fun pagingRecentSong(): Flow<PagingData<SongInfo>>? {
+        if (!myRecentRequested) {
+            myRecentRequested = true
+            return Pager(PagingConfig(pageSize = 50)) { RecentSongPagingSource() }.flow
         }
+        return null
     }
 
 }

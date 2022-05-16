@@ -22,10 +22,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.OpenApiDemoActivity
+import com.tencent.qqmusic.qplayer.ui.activity.SongCacheDemoActivity
+import com.tencent.qqmusic.qplayer.ui.activity.TestPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomePage
 import com.tencent.qqmusic.qplayer.ui.activity.login.MinePage
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
+import com.tencent.qqmusic.qplayer.ui.activity.player.qualityToStr
 
 @Composable
 fun HomeScreen(categoryViewModel: HomeViewModel = viewModel()) {
@@ -132,5 +137,43 @@ fun OtherScreen() {
         }
 
         Text(text = "当前为${if (OpenApiSDK.isNewProtocol) "新协议" else "旧协议"}")
+
+        Button(onClick = {
+            activity.startActivity(Intent(activity, SongCacheDemoActivity::class.java))
+        }, modifier = Modifier.padding(16.dp)) {
+            Text(text = "缓存接口demo")
+        }
+
+        Row {
+            Button(onClick = {
+                OpenApiSDK.init(
+                    activity.applicationContext,
+                    MustInitConfig.APP_ID,
+                    MustInitConfig.APP_PRIVATE_KEY
+                )
+                Toast.makeText(activity, "初始化成功", Toast.LENGTH_SHORT).show()
+            }, modifier = Modifier.padding(16.dp)) {
+                Text(text = "初始化SDK")
+            }
+
+            Button(onClick = {
+                OpenApiSDK.destroy()
+                Toast.makeText(activity, "销毁成功", Toast.LENGTH_SHORT).show()
+            }, modifier = Modifier.padding(16.dp)) {
+                Text(text = "销毁SDK")
+            }
+        }
+
+        Button(onClick = {
+            activity.startActivity(
+                Intent(
+                    activity,
+                    PlayerActivity::class.java
+                )
+            )
+        }, modifier = Modifier.padding(16.dp)) {
+            Text(text = "进入播放测试界面")
+        }
+
     }
 }

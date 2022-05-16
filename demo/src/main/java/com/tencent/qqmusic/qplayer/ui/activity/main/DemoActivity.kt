@@ -16,12 +16,19 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.tencent.qqmusic.openapisdk.business_common.Global
+import com.tencent.qqmusic.qplayer.BuildConfig
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.qplayer.App
+import com.tencent.qqmusic.qplayer.ui.activity.MainActivity
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 
 class DemoActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        App.init(this)
         setContent {
             MainScreen()
         }

@@ -26,7 +26,9 @@
             android:name=".ui.activity.player.PlayerActivity"
             android:exported="true"
             android:label="@string/title_activity_player"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.QPlayerSDKAndroid.NoActionBar" />
+        <activity android:name=".ui.activity.TestPlayerActivity"/>
         <activity
             android:name=".ui.activity.main.DemoActivity"
             android:exported="true"
@@ -41,42 +43,12 @@
             android:name=".ui.activity.MainActivity"
             android:exported="true" />
         <activity android:name=".ui.activity.OpenApiDemoActivity" />
+        <activity android:name=".ui.activity.SongCacheDemoActivity"/>
 
         <activity android:name=".ui.activity.songlist.SongListActivity" />
         <activity android:name=".ui.activity.player.PlayListActivity" />
+        <activity android:name=".ui.activity.player.PlayerTestActivity"/>
 
-        <activity
-            android:name=".logininfo.miniprogram.qqmusic.QQReturnActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-
-                <data
-                    android:host="qqlogin"
-                    android:scheme="qplayer" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name="com.tencent.tauth.AuthActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:noHistory="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data android:scheme="tencent101834739" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name="com.tencent.connect.common.AssistActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:exported="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity
             android:name="com.tencent.qqmusicrecognition.wxapi.WXEntryActivity"
             android:exported="true"

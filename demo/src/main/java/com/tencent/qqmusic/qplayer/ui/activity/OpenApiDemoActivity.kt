@@ -13,8 +13,12 @@ import com.google.gson.GsonBuilder
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.openapisdk.model.SearchType
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.openapi.OpenApi
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
+import com.tencent.qqmusic.openapisdk.model.SearchResult
+import com.tencent.qqmusic.openapisdk.model.VipInfo
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -24,6 +28,10 @@ class OpenApiDemoActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "OpenApiDemoActivity"
+        private val testMultiBlockingGetBlock: OpenApi.(OpenApiCallback<OpenApiResponse<VipInfo>>) -> Unit =
+            {
+                OpenApiSDK.getOpenApi().fetchGreenMemberInformation(callback = it)
+            }
     }
 
     private val methodNameToBlock = mutableMapOf<String, (MethodNameWidthParam) -> Unit>()
@@ -206,6 +214,20 @@ class OpenApiDemoActivity : AppCompatActivity() {
             }
         }
 
+        findViewById<View>(R.id.btn_test2).setOnClickListener {
+            repeat(1000) {
+                thread {
+                    val resp = OpenApiSDK.getOpenApi().blockingGet<VipInfo>(
+                        testMultiBlockingGetBlock)
+                    if (!resp.isSuccess()) {
+                        QLog.e(TAG, "并发请求失败, resp=${resp}")
+                    } else {
+                        QLog.i(TAG, "并发请求成功")
+                    }
+                }
+            }
+        }
+
         findViewById<View>(R.id.btn_test).setOnClickListener {
             errorOpiNameAndMsg.clear()
             displayTv.text = "正在请求, 请稍等..."
@@ -375,6 +397,11 @@ class OpenApiDemoActivity : AppCompatActivity() {
 //                }
             //commonCallback.invoke(ret)
 //            }
+        }
+        methodNameToBlock["fetchUserInfo"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.fetchUserInfo(commonCallback)
         }
         methodNameToBlock["createGreenOrder"] = {
             val callback = CallbackWithName(it)
@@ -802,12 +829,36 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 callback = commonCallback
             )
         }
+        methodNameToBlock["reportRecentPlay"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.reportRecentPlay(paramStr1!!.toLong(), 2, callback = commonCallback)
+        }
     }
 
     private fun initMethodNameList() {
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "fetchGreenMemberInformation", listOf(), listOf()
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchUserInfo", listOf(), listOf()
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "createGreenOrder",
+                listOf("matchId", "充值账号", "充值时长，单位月"),
+                listOf(MustInitConfig.MATCH_ID, "", "2")
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "queryGreenOrder",
+                listOf("matchId", "订单id"),
+                listOf(MustInitConfig.MATCH_ID, "")
             )
         )
         methodNameWithParamList.add(
