@@ -25,7 +25,6 @@ class App : Application() {
         private const val TAG = "App"
 
         fun init(context: Context) {
-            Global.isDebug = true
 
             MustInitConfig.check()
             OpenApiSDK.init(
