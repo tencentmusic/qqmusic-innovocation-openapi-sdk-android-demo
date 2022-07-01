@@ -149,7 +149,7 @@ fun OtherScreen() {
                 OpenApiSDK.init(
                     activity.applicationContext,
                     MustInitConfig.APP_ID,
-                    MustInitConfig.APP_PRIVATE_KEY
+                    MustInitConfig.APP_KEY
                 )
                 Toast.makeText(activity, "初始化成功", Toast.LENGTH_SHORT).show()
             }, modifier = Modifier.padding(16.dp)) {

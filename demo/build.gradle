@@ -56,7 +56,7 @@ android {
 
 dependencies {
 //    implementation project(':entry')
-    implementation 'com.tencent.qqmusic.openapi:openapi-sdk:1.1.5'
+    implementation 'com.tencent.qqmusic.openapi:openapi-sdk:1.1.6'
 
     implementation 'com.tencent.mm.opensdk:wechat-sdk-android-without-mta:6.8.0'
 
