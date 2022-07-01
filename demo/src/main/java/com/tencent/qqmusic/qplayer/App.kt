@@ -30,7 +30,7 @@ class App : Application() {
             OpenApiSDK.init(
                 context.applicationContext,
                 MustInitConfig.APP_ID,
-                MustInitConfig.APP_PRIVATE_KEY
+                MustInitConfig.APP_KEY
             )
 
             OpenApiSDK.getPlayerApi().setSDKSpecialNeedInterface(object : ISDKSpecialNeedInterface {
