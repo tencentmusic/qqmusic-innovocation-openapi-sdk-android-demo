@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.tencent.qqmusicrecognition"
-        minSdkVersion rootProject.ext.minSdkVersion
+        minSdkVersion 21
         targetSdk 31
         versionCode rootProject.ext.appVersionCode
         versionName rootProject.ext.appVersionName
@@ -17,14 +17,17 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
+        multiDexEnabled true
+
+        archivesBaseName = project.hasProperty('git_version')
+                ? "qplay-edge-demo-${appVersionName}-${git_version}_SDKv${sdk_version}"
+                : "qplay-edge-demo-${appVersionName}_SDKv${sdk_version}"
     }
 
     buildTypes {
-        debug {
-            debuggable true
-        }
 
         release {
+            multiDexEnabled true
             debuggable true
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -50,14 +53,16 @@ android {
     }
     composeOptions {
         kotlinCompilerExtensionVersion compose_version
-        kotlinCompilerVersion '1.5.21'
+        kotlinCompilerVersion kotlin_version
     }
 }
 
 dependencies {
-//    implementation project(':entry')
-    implementation 'com.tencent.qqmusic.openapi:openapi-sdk:1.1.6'
-
+    if (useSdkSource == "true") {
+        implementation project(':entry')
+    } else {
+        implementation "com.tencent.qqmusic.openapi:openapi-sdk:$sdk_version"
+    }
     implementation 'com.tencent.mm.opensdk:wechat-sdk-android-without-mta:6.8.0'
 
     implementation 'com.google.android.material:material:1.4.0'

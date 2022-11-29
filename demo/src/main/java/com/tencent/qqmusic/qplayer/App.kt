@@ -5,15 +5,23 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Build
+import android.util.Log
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.ISDKSpecialNeedInterface
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.ui.activity.MainActivity
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
+import com.tencent.qqmusic.qplayer.utils.AudioFocusChangeHelper
+import com.tencent.qqmusic.qplayer.utils.MockUtils
+import com.tencent.qqmusic.sharedfileaccessor.SPBridge
 import com.tencent.qqmusicplayerprocess.service.NotificationParams
+import java.lang.Exception
 
 /**
  * Created by tannyli on 2021/8/31.
@@ -33,6 +41,7 @@ class App : Application() {
                 MustInitConfig.APP_KEY
             )
 
+            OpenApiSDK.getPlayerApi().setEnableCallStateListener(false)
             OpenApiSDK.getPlayerApi().setSDKSpecialNeedInterface(object : ISDKSpecialNeedInterface {
                 override fun getNotification(playSong: SongInfo): Notification? {
                     var notification: Notification? = null
@@ -73,7 +82,7 @@ class App : Application() {
                 }
 
                 override fun needRequestFocus(): Boolean {
-                    return true
+                    return false
                 }
 
                 override fun isAutoPlayNext(): Boolean {
@@ -81,15 +90,12 @@ class App : Application() {
                 }
             })
 
+            MockUtils.testFocus(context)
+
             //OpenApiSDK.getPlayerApi().setEnableMediaButton(false)
             OpenApiSDK.getPlayerApi().setEnableBluetoothListener(false)
 
             PlayerObserver.registerSongEvent()
         }
     }
-
-    override fun onCreate() {
-        super.onCreate()
-    }
-
 }

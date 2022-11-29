@@ -10,9 +10,12 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import kotlin.concurrent.thread
 
 // 
@@ -33,6 +36,11 @@ class PlayerTestActivity : Activity() {
         val edt = findViewById<EditText>(R.id.edt_song)
         val btnPlay = findViewById<Button>(R.id.btn_play)
         val btnQuality = findViewById<Button>(R.id.btn_change_quality)
+        val edtFolder = findViewById<EditText>(R.id.edt_folder)
+        val btnFolder = findViewById<Button>(R.id.btn_folder)
+
+        val btnUseDolby = findViewById<Button>(R.id.btn_use_dolby)
+        edt.setText("335918510,317178463,316688109,332183304")
 
         refresh()
 
@@ -57,7 +65,7 @@ class PlayerTestActivity : Activity() {
                     midList = if (songMidList.isEmpty()) null else songMidList
                 ) {
                     if (it.isSuccess()) {
-                        val ret = OpenApiSDK.getPlayerApi().playSongs(it.data!!)
+                        val ret = OpenApiSDK.getPlayerApi().playSongs(it.data!!, it.data!!.indices.random())
                         Handler(Looper.getMainLooper()).postDelayed(Runnable {
                             //OpenApiSDK.getPlayerApi().seek(301318)
                         }, 10)
@@ -73,27 +81,56 @@ class PlayerTestActivity : Activity() {
             }
         }
 
-        btnQuality.setOnClickListener {
-            val next = when (OpenApiSDK.getPlayerApi().getPreferSongQuality()) {
-                PlayerEnums.Quality.HQ -> {
-                    PlayerEnums.Quality.STANDARD
-                }
-                PlayerEnums.Quality.STANDARD -> {
-                    PlayerEnums.Quality.LQ
-                }
-                PlayerEnums.Quality.LQ -> {
-                    PlayerEnums.Quality.SQ
-                }
-                else -> {
-                    PlayerEnums.Quality.HQ
-                }
+        findViewById<Button>(R.id.btn_play_list_update).setOnClickListener {
+            val list = OpenApiSDK.getPlayerApi().getPlayList()
+            Log.d(TAG, "before size:${list.size}")
+            if (list.size < 2) {
+                ToastUtils.showShort("请保持列表数大于1个")
+                return@setOnClickListener
             }
-            val ret = OpenApiSDK.getPlayerApi().setPreferSongQuality(next)
-            if (ret != 0) {
-                Toast.makeText(this, "切换失败：$ret", Toast.LENGTH_SHORT).show()
+            val newList = ArrayList(list)
+            newList.removeAt(newList.size - 1)
+            AppScope.launchIO {
+                OpenApiSDK.getPlayerApi().updatePlayingSongList(newList)
+                Handler(Looper.getMainLooper()).postDelayed({
+                    val newSize = OpenApiSDK.getPlayerApi().getPlayList().size
+                    Log.d(TAG, "after size:${newSize}")
+                    ToastUtils.showShort("列表从${list.size} -> $newSize")
+                }, 1000)
             }
+        }
 
-            refresh()
+        btnQuality.setOnClickListener {
+            QualityAlert.showQualityAlert(this, {
+                OpenApiSDK.getPlayerApi().setPreferSongQuality(it)
+            }, {
+                runOnUiThread {
+                    refresh()
+                }
+            })
+        }
+
+        btnUseDolby.setOnClickListener {
+//            edt.setText("359434619,359434618,359434626,359434622,359434624")
+            edt.setText("370513537")
+        }
+
+        findViewById<Button>(R.id.btn_use_hires).setOnClickListener {
+//            edt.setText("262607197")
+            edt.setText("381885920,262607197")
+        }
+
+        edtFolder.setTextIsSelectable(true)
+        btnFolder.setOnClickListener {
+            val albumIdText = edtFolder.text.toString()
+            startActivity(
+                Intent(
+                    this@PlayerTestActivity,
+                    SongListActivity::class.java
+                ).apply {
+                    putExtra(SongListActivity.KEY_FOLDER_ID, albumIdText)
+                }
+            )
         }
     }
 
@@ -112,6 +149,12 @@ class PlayerTestActivity : Activity() {
             }
             PlayerEnums.Quality.LQ -> {
                 "LQ"
+            }
+            PlayerEnums.Quality.DOLBY -> {
+                "杜比"
+            }
+            PlayerEnums.Quality.HIRES -> {
+                "HiRes"
             }
             else -> {
                 "未知"

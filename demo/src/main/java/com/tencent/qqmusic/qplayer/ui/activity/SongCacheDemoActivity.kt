@@ -6,10 +6,13 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
 import android.view.View
+import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.addTextChangedListener
+import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.SongCacheCallback
 import com.tencent.qqmusic.openapisdk.model.SongInfo
@@ -108,8 +111,8 @@ class SongCacheDemoActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.size).setOnClickListener {
             val cacheSize = OpenApiSDK.getSongCacheApi().getCacheSize()
-            Log.d(TAG, "cacheSize=$cacheSize byte")
-            Toast.makeText(this, "size: ${cacheSize}byte", Toast.LENGTH_SHORT).show()
+            Log.d(TAG, "cacheSize=${cacheSize / 1024 /1024} MB")
+            Toast.makeText(this, "size: ${cacheSize / 1024 /1024} MB", Toast.LENGTH_SHORT).show()
         }
 
         edit.addTextChangedListener(object : TextWatcher {
@@ -132,8 +135,28 @@ class SongCacheDemoActivity : AppCompatActivity() {
         edit.setText("316868744")
 
         refreshExist()
+
+        initSetCacheView()
     }
 
+    private fun initSetCacheView() {
+        val etSize = findViewById<EditText>(R.id.edit_cache_size)
+        val etSongNum = findViewById<EditText>(R.id.edit_cache_song_num)
+        findViewById<Button>(R.id.custom_set_size).setOnClickListener {
+            val size = etSize.text.toString().toIntOrNull() ?: 0
+            val songNum = etSongNum.text.toString().toIntOrNull() ?: 0
+            if (size == 0 || songNum == 0) {
+                Toast.makeText(this, "请输入正确的参数", Toast.LENGTH_SHORT).show()
+            } else {
+                val ret = Global.getSongCacheApi().setCacheMaxSize(size, songNum)
+                if (ret == 0) {
+                    Toast.makeText(this, "设置成功", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "设置失败", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     @SuppressLint("SetTextI18n")
     private fun refreshExist() {

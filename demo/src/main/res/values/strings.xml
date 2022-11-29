@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">QPlayerDemo</string>
+    <string name="app_name">OpenAPISDK</string>
     <string name="title_activity_demo">DemoActivity</string>
     <string name="title_activity_login">LoginActivity</string>
     <string name="title_activity_player">PlayerActivity</string>

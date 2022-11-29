@@ -38,6 +38,46 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="15dp" />
+
     </LinearLayout>
+
+    <Button
+        android:id="@+id/btn_use_dolby"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="填入杜比歌曲"/>
+
+    <Button
+        android:id="@+id/btn_use_hires"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="填入Hires歌曲"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="15dp">
+
+        <EditText
+            android:id="@+id/edt_folder"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="输入歌单Id" />
+
+        <Button
+            android:id="@+id/btn_folder"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="搜索歌单" />
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btn_play_list_update"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="更新播放列表" />
 
 </LinearLayout>

@@ -18,12 +18,25 @@ import kotlinx.coroutines.launch
 class FolderViewModel : ViewModel() {
 
     var folders: List<Folder> by mutableStateOf(emptyList())
+    var folder: Folder by mutableStateOf(Folder())
 
     fun fetchFolderByCategory(categoryIdList: List<Int>) {
         viewModelScope.launch(Dispatchers.IO) {
             OpenApiSDK.getOpenApi().fetchFolderListByCategory(categoryIdList) {
                 if (it.isSuccess()) {
                     folders = it.data ?: emptyList()
+                } else {
+
+                }
+            }
+        }
+    }
+
+    fun fetchFolderByFolderId(folderId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            OpenApiSDK.getOpenApi().fetchFolderDetail(folderId) {
+                if (it.isSuccess()) {
+                    folder = it.data ?: Folder()
                 } else {
 
                 }

@@ -37,4 +37,18 @@ class SongListRepo {
         return ret
     }
 
+    fun fetchSongInfoByALbum(
+        albumId: String,
+        page: Int,
+        count: Int
+    ): OpenApiResponse<List<SongInfo>> {
+        val startTime = System.currentTimeMillis()
+        Log.i(TAG, "[fetchSongInfoByAlbum]: start time $startTime")
+        val ret = OpenApiSDK.getOpenApi().blockingGet<List<SongInfo>> {
+            OpenApiSDK.getOpenApi().fetchSongOfAlbum(albumId, null, page, count = count, callback = it)
+        }
+        Log.i(TAG, "[fetchSongInfoByAlbum]: duration ${System.currentTimeMillis() - startTime}")
+        return ret
+    }
+
 }

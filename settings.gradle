@@ -1,2 +1,10 @@
-rootProject.name = "QPlayer"
+rootProject.name = "QPlay Edge Android"
 include ':demo'
+
+if (useSdkSource == "true") {
+    try {
+        apply from: 'config_sdk.gradle'
+    } catch (ignored) {
+        println("settings.gradle include failed. ignore:${ignored}")
+    }
+}

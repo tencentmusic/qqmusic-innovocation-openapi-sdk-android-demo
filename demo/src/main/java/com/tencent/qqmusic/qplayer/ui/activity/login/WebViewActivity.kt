@@ -1,6 +1,7 @@
 package com.tencent.qqmusic.qplayer.ui.activity.login
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -9,6 +10,7 @@ import android.webkit.*
 import android.widget.Toast
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusicsdk.sdklog.SDKLog
 
 // 
 // Created by clydeazhang on 2022/1/4 11:30 上午.
@@ -17,12 +19,22 @@ import com.tencent.qqmusic.qplayer.R
 class WebViewActivity : Activity() {
     companion object {
         private const val TAG = "@@@WebViewActivity"
+
+        @JvmStatic
+        fun start(context: Context, url: String) {
+            val starter = Intent(context, WebViewActivity::class.java)
+                .putExtra("url", url)
+            context.startActivity(starter)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_web)
+        val url = intent.getStringExtra("url") ?: "null"
+        SDKLog.i(TAG, "load url:$url")
         val web = findViewById<WebView>(R.id.web)
+        web.loadUrl(url)
         web.settings.apply {
             this.javaScriptEnabled = true
         }
@@ -41,28 +53,6 @@ class WebViewActivity : Activity() {
             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                 Log.d(TAG, "shouldOverrideUrlLoading 1, url=$url")
                 return false
-            }
-
-            override fun shouldOverrideUrlLoading(
-                view: WebView?,
-                request: WebResourceRequest?
-            ): Boolean {
-                Log.d(TAG, "shouldOverrideUrlLoading, url=${request?.url?.toString()}")
-                val isQQ = request?.url?.toString()?.startsWith("wtloginmqq://") ?: false
-                if (isQQ) {
-                    Log.d(TAG, "jump qq")
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(request?.url?.toString() ?: "")))
-                    return true
-                }
-                return false
-            }
-        }
-
-        OpenApiSDK.getLoginApi().getQQLoginWebUrl(this, "") { url, error ->
-            if (!url.isNullOrEmpty()) {
-                web.loadUrl(url)
-            } else {
-                Toast.makeText(this, "获取url失败", Toast.LENGTH_SHORT).show()
             }
         }
 
