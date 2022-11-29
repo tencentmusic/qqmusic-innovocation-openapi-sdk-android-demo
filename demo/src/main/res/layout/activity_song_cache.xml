@@ -63,4 +63,41 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 
+
+    <TextView
+        android:layout_marginTop="10dp"
+        android:text="设置缓存大小（sizeMb>50 songNum>10）"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <EditText
+            android:id="@+id/edit_cache_size"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:hint="输入缓存大小(MB)"
+            android:textSize="12sp"
+            android:textColorHint="@color/gray" />
+
+        <EditText
+            android:layout_marginLeft="5dp"
+            android:textSize="12sp"
+            android:id="@+id/edit_cache_song_num"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:hint="输入最多歌曲数"
+            android:textColorHint="@color/gray" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/custom_set_size"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="设置缓存大小" />
+
+
 </LinearLayout>

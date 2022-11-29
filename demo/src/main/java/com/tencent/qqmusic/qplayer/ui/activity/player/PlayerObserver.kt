@@ -15,7 +15,7 @@ import com.tencent.qqmusic.openapisdk.core.player.IMediaEventListener
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEvent
 import com.tencent.qqmusic.openapisdk.model.SongInfo
-import com.tencent.qqmusic.qplayer.core.utils.pref.QQPlayerPreferencesNew
+import com.tencent.qqmusic.qplayer.core.player.MusicPlayerHelper
 
 //
 // Created by tylertan on 2021/11/2
@@ -33,6 +33,19 @@ object PlayerObserver {
     var mCurrentQuality: Int? by mutableStateOf<Int?>(null)
 
     var playStateText: String by mutableStateOf<String>("播放状态: Idle")
+    var playPosition: Float by  mutableStateOf(0f)
+    var seekPosition: Float by mutableStateOf(-1f)
+
+
+    init {
+        MusicPlayerHelper.getInstance().registerProgressChangedInterface {
+            playPosition = OpenApiSDK.getPlayerApi().getCurrentPlayTime()?.toFloat() ?: 0f
+            if (seekPosition in 0.0..playPosition.toDouble()) {
+                seekPosition = -1f
+            }
+            Log.i(TAG, "registerProgressChangedInterface slidePosition = $playPosition")
+        }
+    }
     private val handler = object : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             super.handleMessage(msg)
@@ -46,6 +59,11 @@ object PlayerObserver {
                 }
             }
         }
+    }
+
+    private fun resetPlayProgress() {
+        seekPosition = -1f
+        playPosition = 0f
     }
 
     private val event = object : IMediaEventListener {
@@ -67,6 +85,7 @@ object PlayerObserver {
                         if (currentPlaySongQuality != null && (currentPlaySongQuality > 0)) {
                             mCurrentQuality = currentPlaySongQuality
                         }
+                        resetPlayProgress()
                     }
                 }
                 PlayerEvent.Event.API_EVENT_SONG_PLAY_ERROR -> {
@@ -78,6 +97,7 @@ object PlayerObserver {
                         Toast.LENGTH_SHORT
                     ).show()
                     setPlayState("播放错误(code=${errorCode})")
+                    resetPlayProgress()
                 }
                 PlayerEvent.Event.API_EVENT_PLAY_STATE_CHANGED -> {
                     val state = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_PLAY_STATE)

@@ -3,26 +3,31 @@ package com.tencent.qqmusic.qplayer.ui.activity.main
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.tencent.qqmusic.openapisdk.business_common.Global
-import com.tencent.qqmusic.qplayer.BuildConfig
-import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.App
-import com.tencent.qqmusic.qplayer.ui.activity.MainActivity
-import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
+import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
 
 class DemoActivity : ComponentActivity() {
 
@@ -33,6 +38,38 @@ class DemoActivity : ComponentActivity() {
             MainScreen()
         }
     }
+
+//    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+//        super.onRestoreInstanceState(savedInstanceState)
+//        AppScope.launchIO {
+//            val songList = SongListRepo().fetchSongInfoByFolder("8513652479", 0, 50).data
+//                ?: emptyList()
+//            Log.i("lichaojian", "lichaojian onRestoreInstanceState")
+//            OpenApiSDK.getPlayerApi().updatePlayingSongList(songList)
+//        }
+//    }
+}
+
+@Composable
+fun loginExpiredDialog(showDialog: Boolean, setShowDialog: (Boolean) -> Unit) {
+    if (showDialog) {
+        Dialog(onDismissRequest = {
+
+        }) {
+            Column(
+                modifier = Modifier.background(color = Color.Yellow).width(300.dp).height(300.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(text = "登录过期啦")
+                Button(onClick = {
+                    setShowDialog(false)
+                }, modifier = Modifier.padding(16.dp)) {
+                    Text("知道了")
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -40,12 +77,6 @@ fun Navigation(navController: NavHostController) {
     NavHost(navController, startDestination = NavigationItem.Home.route) {
         composable(NavigationItem.Home.route) {
             HomeScreen()
-        }
-        composable(NavigationItem.Music.route) {
-            RankScreen()
-        }
-        composable(NavigationItem.Movies.route) {
-            RadioScreen()
         }
         composable(NavigationItem.Books.route) {
             SearchScreen()
@@ -76,8 +107,6 @@ fun TopBarPreview() {
 fun BottomNavigationBar(navController: NavController) {
     val items = listOf(
         NavigationItem.Home,
-        NavigationItem.Music,
-        NavigationItem.Movies,
         NavigationItem.Books,
         NavigationItem.Profile,
         NavigationItem.Other
@@ -90,7 +119,7 @@ fun BottomNavigationBar(navController: NavController) {
         items.forEach { item ->
             BottomNavigationItem(
                 icon = { Icon(painterResource(id = item.icon), contentDescription = item.title) },
-                label = { Text(text = item.title) },
+                label = { Text(text = item.title, fontSize = 10.sp) },
                 selectedContentColor = Color.White,
                 unselectedContentColor = Color.White.copy(0.4f),
                 alwaysShowLabel = true,
@@ -120,10 +149,18 @@ fun BottomNavigationBar(navController: NavController) {
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
+    val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
+    loginExpiredDialog(showDialog = showDialog, setShowDialog = setShowDialog)
+    OpenApiSDK.getLoginApi().setLoginStateErrorCallback {
+        QLog.i("DemoActivity", "setLoginStateErrorCallback msg = $it")
+        setShowDialog(true)
+    }
     Scaffold(
-        topBar = { TopBar() },
+//        topBar = { TopBar() },
         bottomBar = { BottomNavigationBar(navController) }
     ) {
-        Navigation(navController = navController)
+        Box(modifier = Modifier.padding(it)) {
+            Navigation(navController = navController)
+        }
     }
 }

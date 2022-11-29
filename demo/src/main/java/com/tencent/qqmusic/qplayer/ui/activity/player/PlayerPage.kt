@@ -28,7 +28,7 @@ import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.utils.pref.QQPlayerPreferencesNew
-import com.tencent.qqmusicsdk.protocol.PlayDefine
+import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import kotlin.concurrent.thread
 
 
@@ -57,6 +57,12 @@ fun PlayerScreen(observer: PlayerObserver) {
 
 fun Int.qualityToStr(): String {
     return when (this) {
+        PlayerEnums.Quality.DOLBY -> {
+            "DOLBY"
+        }
+        PlayerEnums.Quality.HIRES -> {
+            "HIRES"
+        }
         PlayerEnums.Quality.SQ -> {
             "SQ"
         }
@@ -85,17 +91,10 @@ fun PlayerPage(observer: PlayerObserver) {
     val currMode = observer.currentMode
     val qualityNew = observer.mCurrentQuality
     val playStateText = observer.playStateText
-    val quality = remember { mutableStateOf(OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()) }
+    val quality = remember(currSong) { mutableStateOf(OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()) }
 
     val modeOrder =
         mutableListOf(PlayerEnums.Mode.LIST, PlayerEnums.Mode.ONE, PlayerEnums.Mode.SHUFFLE)
-    val qualityOrder =
-        mutableListOf(
-            PlayerEnums.Quality.LQ,
-            PlayerEnums.Quality.STANDARD,
-            PlayerEnums.Quality.HQ,
-            PlayerEnums.Quality.SQ
-        )
 
     val scope = rememberCoroutineScope()
 
@@ -171,6 +170,12 @@ fun PlayerPage(observer: PlayerObserver) {
                 PlayerEnums.Quality.STANDARD -> {
                     R.drawable.ic_standard_quality
                 }
+                PlayerEnums.Quality.DOLBY -> {
+                    R.drawable.ic_dolby_quality
+                }
+                PlayerEnums.Quality.HIRES -> {
+                    R.drawable.ic_hires
+                }
                 else -> {
                     R.drawable.ic_lq
                 }
@@ -183,50 +188,13 @@ fun PlayerPage(observer: PlayerObserver) {
                 modifier = Modifier
                     .size(50.dp)
                     .clickable {
-                        thread {
-                            val currIndex = qualityOrder.indexOf(
-                                OpenApiSDK
-                                    .getPlayerApi()
-                                    .getCurrentPlaySongQuality()
-                            )
-                            val nextQuality = qualityOrder.getOrNull(currIndex + 1)
-                                ?: PlayerEnums.Quality.LQ
-                            val ret =
-                                OpenApiSDK
-                                    .getPlayerApi()
-                                    .setCurrentPlaySongQuality(nextQuality)
-                            when (ret) {
-                                PlayDefine.PlayError.PLAY_ERR_NONE -> {
-                                    Log.d(
-                                        TAG,
-                                        "切换歌曲品质成功"
-                                    )
-                                    quality.value = nextQuality
-                                }
-                                4 -> {
-                                    activity.runOnUiThread {
-                                        Toast
-                                            .makeText(activity, "试听歌曲无法切换音质", Toast.LENGTH_SHORT)
-                                            .show()
-                                    }
-                                }
-                                205 -> {
-                                    activity.runOnUiThread {
-                                        Toast
-                                            .makeText(activity, "没有对应音质", Toast.LENGTH_SHORT)
-                                            .show()
-                                    }
-                                }
-                                else -> {
-                                    activity.runOnUiThread {
-                                        Toast
-                                            .makeText(activity, "音质切换失败: $ret", Toast.LENGTH_SHORT)
-                                            .show()
-                                    }
-                                    Log.e(TAG, "切换歌曲品质失败, ret=$ret")
-                                }
-                            }
-                        }
+                        QualityAlert.showQualityAlert(activity, {
+                            OpenApiSDK
+                                .getPlayerApi()
+                                .setCurrentPlaySongQuality(it)
+                        }, {
+                            quality.value = it
+                        })
                     }
             )
 
@@ -258,13 +226,44 @@ fun PlayerPage(observer: PlayerObserver) {
             }, content = {
                 Text("进入播放测试页")
             })
-            Button(onClick = {
-                thread {
-                    OpenApiSDK.getPlayerApi().seek(193680)
+//            Button(onClick = {
+//                thread {
+//                    OpenApiSDK.getPlayerApi().getDuration()?.let {
+//                        val position = it.toInt() / 2
+//                        QLog.i(TAG, "before seek duration = $it,  position = $position")
+//                        OpenApiSDK.getPlayerApi().seek(position)
+//                    }
+//                }
+//            }, content = {
+//                Text("seek")
+//            })
+        }
+        // 播放控制
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Slider(
+                value = if (observer.seekPosition >= 0) observer.seekPosition else observer.playPosition,
+                valueRange = 0f..(OpenApiSDK.getPlayerApi().getDuration()?.toFloat() ?: 100f),
+                onValueChange = {
+                    observer.seekPosition = it
+                },
+                onValueChangeFinished = {
+                    thread {
+                        val seekPosition = observer.seekPosition.toInt()
+                        val res = OpenApiSDK.getPlayerApi().seek(seekPosition)
+                        if (res.toInt() == seekPosition) {
+                            QLog.i(TAG, "PlayerPage seek success res = $res, seekPosition = $seekPosition")
+                        } else {
+                            observer.seekPosition = res.toFloat()
+                            QLog.i(TAG, "PlayerPage seek fail res = $res, seekPosition = $seekPosition")
+                        }
+                    }
                 }
-            }, content = {
-                Text("seek")
-            })
+            )
         }
 
         // 播放控制

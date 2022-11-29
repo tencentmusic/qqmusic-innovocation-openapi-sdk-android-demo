@@ -8,14 +8,19 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
@@ -47,6 +52,42 @@ fun SongListScreen(flow: Flow<PagingData<SongInfo>>, displayOnly: Boolean = fals
     }
 }
 
+@Composable
+fun DialogDemo(showDialog: Boolean, callback: (type: String) -> Unit, setShowDialog: (Boolean) -> Unit) {
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = {
+               setShowDialog(false)
+            },
+            title = {
+                Text("选择你要执行的动作")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        setShowDialog(false)
+                        callback.invoke("播放")
+
+                    }
+                ) {
+                    Text("播放")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        setShowDialog(false)
+                        callback.invoke("添加到下一首播放")
+                    }
+                ) {
+                    Text("添加到下一首播放")
+                }
+            }
+        )
+    }
+}
+
 @ExperimentalCoilApi
 @Composable
 fun SongListPage(flow: Flow<PagingData<SongInfo>>?, displayOnly: Boolean = false) {
@@ -54,11 +95,11 @@ fun SongListPage(flow: Flow<PagingData<SongInfo>>?, displayOnly: Boolean = false
     val activity = LocalContext.current as Activity
     val composableScope = rememberCoroutineScope()
     val songs = flow.collectAsLazyPagingItems()
-
+    Log.i(TAG, "SongListPage: songs count: ${songs.itemCount}")
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         this.items(songs) { song ->
-            Log.i(TAG, "SongListPage: songs size ${songs.itemCount}")
             song ?: return@items
+            val (showDialog, setShowDialog) =  remember { mutableStateOf(false) }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -67,13 +108,35 @@ fun SongListPage(flow: Flow<PagingData<SongInfo>>?, displayOnly: Boolean = false
                         if (displayOnly) {
                             return@clickable
                         }
-
+                        setShowDialog(true)
+                    }
+            ) {
+                Image(
+                    painter = rememberImagePainter(song.smallCoverUrl()),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(50.dp)
+                        .padding(2.dp)
+                )
+                Column {
+                    Text(text = song.songName, color = Color.Black)
+                    Text(
+                        text = song.singerName ?: "未知",
+//                            color = if (canPlay) Color.Black else Color.Gray
+                        color = Color.Black
+                    )
+                }
+            }
+            DialogDemo(showDialog, callback = {
+                when (it) {
+                    "播放" -> {
                         composableScope.launch(Dispatchers.Main) {
                             val playList = songs.snapshot().items
                             val cur = System.currentTimeMillis()
                             val ret = OpenApiSDK
                                 .getPlayerApi()
                                 .playSongs(playList, playList.indexOf(song))
+                            OpenApiSDK.getOpenApi().reportRecentPlay(song.songId.toString(), 2, callback=null)
                             Log.d(TAG, "启播歌曲数量: ${playList.size}, ret=$ret")
                             when (ret) {
                                 PlayDefine.PlayError.PLAY_ERR_NONETWORK -> {
@@ -93,6 +156,37 @@ fun SongListPage(flow: Flow<PagingData<SongInfo>>?, displayOnly: Boolean = false
                             }
                         }
                     }
+                    "添加到下一首播放" -> {
+//                        OpenApiSDK.getPlayerApi().addToNext(songInfo = song)
+                        OpenApiSDK.getPlayerApi().setPlayList(listOf(song))
+                    }
+                    else -> {
+
+                    }
+                }
+            }, setShowDialog = setShowDialog);
+        }
+    }
+}
+
+@Composable
+fun SongListPage(songs: List<SongInfo>, displayOnly: Boolean = false) {
+    val composableScope = rememberCoroutineScope()
+    val activity = LocalContext.current as Activity
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        this.items(songs.size) { index ->
+            val song = songs.elementAtOrNull(index) ?: return@items
+            val (showDialog, setShowDialog) =  remember { mutableStateOf(false) }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .clickable {
+                        if (displayOnly) {
+                            return@clickable
+                        }
+                        setShowDialog(true)
+                    }
             ) {
                 Image(
                     painter = rememberImagePainter(song.smallCoverUrl()),
@@ -110,6 +204,41 @@ fun SongListPage(flow: Flow<PagingData<SongInfo>>?, displayOnly: Boolean = false
                     )
                 }
             }
+            DialogDemo(showDialog, callback = {
+                when (it) {
+                    "播放" -> {
+                        composableScope.launch(Dispatchers.Main) {
+                            val cur = System.currentTimeMillis()
+                            val ret = OpenApiSDK
+                                .getPlayerApi()
+                                .playSongs(songs, songs.indexOf(song))
+                            OpenApiSDK.getOpenApi().reportRecentPlay(song.songId.toString(), 2, callback=null)
+                            Log.d(TAG, "起播歌曲数量: ${songs.size}, ret=$ret")
+                            when (ret) {
+                                PlayDefine.PlayError.PLAY_ERR_NONETWORK -> {
+                                    Toast
+                                        .makeText(activity, "无网络连接", Toast.LENGTH_SHORT)
+                                        .show()
+                                }
+                                else -> {
+                                    delay(500L)
+                                    activity.startActivity(
+                                        Intent(
+                                            activity,
+                                            PlayerActivity::class.java
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    "添加到下一首播放" -> {
+                        OpenApiSDK.getPlayerApi().setPlayList(listOf(song))
+                    }
+                    else -> {
+                    }
+                }
+            }, setShowDialog = setShowDialog);
         }
     }
 }
