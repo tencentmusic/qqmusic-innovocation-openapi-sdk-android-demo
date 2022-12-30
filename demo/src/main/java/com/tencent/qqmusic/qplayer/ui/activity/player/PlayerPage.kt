@@ -26,6 +26,8 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.core.utils.pref.QQPlayerPreferencesNew
+import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricActivity
 import kotlin.concurrent.thread
 import kotlin.math.log10
 
@@ -107,7 +109,11 @@ fun PlayerPage(observer: PlayerObserver) {
         Image(
             painter = rememberImagePainter(currSong?.bigCoverUrl()),
             contentDescription = null,
-            modifier = Modifier.size(300.dp)
+            modifier = Modifier
+                .clickable {
+                    activity.startActivity(Intent(activity, LyricActivity::class.java))
+                }
+                .size(300.dp)
         )
 
         // 歌曲信息
@@ -203,7 +209,21 @@ fun PlayerPage(observer: PlayerObserver) {
                 modifier = Modifier
                     .size(50.dp)
                     .clickable {
-                        activity.startActivity(Intent(activity, PlayListActivity::class.java))
+                        val intent = Intent(activity, PlayListActivity::class.java).apply {
+                            putExtra(PlayListActivity.KEY_DISPLAY_ONLY, false)
+                        }
+                        activity.startActivity(intent)
+                    }
+            )
+
+            // 音效
+            Image(
+                painter = painterResource(id = R.drawable.ic_sound_effect),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(50.dp)
+                    .clickable {
+                        activity.startActivity(Intent(activity, SoundEffectActivity::class.java))
                     }
             )
         }
@@ -245,9 +265,13 @@ fun PlayerPage(observer: PlayerObserver) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = OpenApiSDK.getPlayerApi().getDuration()?.let {
-                    "%${log10(it.toDouble()).toInt() + 1}.0f".format(observer.playPosition)
-                } ?: "",
+                text = if (currSong == null) {
+                    ""
+                } else {
+                    OpenApiSDK.getPlayerApi().getDuration()?.let {
+                        "%${log10(it.toDouble()).toInt() + 1}.0f".format(observer.playPosition)
+                    } ?: ""
+                },
                 fontFamily = FontFamily.Monospace
             )
 

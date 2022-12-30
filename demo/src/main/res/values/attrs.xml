@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- ScaleBar自定义参数 -->
+    <declare-styleable name="ScaleBar">
+        <attr name="scaleBackground" format="color" />
+    </declare-styleable>
+
+    <declare-styleable name="Scale">
+        <attr name="scale_height" format="dimension" />
+    </declare-styleable>
+    <!-- HorizontalScrollTab自定义样式参数 -->
+    <declare-styleable name="HorizontalScrollTab">
+        <attr name="tab_width" format="dimension" />
+        <attr name="max_tab_width" format="dimension" />
+        <attr name="min_tab_width" format="dimension" />
+    </declare-styleable>
+    <!-- LyricView自定义样式参数 -->
+    <declare-styleable name="LyricView">
+        <attr name="textSize" format="dimension" />
+        <attr name="transTextSize" format="dimension" />
+        <attr name="textColor" format="color" />
+        <attr name="textThinColor" format="color" />
+        <attr name="hiLightSize" format="dimension" />
+        <attr name="transHiLightSize" format="dimension" />
+        <attr name="transMarginLine" format="dimension" />
+        <attr name="transLineMarginLine" format="dimension" />
+        <attr name="hiLightColor" format="color" />
+        <attr name="hiLightThinColor" format="color" />
+        <attr name="marginLine" format="dimension" />
+        <attr name="hiLightmarginLine" format="dimension" />
+        <attr name="lineSpace" format="dimension" />
+        <attr name="singleLine" format="boolean" />
+        <attr name="LineNumbers" format="integer" />
+        <attr name="LineAdJust" format="dimension" />
+        <attr name="hasShadow" format="boolean" />
+        <attr name="ShadowRadius" format="float" />
+        <attr name="ShadowDx" format="float" />
+        <attr name="ShadowDy" format="float" />
+        <attr name="ShadowColor" format="color" />
+        <attr name="ShadowDefault" format="boolean" />
+        <attr name="tansSingleLine" format="boolean" />
+        <attr name="noLyricMarginBottom" format="dimension" />
+    </declare-styleable>
+    <!--文本转换标签-->
+    <declare-styleable name="RichTextView">
+        <attr name="format">
+            <flag name="emoji" value="1" />
+            <flag name="avatar" value="2" />
+            <flag name="ubb" value="4" />
+        </attr>
+    </declare-styleable>
+
+    <!-- 伴奏反馈两边对齐的textview -->
+    <declare-styleable name="JustifyTextView">
+        <attr name="textLength" format="integer" />
+        <attr name="textBgColor" format="color" />
+    </declare-styleable>
+
+    <!-- 伴奏反馈两边对齐的textview -->
+    <declare-styleable name="NameView">
+        <attr name="nameTextSize" format="dimension" />
+        <attr name="nameTextColor" format="color" />
+        <attr name="nameTextStyle">
+            <flag name="normal" value="1" />
+            <flag name="bold" value="2" />
+        </attr>
+    </declare-styleable>
+
+    <!-- 圆角 LinearLayout 自定义样式参数-->
+    <declare-styleable name="RoundedLinearLayout">
+        <!-- 圆角半径（dp） -->
+        <attr name="radius" format="dimension" />
+    </declare-styleable>
+
+    <!-- common_title_bar的参数 -->
+    <declare-styleable name="CommonTitleBar">
+        <!-- 标题 -->
+        <attr name="titleBarText" format="string" />
+        <!-- 右上角文字是否显示 -->
+        <attr name="isRightTextVisible" format="boolean" />
+        <!-- 右上角文字 -->
+        <attr name="rightText" format="string" />
+        <!-- 右上角按钮是否显示 -->
+        <attr name="isRightMenuBtnVisible" format="boolean" />
+    </declare-styleable>
+
+    <!-- 私信cell左右标识的参数 -->
+    <declare-styleable name="MailCell">
+        <!-- cell左右中方位 -->
+        <attr name="cellPosition" format="string" />
+    </declare-styleable>
+
+    <declare-styleable name="RefreshableListView">
+        <!--2.3系统延迟addHeader以解决兼容问题-->
+        <attr name="lazyAddHeader" format="boolean" />
+    </declare-styleable>
+
+    <declare-styleable name="ReflectionRelativeLayout">
+        <attr name="value" format="string" />
+        <attr name="pos" format="integer" />
+        <attr name="waterreflection" format="boolean" />
+        <attr name="isfirst" format="boolean" />
+        <attr name="islast" format="boolean" />
+    </declare-styleable>
+
+    <declare-styleable name="ListViewSimpleItem">
+        <attr name="indexText" format="string" />
+        <attr name="indexIcon" format="reference" />
+        <attr name="contentText" format="string" />
+        <attr name="subText" format="string" />
+        <attr name="infoText" format="string" />
+        <attr name="simpleitemtype">
+            <enum name="list_item" value="0" />
+            <enum name="function_btn" value="1" />
+        </attr>
+        <attr name="checkMode">
+            <enum name="switch_check" value="0" />
+            <enum name="flash_check" value="1" />
+        </attr>
+        <attr name="optionIcon" format="reference" />
+    </declare-styleable>
+
+    //gif显示相关
+    <declare-styleable name="GifView">
+        <attr name="gif" format="reference" />
+        <attr name="paused" format="boolean" />
+    </declare-styleable>
+    <declare-styleable name="GifImageView">
+        <attr name="gifRes" format="reference" />
+    </declare-styleable>
+    <declare-styleable name="CustomTheme">
+        <attr name="gifViewStyle" format="reference" />
+    </declare-styleable>
+
+    //播放页背景图片轮播
+    <declare-styleable name="TvImageViewCarousel">
+        <attr name="switchTime" format="integer" />
+        <attr name="animTime" format="integer" />
+        <attr name="maskDrawable" format="reference" />
+    </declare-styleable>
+
+    <!--Focus Related Attrs-->
+    <declare-styleable name="FocusSearch">
+        <attr name="firstFocusedId" format="reference" />
+    </declare-styleable>
+
+    <declare-styleable name="IrisSwitchButton">
+        <attr name="background" format="reference" />
+        <attr name="chosenMaskBackground" format="reference|color" />
+        <attr name="chosenTextColor" format="color" />
+        <attr name="notChosenTextSize" format="dimension"/>
+        <attr name="notChosenTextColor" format="color" />
+        <attr name="itemCount" format="integer" />
+        <attr name="initChosenItemIndex" format="integer" />
+        <attr name="itemWidth" format="integer" />
+    </declare-styleable>
+
+    <declare-styleable name="TextCardView">
+        <attr name="cardTextSize" format="dimension" />
+        <attr name="cardTextColor" format="dimension" />
+        <attr name="cardBackGround" format="reference" />
+    </declare-styleable>
+
+    <declare-styleable name="DialogFragmentNavigator">
+        <attr name="android:name" />
+    </declare-styleable>
+    <declare-styleable name="FragmentNavigator">
+        <attr name="android:name" />
+    </declare-styleable>
+    <declare-styleable name="NavHostFragment">
+        <attr name="defaultNavHost" format="boolean" />
+    </declare-styleable>
+    <declare-styleable name="VipView">
+        <attr name="src" format="reference" />
+    </declare-styleable>
+
+    <declare-styleable name="WaveView">
+        <attr name="pic" format="reference" />
+    </declare-styleable>
+
+    <declare-styleable name="CommonTitle">
+        <attr name="middleIsText" format="boolean" />
+    </declare-styleable>
+
+
+    <declare-styleable name="GradientCardView">
+        <attr name="startColor" format="reference|color" />
+        <attr name="endColor" format="reference|color" />
+        <attr name="text" format="reference|string" />
+        <attr name="image" format="reference" />
+    </declare-styleable>
+
+    <declare-styleable name="GeneralCardContainer">
+        <attr name="contentAspectRadio" format="reference|float" />
+        <attr name="outlineCornerRadius" format="reference|dimension" />
+        <attr name="outlineWidth" format="reference|dimension" />
+        <attr name="outlineColor" format="reference|color" />
+        <attr name="nullbackground" format="boolean" />
+        <attr name="exactSize" format="boolean" />
+        <attr name="contentShape" format="enum">
+            <enum name="rectangle" value="0" />
+            <enum name="circle" value="1" />
+            <enum name="mask" value="2" />
+        </attr>
+        <attr name="indicator" format="reference"/>
+        <attr name="indicatorPosition" format="enum">
+            <enum name="left" value="0"/>
+            <enum name="center" value="1"/>
+        </attr>
+    </declare-styleable>
+    <declare-styleable name="SVGView">
+        <attr name="svg_src" format="reference" />
+        <attr name="svg_background" format="reference|color" />
+        <attr name="svg_foreground" format="reference|color" />
+        <attr name="svg_transFG" format="boolean" />
+        <attr name="svg_transBG" format="boolean" />
+        <attr name="svg_isIcon" format="boolean" />
+        <attr name="svg_isMagic" format="boolean" />
+        <attr name="auto_zoom" format="boolean" />
+    </declare-styleable>
+    <declare-styleable name="PlayerAnimView">
+        <attr name="anim_color" format="reference|color" />
+    </declare-styleable>
+
+    <declare-styleable name="RoundButton">
+        <attr name="icon" format="reference" />
+    </declare-styleable>
+    <declare-styleable name="SignInDayCircleView">
+        <attr name="day" format="integer" />
+    </declare-styleable>
+    <declare-styleable name="UnderLineTextView">
+        <attr name="bottomPadding" format="integer" />
+        <attr name="underLineHeight" format="integer" />
+        <attr name="underLineLength" format="integer" />
+        <attr name="underLineRadius" format="integer" />
+        <attr name="underLineShow" format="boolean" />
+    </declare-styleable>
+    <declare-styleable name="TickerView">
+        <attr name="ticker_animationDuration" format="reference|integer" />
+        <attr name="ticker_animateMeasurementChange" format="reference|boolean" />
+        <attr name="ticker_defaultCharacterList" format="enum">
+            <enum name="number" value="1" />
+            <enum name="alphabet" value="2" />
+        </attr>
+        <attr name="ticker_defaultPreferredScrollingDirection" format="enum">
+            <enum name="any" value="0" />
+            <enum name="up" value="1" />
+            <enum name="down" value="2" />
+        </attr>
+
+        <!-- Custom implementations of common android text attributes -->
+        <attr name="android:gravity" tools:ignore="ResourceName" />
+        <attr name="android:shadowColor" tools:ignore="ResourceName" />
+        <attr name="android:shadowDx" tools:ignore="ResourceName" />
+        <attr name="android:shadowDy" tools:ignore="ResourceName" />
+        <attr name="android:shadowRadius" tools:ignore="ResourceName" />
+        <attr name="android:text" tools:ignore="ResourceName" />
+        <attr name="android:textAppearance" tools:ignore="ResourceName" />
+        <attr name="android:textColor" tools:ignore="ResourceName" />
+        <attr name="android:textSize" tools:ignore="ResourceName" />
+        <attr name="android:textStyle" tools:ignore="ResourceName" />
+    </declare-styleable>
+
+    <declare-styleable name="VipResolutionImageView">
+        <attr name="resolutionType" format="string" />
+    </declare-styleable>
+</resources>

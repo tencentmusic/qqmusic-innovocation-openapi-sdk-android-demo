@@ -30,6 +30,7 @@ class HomeViewModel : ViewModel() {
 
     var mineFolders: List<Folder> by mutableStateOf(emptyList())
     var favFolders: List<Folder> by mutableStateOf(emptyList())
+    var favAlbums: List<Album> by mutableStateOf(emptyList())
     var hotKeys: List<HotKey> by mutableStateOf(emptyList())
     var recentAlbums: List<Album> by mutableStateOf(emptyList())
     var recentFolders: List<Folder> by mutableStateOf(emptyList())
@@ -47,6 +48,7 @@ class HomeViewModel : ViewModel() {
         private const val TAG = "HomeViewModel"
         var myFolderRequested = false
         var myFavRequested = false
+        var myFavAlbumRequested = false
         var myRecentRequested = false
         var fetchHotKey = false
         fun clearRequestState() {
@@ -54,6 +56,7 @@ class HomeViewModel : ViewModel() {
             myFavRequested = false
             myRecentRequested = false
             fetchHotKey = false
+            myFavAlbumRequested = false
         }
     }
 
@@ -95,10 +98,23 @@ class HomeViewModel : ViewModel() {
                         favFolders = it.data ?: emptyList()
                     } else {
                     }
-
                 }
             }
             myFavRequested = true
+        }
+    }
+
+    fun fetchCollectedAlbum() {
+        if (!myFavAlbumRequested) {
+            viewModelScope.launch(Dispatchers.IO) {
+                OpenApiSDK.getOpenApi().fetchCollectedAlbum(0, 50) {
+                    if (it.isSuccess()) {
+                        favAlbums = it.data ?: emptyList()
+                    } else {
+                    }
+                }
+            }
+            myFavAlbumRequested = true
         }
     }
 

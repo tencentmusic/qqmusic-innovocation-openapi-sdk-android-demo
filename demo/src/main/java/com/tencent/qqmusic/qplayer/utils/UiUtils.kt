@@ -1,5 +1,8 @@
 package com.tencent.qqmusic.qplayer.utils
 
+import android.widget.Toast
+import com.tencent.qqmusic.innovation.common.util.UtilContext
+
 /**
  * Created by tannyli on 2022/10/25.
  * Copyright (c) 2022 TME. All rights reserved.
@@ -11,5 +14,8 @@ object UiUtils {
         return "(${sizeByte / 1024 / 1024}MB)"
     }
 
+    fun showToast(msg: String) {
+        Toast.makeText(UtilContext.getApp(), msg, Toast.LENGTH_SHORT).show()
+    }
 
 }

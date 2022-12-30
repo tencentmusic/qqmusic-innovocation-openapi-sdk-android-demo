@@ -86,8 +86,8 @@ class PartnerLoginActivity : Activity() {
                 getParamStr()
                 val bindStatus = OpenApiSDK.getOpenApi().setupPartnerEnv(
                     partner_app_id_str ?: "",
+                    partner_access_token_str ?: "",
                     partner_account_id_str ?: "",
-                    partner_access_token_str ?: ""
                 )
                 val message = if (bindStatus == 1) {
                     "成功设置第三方信息，该第三方信息已经绑定"

@@ -27,7 +27,7 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
-import com.tencent.qqmusic.openapisdk.business_common.Global
+import com.tencent.qqmusic.module.common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.PartnerLoginActivity
@@ -64,7 +64,7 @@ fun MinePage() {
 
     homeViewModel.userInfo.observe(lifecycleOwner, Observer {
         userInfoText.value = it?.let { userInfo ->
-            "昵称：${userInfo.nickName}"
+            "昵称：${userInfo.nickName} id:${OpenApiSDK.getLoginApi().getUserOpenId()}"
         } ?: ""
     })
 
@@ -268,6 +268,7 @@ fun MineSongList(viewModel: HomeViewModel) {
     val pages = mutableListOf(
         "自建歌单",
         "收藏歌单",
+        "收藏专辑",
         "最近播放单曲",
         "最近播放专辑",
         "最近播放歌单",
@@ -325,20 +326,25 @@ fun MineSongList(viewModel: HomeViewModel) {
                 FolderPage(viewModel.favFolders)
             }
             2 -> {
+                // 收藏专辑
+                viewModel.fetchCollectedAlbum()
+                AlbumPage(viewModel.favAlbums)
+            }
+            3 -> {
                 // 最近播放（单曲）
                 SongListPage(viewModel.pagingRecentSong())
             }
-            3 -> {
+            4 -> {
                 // 最近播放（专辑）
                 viewModel.fetchRecentAlbums()
                 AlbumPage(albums = viewModel.recentAlbums)
             }
-            4 -> {
+            5 -> {
                 // 最近播放（歌单）
                 viewModel.fetchRecentFolders()
                 FolderPage(folders = viewModel.recentFolders)
             }
-            5 -> {
+            6 -> {
                 // 最近播放（长音频）
                 viewModel.fetchRecentLongRadios()
                 AlbumPage(albums = viewModel.recentLongRadio)
@@ -409,7 +415,7 @@ fun FolderDialog(viewModel: HomeViewModel, showDialog: Boolean, setShowDialog: (
                     Log.d(TAG, "New Folder: $foldName")
                     if (foldName.isEmpty()) return@OutlinedButton
 
-                    Global.getOpenApi().createFolder(foldName) {
+                    com.tencent.qqmusic.openapisdk.business_common.Global.getOpenApi().createFolder(foldName) {
                         if (it.isSuccess()) {
                             Log.d(TAG, "succeeded to create folder: $foldName. ret: $it")
                             setShowDialog(false)

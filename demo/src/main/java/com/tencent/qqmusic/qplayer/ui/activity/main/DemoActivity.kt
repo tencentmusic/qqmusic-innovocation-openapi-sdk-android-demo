@@ -1,5 +1,7 @@
 package com.tencent.qqmusic.qplayer.ui.activity.main
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -28,6 +31,7 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
 
 class DemoActivity : ComponentActivity() {
 
@@ -148,6 +152,7 @@ fun BottomNavigationBar(navController: NavController) {
 
 @Composable
 fun MainScreen() {
+    val activity = LocalContext.current as Activity
     val navController = rememberNavController()
     val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
     loginExpiredDialog(showDialog = showDialog, setShowDialog = setShowDialog)
@@ -156,8 +161,16 @@ fun MainScreen() {
         setShowDialog(true)
     }
     Scaffold(
-//        topBar = { TopBar() },
-        bottomBar = { BottomNavigationBar(navController) }
+        bottomBar = { BottomNavigationBar(navController) },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    activity.startActivity(Intent(activity, PlayerActivity::class.java))
+                },
+                backgroundColor = Color.Blue
+            ) {
+                Text(text = "去播放页", color = Color.White)
+            }}
     ) {
         Box(modifier = Modifier.padding(it)) {
             Navigation(navController = navController)
