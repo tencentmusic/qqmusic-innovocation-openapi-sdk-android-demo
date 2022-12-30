@@ -3,7 +3,6 @@ package com.tencent.qqmusic.qplayer.ui.activity.player
 import android.app.Activity
 import android.content.Intent
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,19 +16,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberImagePainter
-import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
-import com.tencent.qqmusic.openapisdk.model.SearchType
-import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.qplayer.core.utils.pref.QQPlayerPreferencesNew
-import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import kotlin.concurrent.thread
+import kotlin.math.log10
 
 
 //
@@ -243,8 +241,16 @@ fun PlayerPage(observer: PlayerObserver) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 20.dp, end = 20.dp),
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(
+                text = OpenApiSDK.getPlayerApi().getDuration()?.let {
+                    "%${log10(it.toDouble()).toInt() + 1}.0f".format(observer.playPosition)
+                } ?: "",
+                fontFamily = FontFamily.Monospace
+            )
+
             Slider(
                 value = if (observer.seekPosition >= 0) observer.seekPosition else observer.playPosition,
                 valueRange = 0f..(OpenApiSDK.getPlayerApi().getDuration()?.toFloat() ?: 100f),
@@ -262,7 +268,13 @@ fun PlayerPage(observer: PlayerObserver) {
                             QLog.i(TAG, "PlayerPage seek fail res = $res, seekPosition = $seekPosition")
                         }
                     }
-                }
+                },
+                modifier = Modifier.weight(1f, true).padding(horizontal = 10.dp)
+            )
+
+            Text(
+                text = OpenApiSDK.getPlayerApi().getDuration().toString(),
+                fontFamily = FontFamily.Monospace
             )
         }
 

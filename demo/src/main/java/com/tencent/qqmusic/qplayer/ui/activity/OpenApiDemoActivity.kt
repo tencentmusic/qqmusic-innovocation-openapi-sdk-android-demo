@@ -930,14 +930,15 @@ class OpenApiDemoActivity : AppCompatActivity() {
             MethodNameWidthParam(
                 "createGreenOrder",
                 listOf("matchId", "充值账号", "充值时长，单位月"),
-                listOf(MustInitConfig.MATCH_ID, "", "2")
+                listOf(MustInitConfig.MATCH_ID, "17612107884285016458", "2")
             )
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "queryGreenOrder",
                 listOf("matchId", "订单id"),
-                listOf(MustInitConfig.MATCH_ID, "")
+                //listOf("OApi_Baidu", "185412__20211115")
+                listOf(MustInitConfig.MATCH_ID, "185412__20211115")
             )
         )
         methodNameWithParamList.add(

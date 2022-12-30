@@ -4,23 +4,30 @@ import android.app.Activity
 import android.content.Intent
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.Observer
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberImagePainter
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
+import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.PartnerLoginActivity
@@ -37,15 +44,22 @@ private const val TAG = "MinePage"
 fun MinePage() {
     val activity = LocalContext.current as Activity
 
-    val text = remember { mutableStateOf("") }
+    val loginText = remember { mutableStateOf("") }
     val userInfoText = remember { mutableStateOf("") }
     val lifecycleOwner = LocalLifecycleOwner.current
     val homeViewModel by lazy {
         HomeViewModel()
     }
 
+    var loginCommon = "未知"
+    var loginThird = "未知"
+    var vipTxt = "未知"
+    var tipFormat = "普通登录：%s，第三方账号登录：%s，VIP：%s"
+
     homeViewModel.loginState.observe(lifecycleOwner, Observer {
-        text.value = "普通登陆：${it.first}, 第三方账号登陆：${it.second}"
+        loginCommon = it.first.toString()
+        loginThird = it.second.toString()
+        loginText.value = String.format(tipFormat, loginCommon, loginThird, vipTxt)
     })
 
     homeViewModel.userInfo.observe(lifecycleOwner, Observer {
@@ -65,24 +79,24 @@ fun MinePage() {
                     OpenApiSDK.getOpenApi().fetchGreenMemberInformation {
                         if (it.isSuccess()) {
                             val vipInfo = it.data
-                            var appendString = ""
                             if (vipInfo != null) {
+                                if (vipInfo.greenVipFlag != 1 && vipInfo.superGreenVipFlag != 1 && vipInfo.hugeVipFlag != 1) {
+                                    vipTxt = "非vip"
+                                }
                                 if (vipInfo.greenVipFlag == 1) {
-                                    appendString += "\n 绿钻：${vipInfo.greenVipStartTime}-${vipInfo.greenVipEndTime}"
+                                    vipTxt = "绿钻：${vipInfo.greenVipStartTime}-${vipInfo.greenVipEndTime}"
                                 }
                                 if (vipInfo.superGreenVipFlag == 1) {
-                                    appendString += "\n 豪华绿钻：${vipInfo.superGreenVipStartTime}-${vipInfo.superGreenVipEndTime}"
+                                    vipTxt = "豪华绿钻：${vipInfo.superGreenVipStartTime}-${vipInfo.superGreenVipEndTime}"
                                 }
                                 if (vipInfo.hugeVipFlag == 1) {
-                                    appendString += "\n 超级会员：${vipInfo.hugeVipStartTime}-${vipInfo.hugeVipEndTime}"
+                                    vipTxt = "超级会员：${vipInfo.hugeVipStartTime}-${vipInfo.hugeVipEndTime}"
                                 }
-                            } else {
-                                appendString += "\n 非vip"
                             }
-                            text.value += appendString
                         } else {
-                            text.value += "\n 获取vip信息失败"
+                            vipTxt = "获取vip信息失败"
                         }
+                        loginText.value = String.format(tipFormat, loginCommon, loginThird, vipTxt)
                     }
                 }
             }
@@ -101,11 +115,11 @@ fun MinePage() {
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        loginStatusButton(activity, homeViewModel, text, userInfoText)
+        loginStatusButton(activity, homeViewModel, loginText, userInfoText)
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        LoginButton(activity, homeViewModel, text)
+        LoginButton(activity, homeViewModel, loginText)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -300,7 +314,10 @@ fun MineSongList(viewModel: HomeViewModel) {
             0 -> {
                 // 自建歌单
                 viewModel.fetchMineFolder()
-                FolderPage(viewModel.mineFolders)
+                Column(modifier = Modifier.fillMaxSize()) {
+                    NewFolder(viewModel)
+                    FolderPage(viewModel.mineFolders)
+                }
             }
             1 -> {
                 // 收藏歌单
@@ -325,6 +342,88 @@ fun MineSongList(viewModel: HomeViewModel) {
                 // 最近播放（长音频）
                 viewModel.fetchRecentLongRadios()
                 AlbumPage(albums = viewModel.recentLongRadio)
+            }
+        }
+    }
+}
+
+@Composable
+fun NewFolder(viewModel: HomeViewModel) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
+//        val showDialog = remember { mutableStateOf(false) }
+//        val showDialog by remember { mutableStateOf(true) }
+        FolderDialog(viewModel, showDialog = showDialog, setShowDialog = setShowDialog)
+        Image(
+            painter = rememberImagePainter(""),
+            contentDescription = null,
+            modifier = Modifier
+                .size(50.dp)
+                .padding(2.dp)
+                .clickable {
+                    setShowDialog(true)
+                }
+        )
+        Column(modifier = Modifier.clickable { setShowDialog(true) }) {
+            Text(text = "Click to Create New Folder")
+            Text(text = "点击创建新个人歌单")
+        }
+    }
+}
+
+@Composable
+fun FolderDialog(viewModel: HomeViewModel, showDialog: Boolean, setShowDialog: (Boolean) -> Unit) {
+    if (!showDialog) return
+
+    var foldName by rememberSaveable { mutableStateOf("") }
+    Dialog(onDismissRequest = {
+        Log.d(TAG, "FolderDialog Dismiss Request")
+        setShowDialog(false)
+    }) {
+        Column(
+            modifier = Modifier
+                .background(Color.White)
+                .padding(5.dp)
+        ) {
+            OutlinedTextField(
+                value = foldName,
+                onValueChange = {
+                    foldName = it
+                },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("输入歌单名字") }
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                OutlinedButton(onClick = { setShowDialog(false) }) {
+                    Text("取消")
+                }
+
+                OutlinedButton(onClick = {
+                    Log.d(TAG, "New Folder: $foldName")
+                    if (foldName.isEmpty()) return@OutlinedButton
+
+                    Global.getOpenApi().createFolder(foldName) {
+                        if (it.isSuccess()) {
+                            Log.d(TAG, "succeeded to create folder: $foldName. ret: $it")
+                            setShowDialog(false)
+                            HomeViewModel.clearRequestState()
+                            viewModel.fetchMineFolder()
+                            return@createFolder
+                        } else {
+                            Log.w(TAG, "failed to create folder: $foldName. ret: $it")
+                            foldName = ""
+                        }
+                    }
+                }) {
+                    Text("确定")
+                }
             }
         }
     }
