@@ -21,7 +21,7 @@ ext {
 
     sdk_version = project.hasProperty('edge_version') && "${edge_version}" != ""
             ? "${edge_version}"
-            : "1.5.0"
+            : "1.6.0"
 
     appVersionCode = 1
     appVersionName = '1.0.0.0'

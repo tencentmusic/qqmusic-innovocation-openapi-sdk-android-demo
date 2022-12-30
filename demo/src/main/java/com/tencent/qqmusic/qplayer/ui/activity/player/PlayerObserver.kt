@@ -117,6 +117,13 @@ object PlayerObserver {
                         }
                         PlayDefine.PlayState.MEDIAPLAYER_STATE_STARTED -> {
                             setPlayState("播放中")
+                            if (currentSong?.canPlayTry() == true && currentSong?.canPlayWhole() != true) {
+                                Toast.makeText(
+                                    UtilContext.getApp(),
+                                    "完整播放受限，将播放试听片段",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
                         PlayDefine.PlayState.MEDIAPLAYER_STATE_STOPPED -> {
                             //setPlayState("已停止")

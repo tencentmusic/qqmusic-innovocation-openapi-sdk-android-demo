@@ -14,12 +14,17 @@ import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListViewModel
 
 class PlayListActivity : ComponentActivity() {
 
+    companion object {
+        const val KEY_DISPLAY_ONLY = "KEY_DISPLAY_ONLY"
+    }
+
     private val vm: SongListViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val displayOnly = intent?.getBooleanExtra(KEY_DISPLAY_ONLY, true) ?: true
         setContent {
-            SongListScreen(vm.pagingPlayList(), true)
+            SongListScreen(vm.pagingPlayList(), displayOnly)
         }
     }
 

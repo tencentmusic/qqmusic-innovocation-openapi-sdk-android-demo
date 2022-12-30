@@ -82,7 +82,7 @@ class App : Application() {
                 }
 
                 override fun needRequestFocus(): Boolean {
-                    return false
+                    return true
                 }
 
                 override fun isAutoPlayNext(): Boolean {
@@ -90,7 +90,7 @@ class App : Application() {
                 }
             })
 
-            MockUtils.testFocus(context)
+//            MockUtils.testFocus(context)
 
             //OpenApiSDK.getPlayerApi().setEnableMediaButton(false)
             OpenApiSDK.getPlayerApi().setEnableBluetoothListener(false)

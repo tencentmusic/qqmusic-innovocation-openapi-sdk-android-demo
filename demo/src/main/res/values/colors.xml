@@ -7,8 +7,25 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="gray">#FF666666</color>
+    <color name="lightGray">#999999</color>
     <color name="white">#FFFFFFFF</color>
     <color name="colorPrimary">#FFFFFFFF</color>
     <color name="colorPrimaryDark">#FFFFFFFF</color>
     <color name="colorAccent">#D81B60</color>
+    <!-- 播放器界面相关颜色 -->
+    <!--
+    <color name="playInfo_song_name_text">#ffffff</color>
+	<color name="playInfo_singer_text">#ffffff</color>
+    -->
+    <color name="lyric_text_color">#80FFFFFF</color>
+    <color name="lyric_interim_text_color">#FFffffff</color>
+    <color name="lyric_hilight_text_color">#FF22d59c</color> <!-- 6.0的绿色全部换成这个颜色 -->
+    <color name="lyric_hilight_text_color_new">#FFFFFFFF</color>
+    <color name="player_list_clicked_color">#4cffffff</color>
+
+    <!-- 歌词设置 -->
+    <color name="lyric_panel_whole_transparent">#b4000000</color>
+    <color name="lyric_panel_divider">#4cffffff</color>
+
+
 </resources>

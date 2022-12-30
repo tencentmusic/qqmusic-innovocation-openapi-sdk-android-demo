@@ -46,9 +46,11 @@
 
         <activity android:name=".ui.activity.songlist.SongListActivity" />
         <activity android:name=".ui.activity.player.PlayListActivity" />
+        <activity android:name=".ui.activity.player.SoundEffectActivity" />
         <activity android:name=".ui.activity.player.PlayerTestActivity"/>
         <activity android:name=".ui.activity.PartnerLoginActivity"/>
         <activity android:name=".ui.activity.songlist.AlbumActivity"/>
+        <activity android:name=".ui.activity.lyric.LyricActivity"/>
 
         <activity
             android:name="com.tencent.qqmusicrecognition.wxapi.WXEntryActivity"

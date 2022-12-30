@@ -8,14 +8,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.AlertDialog
-import androidx.compose.material.Button
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -45,8 +43,18 @@ private const val TAG = "SongListPage"
 
 @Composable
 fun SongListScreen(flow: Flow<PagingData<SongInfo>>, displayOnly: Boolean = false) {
+    val activity = LocalContext.current as Activity
     Scaffold(
-        topBar = { TopBar() }
+        topBar = { TopBar() },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                gotoPlayerActivity(activity)
+                },
+                backgroundColor = Color.Blue
+            ) {
+                Text(text = "去播放页", color = Color.White)
+            }}
     ) {
         SongListPage(flow, displayOnly = displayOnly)
     }
@@ -127,6 +135,7 @@ fun SongListPage(flow: Flow<PagingData<SongInfo>>?, displayOnly: Boolean = false
                     )
                 }
             }
+
             DialogDemo(showDialog, callback = {
                 when (it) {
                     "播放" -> {
@@ -146,27 +155,33 @@ fun SongListPage(flow: Flow<PagingData<SongInfo>>?, displayOnly: Boolean = false
                                 }
                                 else -> {
                                     delay(500L)
-                                    activity.startActivity(
-                                        Intent(
-                                            activity,
-                                            PlayerActivity::class.java
-                                        )
-                                    )
+                                    gotoPlayerActivity(activity)
                                 }
                             }
                         }
                     }
                     "添加到下一首播放" -> {
-//                        OpenApiSDK.getPlayerApi().addToNext(songInfo = song)
-                        OpenApiSDK.getPlayerApi().setPlayList(listOf(song))
+                        OpenApiSDK.getPlayerApi().addToNext(songInfo = song)
                     }
                     else -> {
 
                     }
                 }
-            }, setShowDialog = setShowDialog);
+            }, setShowDialog = setShowDialog)
         }
     }
+}
+
+private fun gotoPlayerActivity(activity: Activity) {
+    activity.startActivity(
+        Intent(
+            activity,
+            PlayerActivity::class.java
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+    )
 }
 
 @Composable

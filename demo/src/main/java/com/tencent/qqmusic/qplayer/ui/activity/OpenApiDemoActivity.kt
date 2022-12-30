@@ -2,7 +2,6 @@ package com.tencent.qqmusic.qplayer.ui.activity
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.provider.Settings
 import android.text.Editable
 import android.text.SpannableStringBuilder
 import android.text.TextWatcher
@@ -18,7 +17,6 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApi
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
-import com.tencent.qqmusic.openapisdk.model.SearchResult
 import com.tencent.qqmusic.openapisdk.model.VipInfo
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import java.util.concurrent.CountDownLatch
@@ -908,6 +906,21 @@ class OpenApiDemoActivity : AppCompatActivity() {
             val categoryId: Int? = paramStr4?.toIntOrNull()
             openApi.fetchGetSongListSquare(start, size, order, categoryId, callback = commonCallback)
         }
+
+        methodNameToBlock["fetchCollectedAlbum"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            val start: Int = paramStr1?.toIntOrNull() ?: 0
+            val size: Int = paramStr2?.toIntOrNull() ?: 0
+            openApi.fetchCollectedAlbum(start, size, commonCallback)
+        }
+
+        methodNameToBlock["collectAlbum"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            val isCollect = (paramStr1?.toIntOrNull() ?: 1) > 0
+            openApi.collectAlbum(isCollect, paramStr2?.edtParamToList() ?: emptyList(), commonCallback)
+        }
     }
 
     private fun initMethodNameList() {
@@ -930,14 +943,15 @@ class OpenApiDemoActivity : AppCompatActivity() {
             MethodNameWidthParam(
                 "createGreenOrder",
                 listOf("matchId", "充值账号", "充值时长，单位月"),
-                listOf(MustInitConfig.MATCH_ID, "", "2")
+                listOf(MustInitConfig.MATCH_ID, "17612107884285016458", "2")
             )
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "queryGreenOrder",
                 listOf("matchId", "订单id"),
-                listOf(MustInitConfig.MATCH_ID, "")
+                //listOf("OApi_Baidu", "185412__20211115")
+                listOf(MustInitConfig.MATCH_ID, "185412__20211115")
             )
         )
         methodNameWithParamList.add(
@@ -1264,6 +1278,16 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 listOf("0", "10", "2", "")
             )
         )
+        methodNameWithParamList.add(MethodNameWidthParam(
+            "fetchCollectedAlbum",
+            listOf("起始偏移量", "每页返回数量"),
+            listOf("0", "20")
+        ))
+        methodNameWithParamList.add(MethodNameWidthParam(
+            "collectAlbum",
+            listOf("收藏(0：取消收藏，1：收藏)", "专辑id列表"),
+            listOf("1", null)
+        ))
         methodNameWithParamList.sortBy {
             it.name
         }

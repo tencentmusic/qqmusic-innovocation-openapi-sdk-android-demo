@@ -10,12 +10,12 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
-import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlin.concurrent.thread
 
 // 
@@ -85,7 +85,7 @@ class PlayerTestActivity : Activity() {
             val list = OpenApiSDK.getPlayerApi().getPlayList()
             Log.d(TAG, "before size:${list.size}")
             if (list.size < 2) {
-                ToastUtils.showShort("请保持列表数大于1个")
+                UiUtils.showToast("请保持列表数大于1个")
                 return@setOnClickListener
             }
             val newList = ArrayList(list)
@@ -95,7 +95,7 @@ class PlayerTestActivity : Activity() {
                 Handler(Looper.getMainLooper()).postDelayed({
                     val newSize = OpenApiSDK.getPlayerApi().getPlayList().size
                     Log.d(TAG, "after size:${newSize}")
-                    ToastUtils.showShort("列表从${list.size} -> $newSize")
+                    UiUtils.showToast("列表从${list.size} -> $newSize")
                 }, 1000)
             }
         }

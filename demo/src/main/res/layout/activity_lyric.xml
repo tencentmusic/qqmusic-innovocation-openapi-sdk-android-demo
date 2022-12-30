@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/lightGray"
+    tools:context=".ui.activity.MainActivity">
+
+    <!-- 如果这里不设置clipChildren = true, 歌词不会截断 -->
+    <FrameLayout
+        android:id="@+id/qmlyric_view_layout"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/dp800"
+        android:layout_marginTop="0dp"
+        android:layout_marginRight="0dp"
+        android:clipChildren="true"
+        android:clipToPadding="true"
+        android:background="@color/lightGray"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.tencent.qqmusic.openapisdk.core.view.lyric.QMLyricView
+            android:id="@+id/scroll_lyric"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clickable="false"
+            android:descendantFocusability="blocksDescendants"
+            android:fadingEdgeLength="@dimen/tv_player_activity_lyric_top"
+            android:fillViewport="true"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:requiresFadingEdge="vertical"
+            app:hiLightColor="@color/lyric_hilight_text_color"
+            app:hiLightSize="@dimen/albummode_lyric_highlight_text_size"
+            app:hiLightThinColor="@color/lyric_interim_text_color"
+            app:hiLightmarginLine="@dimen/tv_player_activity_lyric_margin_light"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:lineSpace="@dimen/albummode_lyric_line_spacing"
+            app:marginLine="@dimen/albummode_lyric_line_spacing"
+            app:noLyricMarginBottom="0dip"
+            app:position="center"
+            app:textSize="@dimen/albummode_lyric_text_size"
+            app:textThinColor="@color/lyric_text_color"
+            app:transHiLightSize="@dimen/tv_search_search_flow_layout_word_size"
+            app:transLineMarginLine="@dimen/tv_player_activity_lyric_trans_big_margin"
+            app:transMarginLine="@dimen/tv_player_activity_lyric_trans_margin"
+            app:transTextSize="@dimen/tv_search_search_flow_layout_word_size" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textSize="20sp"
+            android:textColor="@color/white"
+            android:visibility="gone"
+            android:id="@+id/loading_lyric_status"/>
+
+    </FrameLayout>
+
+    <Button
+        android:id="@+id/switch_lyric_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right"
+        android:layout_marginRight="20dp"/>
+
+
+    <com.tencent.qqmusic.openapisdk.core.view.lyric.TwoLineLyricLayout
+        android:id="@+id/twoline_lyric_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_constraintTop_toBottomOf="@+id/qmlyric_view_layout"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:hiLightColor="@color/lyric_hilight_text_color"
+        app:hiLightSize="@dimen/albummode_lyric_highlight_text_size"
+        app:hiLightThinColor="@color/lyric_interim_text_color"
+        app:textThinColor="@color/lyric_text_color"
+        app:transHiLightSize="@dimen/tv_search_search_flow_layout_word_size"
+        app:transLineMarginLine="@dimen/tv_player_activity_lyric_trans_big_margin"
+        app:transMarginLine="@dimen/tv_player_activity_lyric_trans_margin"
+        app:transTextSize="@dimen/tv_search_search_flow_layout_word_size"
+        app:textSize="@dimen/albummode_lyric_text_size"
+        android:background="@color/gray"/>
+
+
+
+</LinearLayout>
