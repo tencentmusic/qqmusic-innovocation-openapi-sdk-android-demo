@@ -49,7 +49,7 @@ fun HomePage(homeViewModel: HomeViewModel) {
 @Composable
 fun homePageTabs(homeViewModel: HomeViewModel){
     val pages = mutableListOf(
-        "分类歌单",
+        "分类歌单","排行榜",
         "专区"
     )
 
@@ -90,6 +90,9 @@ fun homePageTabs(homeViewModel: HomeViewModel){
                 categoryFoldersPage(homeViewModel)
             }
             1 -> {
+                rankPage(homeViewModel)
+            }
+            2 -> {
                 AreaSectionPage(homeViewModel)
             }
         }

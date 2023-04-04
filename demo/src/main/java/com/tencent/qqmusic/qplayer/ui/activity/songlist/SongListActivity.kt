@@ -13,6 +13,7 @@ import coil.annotation.ExperimentalCoilApi
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -27,6 +28,9 @@ class SongListActivity : ComponentActivity() {
         const val KEY_FOLDER_ID = "folder_id"
         const val KEY_ALBUM_ID = "album_id"
         const val KEY_SONG = "song_id"
+        const val KEY_RANK_ID = "rank_id"
+
+        private const val TAG = "SongListActivity"
     }
 
     private val folderId by lazy {
@@ -41,6 +45,10 @@ class SongListActivity : ComponentActivity() {
         intent.getLongExtra(KEY_SONG, 0)
     }
 
+    private val rankId by lazy {
+        intent.getIntExtra(KEY_RANK_ID, 0)
+    }
+
     private val songListViewModel: SongListViewModel by viewModels()
 
     @OptIn(ExperimentalCoilApi::class)
@@ -49,12 +57,14 @@ class SongListActivity : ComponentActivity() {
         setContent {
             if (!folderId.isNullOrEmpty()) {
                 SongListScreen(songListViewModel.pagingFolderSongs(folderId))
-            }
-            else if (!albumId.isNullOrEmpty()) {
+            } else if (!albumId.isNullOrEmpty()) {
                 SongListScreen(songListViewModel.pagingAlbumSongs(albumId))
-            }
-            else if (songId != 0L) {
+            } else if (songId != 0L) {
                 SongListScreen(songListViewModel.pagingSongIds(listOf(songId)))
+            } else if (rankId != 0) {
+                SongListScreen(songListViewModel.pagingRankSongList(rankId))
+            } else {
+                QLog.e(TAG, "err prams")
             }
         }
     }

@@ -47,7 +47,12 @@ class FolderActivity : ComponentActivity() {
             }
         }
 
-        folderViewModel.fetchFolderByCategory(categoryIds)
-        folderViewModel.fetchFolderByFolderId(folderId)
+        if (categoryIds.isNotEmpty()) {
+            folderViewModel.fetchFolderByCategory(categoryIds)
+        }
+        if (folderId.isNotEmpty()) {
+            folderViewModel.fetchFolderByFolderId(folderId)
+        }
+
     }
 }

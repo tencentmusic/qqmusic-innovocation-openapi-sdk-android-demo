@@ -19,6 +19,8 @@ import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.model.VipInfo
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -32,6 +34,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
             {
                 OpenApiSDK.getOpenApi().fetchGreenMemberInformation(callback = it)
             }
+        private var hasRunConcurrent = false
     }
 
     private val methodNameToBlock = mutableMapOf<String, (MethodNameWidthParam) -> Unit>()
@@ -216,17 +219,22 @@ class OpenApiDemoActivity : AppCompatActivity() {
         }
 
         findViewById<View>(R.id.btn_test2).setOnClickListener {
-            repeat(1000) {
-                thread {
-                    val resp = OpenApiSDK.getOpenApi().blockingGet<VipInfo>(
-                        testMultiBlockingGetBlock)
-                    if (!resp.isSuccess()) {
-                        QLog.e(TAG, "并发请求失败, resp=${resp}")
-                    } else {
-                        QLog.i(TAG, "并发请求成功")
-                    }
-                }
-            }
+//            // 由于monkey多次执行，这里会爆。每次启动只运行一次
+//            if (hasRunConcurrent) {
+//                return@setOnClickListener
+//            }
+//            hasRunConcurrent = true
+//            repeat(100) {
+//                GlobalScope.launch {
+//                    val resp = OpenApiSDK.getOpenApi().blockingGet<VipInfo>(
+//                        testMultiBlockingGetBlock)
+//                    if (!resp.isSuccess()) {
+//                        QLog.e(TAG, "并发请求失败, resp=${resp}")
+//                    } else {
+//                        QLog.i(TAG, "并发请求成功")
+//                    }
+//                }
+//            }
         }
 
         findViewById<View>(R.id.btn_test).setOnClickListener {
@@ -463,6 +471,15 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 commonCallback
             )
         }
+        methodNameToBlock["fetchAllRankGroup"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            // 测试trade_info: 123456781234567812345673__20210924
+            openApi.fetchAllRankGroup(
+                commonCallback
+            )
+        }
+
         methodNameToBlock["searchAlbum"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
@@ -1097,6 +1114,11 @@ class OpenApiDemoActivity : AppCompatActivity() {
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "fetchCategoryOfRank", listOf(), listOf()
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchAllRankGroup", listOf(), listOf()
             )
         )
         methodNameWithParamList.add(

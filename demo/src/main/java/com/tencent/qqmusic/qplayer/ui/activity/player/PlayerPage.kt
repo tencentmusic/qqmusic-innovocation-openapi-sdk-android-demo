@@ -123,7 +123,14 @@ fun PlayerPage(observer: PlayerObserver) {
         )
         Text(
             text = currSong?.singerName ?: "未知",
-            fontSize = 20.sp
+            fontSize = 20.sp,
+            modifier = Modifier.clickable {
+                currSong?.singerId?.let {
+                    OpenApiSDK.getOpenApi().fetchSingerWiki(it) {
+                        QLog.i(TAG, "singerWiki: ${it.data}")
+                    }
+                }
+            }
         )
 
         Row(
@@ -179,6 +186,9 @@ fun PlayerPage(observer: PlayerObserver) {
                 }
                 PlayerEnums.Quality.HIRES -> {
                     R.drawable.ic_hires
+                }
+                PlayerEnums.Quality.EXCELLENT -> {
+                    R.drawable.action_icon_excellent_quality
                 }
                 else -> {
                     R.drawable.ic_lq
@@ -293,7 +303,9 @@ fun PlayerPage(observer: PlayerObserver) {
                         }
                     }
                 },
-                modifier = Modifier.weight(1f, true).padding(horizontal = 10.dp)
+                modifier = Modifier
+                    .weight(1f, true)
+                    .padding(horizontal = 10.dp)
             )
 
             Text(
@@ -370,5 +382,4 @@ fun PlayerPage(observer: PlayerObserver) {
         Text(text = playStateText, modifier = Modifier.padding(top = 10.dp))
 
     }
-
 }

@@ -18,8 +18,10 @@ object QualityAlert {
             PlayerEnums.Quality.HQ,
             PlayerEnums.Quality.SQ,
             PlayerEnums.Quality.DOLBY,
-            PlayerEnums.Quality.HIRES
+            PlayerEnums.Quality.HIRES,
+            PlayerEnums.Quality.EXCELLENT
         )
+
     val qualityOrderString =
         arrayOf(
             "LQ",
@@ -27,8 +29,10 @@ object QualityAlert {
             "HQ",
             "SQ",
             "DOLBY",
-            "HIRES"
+            "HIRES",
+            "EXCELLENT"
         )
+
     fun showQualityAlert(activity: Activity, setBlock: (Int)->Int, refresh: (Int)->Unit) {
         val curSong = Global.getPlayerModuleApi().getCurrentSongInfo()
         val stringArray = qualityOrderString.map {
@@ -51,11 +55,15 @@ object QualityAlert {
                 "HIRES" -> {
                     it + UiUtils.getFormatSize(curSong?.getSizeHiRes())
                 }
+                "EXCELLENT" -> {
+                    "臻品音质2.0"
+                }
                 else -> {
                     it
                 }
             }
         }.toTypedArray()
+
         androidx.appcompat.app.AlertDialog.Builder(activity)
             .setItems(stringArray) { _, which ->
                 thread {

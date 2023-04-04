@@ -38,8 +38,8 @@ object PlayerObserver {
 
 
     init {
-        MusicPlayerHelper.getInstance().registerProgressChangedInterface {
-            playPosition = OpenApiSDK.getPlayerApi().getCurrentPlayTime()?.toFloat() ?: 0f
+        MusicPlayerHelper.getInstance().registerProgressChangedInterface { curTime: Long, totalTime: Long ->
+            playPosition = curTime.toFloat()
             if (seekPosition in 0.0..playPosition.toDouble()) {
                 seekPosition = -1f
             }
@@ -85,7 +85,10 @@ object PlayerObserver {
                         if (currentPlaySongQuality != null && (currentPlaySongQuality > 0)) {
                             mCurrentQuality = currentPlaySongQuality
                         }
-                        resetPlayProgress()
+                        Log.d(TAG, "curTime: ${OpenApiSDK.getPlayerApi().getCurrentPlayTime()}, total: ${OpenApiSDK.getPlayerApi().getDuration()}")
+                        if (OpenApiSDK.getPlayerApi().getCurrentPlayTime() == OpenApiSDK.getPlayerApi().getDuration()) {
+                            resetPlayProgress()
+                        }
                     }
                 }
                 PlayerEvent.Event.API_EVENT_SONG_PLAY_ERROR -> {

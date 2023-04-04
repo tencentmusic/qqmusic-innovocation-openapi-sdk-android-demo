@@ -40,4 +40,8 @@ class SongListViewModel : ViewModel() {
     fun pagingSongListSongs(songList: List<SongInfo>) = Pager(PagingConfig(pageSize = 50)) {
         SongListPagingSource(songList, emptyList())
     }.flow
+
+    fun pagingRankSongList(rankId: Int) = Pager(PagingConfig(pageSize = 20)) {
+        RankSongPagingSource(rankId)
+    }.flow
 }
