@@ -27,6 +27,7 @@ import kotlin.math.log
 class HomeViewModel : ViewModel() {
 
     var categories: List<Category> by mutableStateOf(emptyList())
+    var rankGroups: List<RankGroup> by mutableStateOf(emptyList())
 
     var mineFolders: List<Folder> by mutableStateOf(emptyList())
     var favFolders: List<Folder> by mutableStateOf(emptyList())
@@ -71,6 +72,21 @@ class HomeViewModel : ViewModel() {
                 if (it.isSuccess()) {
                     categories = it.data ?: emptyList()
                 } else {
+                }
+            }
+        }
+    }
+
+    fun fetchRankGroup() {
+        if (rankGroups.isEmpty()) {
+            QLog.i(TAG, "fetchRankGroup")
+            viewModelScope.launch(Dispatchers.IO) {
+                OpenApiSDK.getOpenApi().fetchAllRankGroup {
+                    if (it.isSuccess()) {
+                        rankGroups = it.data ?: emptyList()
+                    } else {
+                        QLog.e(TAG, "fetchRankGroup failed:$it")
+                    }
                 }
             }
         }

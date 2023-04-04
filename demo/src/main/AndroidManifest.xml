@@ -59,6 +59,9 @@
             android:launchMode="singleTask"
             android:taskAffinity="net.sourceforge.simcpux"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name=".ui.activity.main.PlayProcessReportTestActivity"
+            android:process=":QQPlayerProcess" />
     </application>
 
 </manifest>

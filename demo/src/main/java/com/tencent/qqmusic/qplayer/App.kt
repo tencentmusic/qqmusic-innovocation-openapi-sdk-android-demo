@@ -33,8 +33,7 @@ class App : Application() {
         private const val TAG = "App"
 
         fun init(context: Context) {
-
-            MustInitConfig.check()
+            Log.i(TAG, "init Application")
             OpenApiSDK.init(
                 context.applicationContext,
                 MustInitConfig.APP_ID,

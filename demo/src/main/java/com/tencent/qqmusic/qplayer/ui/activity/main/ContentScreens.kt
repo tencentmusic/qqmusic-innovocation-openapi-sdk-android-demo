@@ -8,6 +8,7 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import android.media.MediaCodecList
 import android.net.Uri
+import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -34,7 +35,7 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
-import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.report.report.LaunchReport
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.OpenApiDemoActivity
 import com.tencent.qqmusic.qplayer.ui.activity.SongCacheDemoActivity
@@ -112,7 +113,6 @@ fun MineScreen() {
 fun OtherScreen() {
     val activity = LocalContext.current as Activity
     var text by remember { mutableStateOf("当前为${if (OpenApiSDK.isNewProtocol) "新协议" else "旧协议"}") }
-
     val padding = 5.dp
     Column(
         modifier = Modifier
@@ -143,12 +143,12 @@ fun OtherScreen() {
                 1020,
                 AudioFormat.ENCODING_PCM_16BIT
             )
-            QLog.d("OtherScreen", "minBufSize：$minBufSize")
+            Log.d("OtherScreen", "minBufSize：$minBufSize")
             // Check whether there is an in-device Dolby AC-4 IMS decoder.z
             val mediaCodecList = MediaCodecList(MediaCodecList.ALL_CODECS)
             val mediaCodecInfos = mediaCodecList.codecInfos
             mediaCodecInfos?.forEach {
-                QLog.d("OtherScreen", "codeInfo:${it.name}, isEncoder:${it.isEncoder} support:${it.supportedTypes?.contentToString()}")
+                Log.d("OtherScreen", "codeInfo:${it.name}, isEncoder:${it.isEncoder} support:${it.supportedTypes?.contentToString()}")
             }
             if (OpenApiSDK.getPlayerApi().supportDolbyDecoder()) {
                 Toast.makeText(UtilContext.getApp(),"支持杜比",Toast.LENGTH_SHORT).show()
@@ -173,12 +173,6 @@ fun OtherScreen() {
             }
         }, modifier = Modifier.padding(padding)) {
             Text(text = "日志上传")
-        }
-
-        Button(onClick = {
-            throw IllegalStateException("test crash")
-        }, modifier = Modifier.padding(padding)) {
-            Text(text = "立即Crash！")
         }
 
         Button(onClick = {

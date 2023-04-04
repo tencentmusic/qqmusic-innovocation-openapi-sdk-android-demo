@@ -27,8 +27,9 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
-import com.tencent.qqmusic.module.common.Global
+import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.PartnerLoginActivity
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderPage
@@ -54,12 +55,13 @@ fun MinePage() {
     var loginCommon = "未知"
     var loginThird = "未知"
     var vipTxt = "未知"
-    var tipFormat = "普通登录：%s，第三方账号登录：%s，VIP：%s"
+    var vipLevel = "未知"
+    val tipFormat = "普通登录：%s，第三方账号登录：%s\nVIP：%s\n会员等级：%s"
 
     homeViewModel.loginState.observe(lifecycleOwner, Observer {
         loginCommon = it.first.toString()
         loginThird = it.second.toString()
-        loginText.value = String.format(tipFormat, loginCommon, loginThird, vipTxt)
+        loginText.value = String.format(tipFormat, loginCommon, loginThird, vipTxt, vipLevel)
     })
 
     homeViewModel.userInfo.observe(lifecycleOwner, Observer {
@@ -92,11 +94,12 @@ fun MinePage() {
                                 if (vipInfo.hugeVipFlag == 1) {
                                     vipTxt = "超级会员：${vipInfo.hugeVipStartTime}-${vipInfo.hugeVipEndTime}"
                                 }
+                                vipLevel = vipInfo.vipLevel.toString() + "级"
                             }
                         } else {
                             vipTxt = "获取vip信息失败"
                         }
-                        loginText.value = String.format(tipFormat, loginCommon, loginThird, vipTxt)
+                        loginText.value = String.format(tipFormat, loginCommon, loginThird, vipTxt, vipLevel)
                     }
                 }
             }
@@ -146,7 +149,7 @@ fun loginStatusButton(activity: Activity, vm: HomeViewModel, text: MutableState<
             if (isLogin) {
                 Button(onClick = {
                     vm.logout()
-
+                    Global.getPlayerModuleApi().setPreferSongQuality(Quality.HQ)
                     HomeViewModel.clearRequestState()
                 }, modifier = Modifier.padding(8.dp, 0.dp, 0.dp, 0.dp)) {
                     Text(text = "退出登录")

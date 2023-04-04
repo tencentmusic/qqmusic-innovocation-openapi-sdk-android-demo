@@ -31,5 +31,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        findViewById<TextView>(R.id.tv).setOnClickListener {
+
+        }
     }
 }

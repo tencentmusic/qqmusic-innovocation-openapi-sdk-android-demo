@@ -1,6 +1,8 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -10,23 +12,30 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.lifecycle.lifecycleScope
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.player.PlayCallback
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
+import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
+import kotlinx.coroutines.launch
+import java.io.File
 import kotlin.concurrent.thread
 
 // 
 // Created by clydeazhang on 2022/3/10 10:23 上午.
 // Copyright (c) 2022 Tencent. All rights reserved.
 // 
-class PlayerTestActivity : Activity() {
+class PlayerTestActivity : ComponentActivity() {
     companion object {
         private const val TAG = "@@@PlayerTestActivity"
     }
 
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(
