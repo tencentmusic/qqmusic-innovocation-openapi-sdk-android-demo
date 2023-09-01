@@ -1,80 +1,102 @@
-package com.tencent.qqmusic.qplayer.ui.activity.main
+package com.tencent.qqmusic.qplayer.ui.activity.home
 
 import android.util.Log
+import androidx.activity.*
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.GridCells
+import androidx.compose.foundation.lazy.LazyVerticalGrid
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import com.google.accompanist.pager.ExperimentalPagerApi
-import com.google.accompanist.pager.HorizontalPager
-import com.google.accompanist.pager.pagerTabIndicatorOffset
-import com.google.accompanist.pager.rememberPagerState
-import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import androidx.compose.ui.unit.dp
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import com.tencent.qqmusic.qplayer.ui.activity.main.DolbySectionPage
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.FreeSongPagingSource
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPage
 
 private const val TAG = "AreaSectionPage"
 
 @Composable
 fun AreaSectionPage(homeViewModel: HomeViewModel) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        areaSectionTabs(homeViewModel)
-    }
+    areaScreen(homeViewModel)
 }
 
-@OptIn(ExperimentalPagerApi::class)
+var areaIndex = mutableStateOf(-1)
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun areaSectionTabs(homeViewModel: HomeViewModel){
+fun areaScreen(homeViewModel: HomeViewModel) {
+
+    val countState = rememberUpdatedState(areaIndex.value)
+
     val pages = mutableListOf(
         "Hires专区",
-        "Dolby专区"
+        "Dolby专区",
+        "免登录专区",
+        "场景歌单",
+        "新碟"
     )
-    val pagerState = rememberPagerState()
-    val composableScope = rememberCoroutineScope()
 
-    ScrollableTabRow(
-        selectedTabIndex = pagerState.currentPage,
-        indicator = { tabPositions ->
-            TabRowDefaults.Indicator(
-                Modifier.pagerTabIndicatorOffset(pagerState, tabPositions)
-            )
+    val callback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            Log.d(TAG, "handleOnBackPressed: ")
+            areaIndex.value = -1
+            remove()
         }
-    ) {
-        pages.forEachIndexed { index, title ->
-            Tab(
-                text = { Text(text = title) },
-                selected = pagerState.currentPage == index,
-                onClick = {
-                    composableScope.launch(Dispatchers.Main) {
-                        pagerState.scrollToPage(index)
+    }
+    val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+    DisposableEffect(key1 = dispatcher) {
+        onDispose {
+            areaIndex.value = -1
+            callback.remove() // 移除回调
+        }
+    }
+
+    when (areaIndex.value) {
+        -1 -> {
+            LazyVerticalGrid(
+                modifier = Modifier.fillMaxSize(),
+                cells = GridCells.Fixed(2),
+            ) {
+                items(pages) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier
+                        .height(100.dp)
+                        .clickable {
+                            areaIndex.value = pages.indexOf(it)
+                            dispatcher?.addCallback(callback)
+                        }) {
+                        Text(text = it)
                     }
-                },
-                selectedContentColor = Color.White,
-                unselectedContentColor = Color.Gray
-            )
-        }
-    }
-    HorizontalPager(
-        count = pages.size,
-        state = pagerState
-    ) {
-        val index = pagerState.currentPage
-        Log.i(TAG, "AreaSectionPage: current index $index")
-        when (index) {
-            0 -> {
-                HiresSectionPage(homeViewModel)
-            }
-            1 -> {
-                DolbySectionPage(homeViewModel)
+                }
             }
         }
-    }
-}
 
+        0 -> {
+            HiresSectionPage(homeViewModel)
+        }
+
+        1 -> {
+            DolbySectionPage(homeViewModel)
+        }
+
+        2 -> {
+            SongListPage(Pager(PagingConfig(pageSize = 20)) {
+                FreeSongPagingSource()
+            }.flow)
+        }
+        3 -> {
+            categoryFoldersPage(homeViewModel = homeViewModel, true)
+        }
+        4 -> {
+            NewAlbumPage(homeViewModel)
+        }
+    }
+
+
+}

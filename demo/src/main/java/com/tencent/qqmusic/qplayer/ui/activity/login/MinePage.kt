@@ -34,8 +34,12 @@ import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.PartnerLoginActivity
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderPage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
+import com.tencent.qqmusic.qplayer.ui.activity.person.MinePageNew
+import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPage
+import com.tencent.qqmusic.qplayer.utils.UiUtils
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -46,29 +50,10 @@ fun MinePage() {
     val activity = LocalContext.current as Activity
 
     val loginText = remember { mutableStateOf("") }
-    val userInfoText = remember { mutableStateOf("") }
     val lifecycleOwner = LocalLifecycleOwner.current
     val homeViewModel by lazy {
         HomeViewModel()
     }
-
-    var loginCommon = "未知"
-    var loginThird = "未知"
-    var vipTxt = "未知"
-    var vipLevel = "未知"
-    val tipFormat = "普通登录：%s，第三方账号登录：%s\nVIP：%s\n会员等级：%s"
-
-    homeViewModel.loginState.observe(lifecycleOwner, Observer {
-        loginCommon = it.first.toString()
-        loginThird = it.second.toString()
-        loginText.value = String.format(tipFormat, loginCommon, loginThird, vipTxt, vipLevel)
-    })
-
-    homeViewModel.userInfo.observe(lifecycleOwner, Observer {
-        userInfoText.value = it?.let { userInfo ->
-            "昵称：${userInfo.nickName} id:${OpenApiSDK.getLoginApi().getUserOpenId()}"
-        } ?: ""
-    })
 
     DisposableEffect(lifecycleOwner) {
         // Create an observer that triggers our remembered callbacks
@@ -77,30 +62,6 @@ fun MinePage() {
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
                     homeViewModel.fetchUserLoginStatus()
-
-                    OpenApiSDK.getOpenApi().fetchGreenMemberInformation {
-                        if (it.isSuccess()) {
-                            val vipInfo = it.data
-                            if (vipInfo != null) {
-                                if (vipInfo.greenVipFlag != 1 && vipInfo.superGreenVipFlag != 1 && vipInfo.hugeVipFlag != 1) {
-                                    vipTxt = "非vip"
-                                }
-                                if (vipInfo.greenVipFlag == 1) {
-                                    vipTxt = "绿钻：${vipInfo.greenVipStartTime}-${vipInfo.greenVipEndTime}"
-                                }
-                                if (vipInfo.superGreenVipFlag == 1) {
-                                    vipTxt = "豪华绿钻：${vipInfo.superGreenVipStartTime}-${vipInfo.superGreenVipEndTime}"
-                                }
-                                if (vipInfo.hugeVipFlag == 1) {
-                                    vipTxt = "超级会员：${vipInfo.hugeVipStartTime}-${vipInfo.hugeVipEndTime}"
-                                }
-                                vipLevel = vipInfo.vipLevel.toString() + "级"
-                            }
-                        } else {
-                            vipTxt = "获取vip信息失败"
-                        }
-                        loginText.value = String.format(tipFormat, loginCommon, loginThird, vipTxt, vipLevel)
-                    }
                 }
             }
         }
@@ -118,8 +79,7 @@ fun MinePage() {
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        loginStatusButton(activity, homeViewModel, loginText, userInfoText)
-
+        MinePageNew()
         Spacer(modifier = Modifier.height(16.dp))
 
         LoginButton(activity, homeViewModel, loginText)
@@ -131,39 +91,7 @@ fun MinePage() {
 }
 
 @Composable
-fun loginStatusButton(activity: Activity, vm: HomeViewModel, text: MutableState<String>, userInfoText: MutableState<String>) {
-    Column(
-        modifier = Modifier.padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        var isLogin by remember {
-            mutableStateOf(false)
-        }
-        vm.loginState.observe(LocalLifecycleOwner.current, Observer {
-            isLogin = it.first
-        })
-        Row {
-           Text(text = text.value)
-        }
-        Row {
-            if (isLogin) {
-                Button(onClick = {
-                    vm.logout()
-                    Global.getPlayerModuleApi().setPreferSongQuality(Quality.HQ)
-                    HomeViewModel.clearRequestState()
-                }, modifier = Modifier.padding(8.dp, 0.dp, 0.dp, 0.dp)) {
-                    Text(text = "退出登录")
-                }
-            }
-        }
-        if (isLogin) {
-            Text(text = userInfoText.value)
-        }
-    }
-}
-
-@Composable
-fun LoginButton(activity: Activity, vm: HomeViewModel, info: MutableState<String>) {
+fun LoginButton(activity: Activity, vm: HomeViewModel, info: MutableState<String>, model: MineViewModel = viewModel()) {
     var isLogin by remember {
         mutableStateOf(false)
     }
@@ -174,93 +102,124 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, info: MutableState<String
         isLogin = it.first
         isBind = it.second
     })
-    Column (modifier = Modifier.fillMaxWidth()){
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ){
-            Button(
-                onClick = {
-                    OpenApiSDK.getLoginApi().wxLogin(activity, MustInitConfig.WX_APP_ID) { ret, msg ->
-                        Log.i(TAG, "LoginPage: wechat ret $ret")
-                        if (ret) {
-                            Toast.makeText(activity, "微信登录成功", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(activity, "微信登录失败: $msg", Toast.LENGTH_SHORT).show()
-                        }
-
-                        info.value = "微信已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                        vm.fetchUserLoginStatus()
-                        HomeViewModel.clearRequestState()
-                    }
-                },
-                modifier = Modifier.padding(0.dp)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (isLogin) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
             ) {
-                Text(text = "微信登录")
+
+                Button(onClick = {
+                    vm.logout()
+                    model.updateData()
+                    Global.getPlayerModuleApi().setPreferSongQuality(Quality.HQ)
+                    HomeViewModel.clearRequestState()
+                }, modifier = Modifier.padding(8.dp, 0.dp, 0.dp, 0.dp)) {
+                    Text(text = "退出登录")
+                }
+
             }
-            Button(onClick = {
-                OpenApiSDK.getLoginApi().qqLoginWeb(activity) { ret, msg ->
-                    activity.runOnUiThread {
-                        Log.i(TAG, "LoginPage: qq ret $ret, msg: $msg")
-                        if (ret) {
-                            Toast.makeText(activity, "QQ登录成功", Toast.LENGTH_SHORT).show()
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = {
+                        OpenApiSDK.getLoginApi().wxLogin(activity, MustInitConfig.WX_APP_ID) { ret, msg ->
+                            Log.i(TAG, "LoginPage: wechat ret $ret")
+                            if (ret) {
+                                Toast.makeText(activity, "微信登录成功", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(activity, "微信登录失败: $msg", Toast.LENGTH_SHORT).show()
+                            }
+
+                            info.value = "微信已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                            vm.fetchUserLoginStatus()
+                            model.updateData()
+                            HomeViewModel.clearRequestState()
+                        }
+                    },
+                    modifier = Modifier.padding(0.dp)
+                ) {
+                    Text(text = "微信登录")
+                }
+                Button(onClick = {
+                    OpenApiSDK.getLoginApi().qqLoginWeb(activity) { ret, msg ->
+                        activity.runOnUiThread {
+                            Log.i(TAG, "LoginPage: qq ret $ret, msg: $msg")
+                            if (ret) {
+                                Toast.makeText(activity, "QQ登录成功", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(activity, "QQ登录失败: $msg", Toast.LENGTH_SHORT).show()
+                            }
+                            HomeViewModel.clearRequestState()
+                            model.updateData()
+                            info.value = "QQ已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                            vm.fetchUserLoginStatus()
+                        }
+                    }
+                }, modifier = Modifier.padding(0.dp)) {
+                    Text(text = "QQ登录")
+                }
+                Button(onClick = {
+                    OpenApiSDK.getLoginApi().qqMusicLogin(activity) { b, msg ->
+                        if (b) {
+                            Toast.makeText(activity, "登录成功", Toast.LENGTH_SHORT).show()
+
+                            info.value = "QQ音乐已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                            vm.fetchUserLoginStatus()
                         } else {
-                            Toast.makeText(activity, "QQ登录失败: $msg", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(activity, "登录失败: $msg", Toast.LENGTH_SHORT).show()
+                        }
+                        model.updateData()
+                        HomeViewModel.clearRequestState()
+                    }
+                }, modifier = Modifier.padding(0.dp)) {
+                    Text(text = "QQ音乐登录")
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(onClick = {
+                    OpenApiSDK.getLoginApi().qrCodeLogin(activity) { b, msg ->
+                        if (b) {
+                            Toast.makeText(activity, "登录成功", Toast.LENGTH_SHORT).show()
+
+                            info.value = "扫码已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                            vm.fetchUserLoginStatus()
+                        } else {
+                            Toast.makeText(activity, "登录失败: $msg", Toast.LENGTH_SHORT).show()
                         }
                         HomeViewModel.clearRequestState()
-
-                        info.value = "QQ已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                        vm.fetchUserLoginStatus()
+                        model.updateData()
                     }
+                    info.value = "扫码登录结果:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                    vm.fetchUserLoginStatus()
+                }, modifier = Modifier.padding(0.dp)) {
+                    Text(text = "扫码登录")
                 }
-            }, modifier = Modifier.padding(0.dp)) {
-                Text(text = "QQ登录")
-            }
-            Button(onClick = {
-                OpenApiSDK.getLoginApi().qqMusicLogin(activity) { b, msg ->
-                    if (b) {
-                        Toast.makeText(activity, "登录成功", Toast.LENGTH_SHORT).show()
 
-                        info.value = "QQ音乐已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                        vm.fetchUserLoginStatus()
-                    } else {
-                        Toast.makeText(activity, "登录失败: $msg", Toast.LENGTH_SHORT).show()
-                    }
-                    HomeViewModel.clearRequestState()
+                val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
+                PhoneLoginDialog(vm, model, showDialog = showDialog, setShowDialog = setShowDialog)
+                Button(onClick = {
+                    setShowDialog(true)
+                }, modifier = Modifier.padding(0.dp)) {
+                    Text(text = "手机登录")
                 }
-            }, modifier = Modifier.padding(0.dp)) {
-                Text(text = "QQ音乐登录")
+
             }
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ){
-            Button(onClick = {
-                OpenApiSDK.getLoginApi().qrCodeLogin(activity) { b, msg ->
-                    if (b) {
-                        Toast.makeText(activity, "登录成功", Toast.LENGTH_SHORT).show()
 
-                        info.value = "扫码已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                        vm.fetchUserLoginStatus()
-                    } else {
-                        Toast.makeText(activity, "登录失败: $msg", Toast.LENGTH_SHORT).show()
-                    }
-                    HomeViewModel.clearRequestState()
-                }
-                info.value = "扫码登录结果:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                vm.fetchUserLoginStatus()
-            }, modifier = Modifier.padding(0.dp)) {
-                Text(text = "扫码登录")
+        Button(
+            modifier = Modifier.padding(0.dp),
+            onClick = {
+                activity.startActivity(Intent(activity, PartnerLoginActivity::class.java))
             }
-            Button(
-                modifier = Modifier.padding(0.dp),
-                onClick = {
-                    activity.startActivity(Intent(activity, PartnerLoginActivity::class.java))
-                }
-            ) {
-                Text(text = "第三方登录")
-            }
+        ) {
+            Text(text = "第三方登录")
         }
     }
 }
@@ -275,7 +234,11 @@ fun MineSongList(viewModel: HomeViewModel) {
         "最近播放单曲",
         "最近播放专辑",
         "最近播放歌单",
-        "最近播放长音频"
+        "最近播放长音频",
+        "已购专辑",
+        "已购单曲",
+//        "已购有声书"
+
     )
 
     val pagerState = rememberPagerState()
@@ -352,43 +315,122 @@ fun MineSongList(viewModel: HomeViewModel) {
                 viewModel.fetchRecentLongRadios()
                 AlbumPage(albums = viewModel.recentLongRadio)
             }
-        }
-    }
-}
-
-@Composable
-fun NewFolder(viewModel: HomeViewModel) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-    ) {
-        val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
-//        val showDialog = remember { mutableStateOf(false) }
-//        val showDialog by remember { mutableStateOf(true) }
-        FolderDialog(viewModel, showDialog = showDialog, setShowDialog = setShowDialog)
-        Image(
-            painter = rememberImagePainter(""),
-            contentDescription = null,
-            modifier = Modifier
-                .size(50.dp)
-                .padding(2.dp)
-                .clickable {
-                    setShowDialog(true)
+            7 -> {
+                // 已购数字专辑
+                LaunchedEffect(Unit) {
+                    viewModel.fetchBuyRecordOfAlbum()
                 }
-        )
-        Column(modifier = Modifier.clickable { setShowDialog(true) }) {
-            Text(text = "Click to Create New Folder")
-            Text(text = "点击创建新个人歌单")
+                BuyAlbumPage(albums = viewModel.albumOfRecord)
+            }
+            8 -> {
+                // 已购单曲
+                LaunchedEffect(Unit) {
+                   viewModel.fetchBuyRecordOfSong()
+                }
+                SongListPage(songs = viewModel.songOfRecord, needPlayer = false)
+                }
+
+                }
+            }
         }
-    }
-}
+
+        @Composable
+        fun NewFolder(viewModel: HomeViewModel) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            ) {
+                val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
+                FolderDialog(viewModel, showDialog = showDialog, setShowDialog = setShowDialog)
+                Image(
+                    painter = rememberImagePainter(""),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(50.dp)
+                        .padding(2.dp)
+                        .clickable {
+                            setShowDialog(true)
+                        }
+                )
+                Column(modifier = Modifier.clickable { setShowDialog(true) }) {
+                    Text(text = "Click to Create New Folder")
+                    Text(text = "点击创建新个人歌单")
+                }
+            }
+        }
+
+        @Composable
+        fun FolderDialog(
+            viewModel: HomeViewModel,
+            showDialog: Boolean,
+            setShowDialog: (Boolean) -> Unit
+        ) {
+            if (!showDialog) return
+
+            var foldName by rememberSaveable { mutableStateOf("") }
+            Dialog(onDismissRequest = {
+                Log.d(TAG, "FolderDialog Dismiss Request")
+                setShowDialog(false)
+            }) {
+                Column(
+                    modifier = Modifier
+                        .background(Color.White)
+                        .padding(5.dp)
+                ) {
+                    OutlinedTextField(
+                        value = foldName,
+                        onValueChange = {
+                            foldName = it
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("输入歌单名字") }
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        OutlinedButton(onClick = { setShowDialog(false) }) {
+                            Text("取消")
+                        }
+
+                        OutlinedButton(onClick = {
+                            Log.d(TAG, "New Folder: $foldName")
+                            if (foldName.isEmpty()) return@OutlinedButton
+
+                            com.tencent.qqmusic.openapisdk.business_common.Global.getOpenApi()
+                                .createFolder(foldName) {
+                                    if (it.isSuccess()) {
+                                        Log.d(
+                                            TAG,
+                                            "succeeded to create folder: $foldName. ret: $it"
+                                        )
+                                        setShowDialog(false)
+                                        HomeViewModel.clearRequestState()
+                                        viewModel.fetchMineFolder()
+                                        return@createFolder
+                                    } else {
+                                        Log.w(TAG, "failed to create folder: $foldName. ret: $it")
+                                        foldName = ""
+                                    }
+                                }
+                        }) {
+                            Text("确定")
+                        }
+                    }
+                }
+            }
+        }
+
+
 
 @Composable
-fun FolderDialog(viewModel: HomeViewModel, showDialog: Boolean, setShowDialog: (Boolean) -> Unit) {
+fun PhoneLoginDialog(viewModel: HomeViewModel , model: MineViewModel,  showDialog: Boolean, setShowDialog: (Boolean) -> Unit) {
     if (!showDialog) return
 
-    var foldName by rememberSaveable { mutableStateOf("") }
+    val activity = LocalContext.current as Activity
+    var phoneNum by rememberSaveable { mutableStateOf("") }
+    var verifyCode by rememberSaveable { mutableStateOf("") }
     Dialog(onDismissRequest = {
         Log.d(TAG, "FolderDialog Dismiss Request")
         setShowDialog(false)
@@ -399,40 +441,61 @@ fun FolderDialog(viewModel: HomeViewModel, showDialog: Boolean, setShowDialog: (
                 .padding(5.dp)
         ) {
             OutlinedTextField(
-                value = foldName,
+                value = phoneNum,
                 onValueChange = {
-                    foldName = it
+                    phoneNum = it
                 },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("输入歌单名字") }
+                placeholder = { Text("输入11位手机号") }
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                OutlinedButton(onClick = { setShowDialog(false) }) {
-                    Text("取消")
-                }
 
-                OutlinedButton(onClick = {
-                    Log.d(TAG, "New Folder: $foldName")
-                    if (foldName.isEmpty()) return@OutlinedButton
+            OutlinedButton(onClick = {
+                Log.d(TAG, "phoneNum: $phoneNum")
+                if (phoneNum.isEmpty()) return@OutlinedButton
 
-                    com.tencent.qqmusic.openapisdk.business_common.Global.getOpenApi().createFolder(foldName) {
-                        if (it.isSuccess()) {
-                            Log.d(TAG, "succeeded to create folder: $foldName. ret: $it")
-                            setShowDialog(false)
-                            HomeViewModel.clearRequestState()
-                            viewModel.fetchMineFolder()
-                            return@createFolder
-                        } else {
-                            Log.w(TAG, "failed to create folder: $foldName. ret: $it")
-                            foldName = ""
-                        }
+                Global.getLoginModuleApi().sendPhoneVerificationCode(phoneNum) { b, msg, info ->
+                    if (b == 0) {
+                        UiUtils.showToast("获取验证码成功")
+                    } else {
+                        UiUtils.showToast("获取失败:$msg")
                     }
-                }) {
-                    Text("确定")
                 }
+            }) {
+                Text("获取验证码")
+            }
+
+            OutlinedTextField(
+                value = verifyCode,
+                onValueChange = {
+                    verifyCode = it
+                },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("输入验证码") }
+            )
+
+            OutlinedButton(onClick = {
+                Log.d(TAG, "phoneNum: $phoneNum， verifyCode:$verifyCode")
+                if (phoneNum.isEmpty()) return@OutlinedButton
+                if (verifyCode.isEmpty()) return@OutlinedButton
+
+                Global.getLoginModuleApi().phoneLogin(phoneNum, verifyCode, activity, false) { code, msg, info ->
+                    if (code == 0) {
+                        UiUtils.showToast("登录成功")
+                        viewModel.fetchUserLoginStatus()
+                    } else if (code == 1){
+                        UiUtils.showToast("需要绑定Q音账号")
+                    } else {
+                        UiUtils.showToast("登录失败:$msg")
+                    }
+                    model.updateData()
+                    HomeViewModel.clearRequestState()
+                }
+            }) {
+                Text("验证码登录")
+            }
+
+            OutlinedButton(onClick = { setShowDialog(false) }) {
+                Text("取消")
             }
         }
     }

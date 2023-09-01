@@ -6,5 +6,5 @@ sealed class NavigationItem(var route: String, var icon: Int, var title: String)
     object Home : NavigationItem("main", R.drawable.ic_home, "首页")
     object Books : NavigationItem("search", R.drawable.ic_book, "搜索")
     object Profile : NavigationItem("mine", R.drawable.ic_profile, "我的")
-    object Other : NavigationItem("other", R.drawable.ic_other, "其他")
+    object Setting : NavigationItem("setting", R.drawable.ic_other, "设置")
 }

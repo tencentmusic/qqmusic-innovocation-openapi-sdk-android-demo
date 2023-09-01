@@ -11,6 +11,7 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.google.gson.GsonBuilder
 import com.tencent.qqmusic.openapisdk.business_common.Global
+import com.tencent.qqmusic.openapisdk.business_common.login.OpenIdInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.openapisdk.model.SearchType
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
@@ -18,9 +19,6 @@ import com.tencent.qqmusic.openapisdk.core.openapi.OpenApi
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.model.VipInfo
-import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -219,22 +217,17 @@ class OpenApiDemoActivity : AppCompatActivity() {
         }
 
         findViewById<View>(R.id.btn_test2).setOnClickListener {
-//            // 由于monkey多次执行，这里会爆。每次启动只运行一次
-//            if (hasRunConcurrent) {
-//                return@setOnClickListener
-//            }
-//            hasRunConcurrent = true
-//            repeat(100) {
-//                GlobalScope.launch {
-//                    val resp = OpenApiSDK.getOpenApi().blockingGet<VipInfo>(
-//                        testMultiBlockingGetBlock)
-//                    if (!resp.isSuccess()) {
-//                        QLog.e(TAG, "并发请求失败, resp=${resp}")
-//                    } else {
-//                        QLog.i(TAG, "并发请求成功")
-//                    }
-//                }
-//            }
+           val openIdInfo = Global.getLoginModuleApi().openIdInfo
+            openIdInfo?.apply {
+                Global.getLoginModuleApi().openIdInfo = OpenIdInfo(
+                    expireTime = expireTime,
+                    openId = openId,
+                    accessToken = "auh6b4002f6eb9585f13d562b6d2229e052c37daae2e2cb350582832c9ae958c410",
+                    refreshToken = refreshToken,
+                    type = type
+                )
+            }
+
         }
 
         findViewById<View>(R.id.btn_test).setOnClickListener {
@@ -671,6 +664,11 @@ class OpenApiDemoActivity : AppCompatActivity() {
             fillDefaultParamIfNull(it)
             openApi.fetchJustListenRadio(commonCallback)
         }
+        methodNameToBlock["fetchJustListenRank"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.fetchJustListenRank(commonCallback)
+        }
         methodNameToBlock["fetchSongOfJustListenRadio"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
@@ -908,6 +906,19 @@ class OpenApiDemoActivity : AppCompatActivity() {
             openApi.fetchHotKeyList(type = paramStr1?.toIntOrNull() ?: 0, callback = commonCallback)
         }
 
+
+
+
+
+//        methodNameToBlock["fetchBuyRecordb"] = {
+//            val commonCallback = CallbackWithName(it)
+//            fillDefaultParamIfNull(it)
+////            openApi.fetchBuyRecord(
+////                paramStr1?.toIntOrNull() ?: 0,
+////                paramStr2.toString(),
+////                callback =commonCallback )
+//        }
+
         methodNameToBlock["fetchGetAiSongList"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
@@ -938,9 +949,34 @@ class OpenApiDemoActivity : AppCompatActivity() {
             val isCollect = (paramStr1?.toIntOrNull() ?: 1) > 0
             openApi.collectAlbum(isCollect, paramStr2?.edtParamToList() ?: emptyList(), commonCallback)
         }
+
+        methodNameToBlock["fetchCategoryPageOfLongAudio"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.fetchCategoryPageOfLongAudio(commonCallback)
+        }
+
+        methodNameToBlock["fetchCategoryPageDetailOfLongAudio"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            val categoryId = paramStr1?.toIntOrNull() ?: 0
+            val subCategoryId = paramStr2?.toIntOrNull() ?: 0
+            val page = paramStr3?.toIntOrNull() ?: 0
+            openApi.fetchCategoryPageDetailOfLongAudio(categoryId, subCategoryId, page, commonCallback)
+        }
     }
 
     private fun initMethodNameList() {
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchCategoryPageOfLongAudio", listOf(), listOf()
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchCategoryPageDetailOfLongAudio", listOf("品类一级id", "品类二级id", "页码"), listOf()
+            )
+        )
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "fetchGreenMemberInformation", listOf(), listOf()
@@ -1108,6 +1144,11 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
+                "fetchJustListenRank", listOf(), listOf()
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
                 "fetchSongOfJustListenRadio", listOf("电台id"), listOf("601")
             )
         )
@@ -1157,6 +1198,23 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 "fetchHotSingerList", listOf("区域", "性别", "流派"), listOf("-100", "-100", "-100")
             )
         )
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchNewAlbum", listOf("地区", "页码", "每页返回数量(可不传)","专辑类型"), listOf("", null, null,null)
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "get111", listOf("地区"), listOf("")
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "get222", listOf("地区"), listOf("")
+            )
+        )
+
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "fetchAlbumOfSinger",

@@ -1,4 +1,4 @@
-rootProject.name = "QPlay Edge Android"
+rootProject.name = "QPlay Edge (Demo)"
 include ':demo'
 
 if (useSdkSource == "true") {

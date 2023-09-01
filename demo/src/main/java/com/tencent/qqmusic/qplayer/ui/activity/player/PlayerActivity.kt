@@ -22,9 +22,6 @@ class PlayerActivity : ComponentActivity() {
     @OptIn(ExperimentalPagerApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (PlayerObserver.currentSong == null) {
-            Toast.makeText(this, "暂无正在播放的歌曲", Toast.LENGTH_SHORT).show()
-        }
         setContent {
             MainPage()
         }
@@ -37,14 +34,20 @@ class PlayerActivity : ComponentActivity() {
         val pagerState = rememberPagerState()
         val coroutineScope = rememberCoroutineScope()
 
-        HorizontalPager(count = 2, state = pagerState) {
+        HorizontalPager(count = 3, state = pagerState) {
             when (it) {
                 0 -> SongDetailPage(observer = PlayerObserver)
+                1 -> PlayerScreen(observer = PlayerObserver)
+                2 -> PlayControlTestPage()
                 else -> PlayerScreen(observer = PlayerObserver)
             }
         }
         coroutineScope.launch {
-            pagerState.scrollToPage(1)
+            if (pagerState.pageCount == 0) {
+                pagerState.scrollToPage(0)
+            } else {
+                pagerState.scrollToPage(1)
+            }
         }
     }
 

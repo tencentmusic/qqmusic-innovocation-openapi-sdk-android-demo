@@ -18,6 +18,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.QPlayerSDKAndroid">
         <activity
+            android:name=".LongAudioRankActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.activity.folder.FolderActivity"
             android:exported="true"
             android:label="@string/title_activity_folder"
@@ -38,20 +41,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".ui.activity.MainActivity"
-            android:exported="true" />
         <activity android:name=".ui.activity.OpenApiDemoActivity" />
-        <activity android:name=".ui.activity.SongCacheDemoActivity"/>
-
+        <activity android:name=".ui.activity.SongCacheDemoActivity" />
         <activity android:name=".ui.activity.songlist.SongListActivity" />
-        <activity android:name=".ui.activity.player.PlayListActivity" />
+        <activity
+            android:name=".ui.activity.player.PlayListActivity"
+            android:theme="@style/TranslucentTheme" />
         <activity android:name=".ui.activity.player.SoundEffectActivity" />
-        <activity android:name=".ui.activity.player.PlayerTestActivity"/>
-        <activity android:name=".ui.activity.PartnerLoginActivity"/>
-        <activity android:name=".ui.activity.songlist.AlbumActivity"/>
-        <activity android:name=".ui.activity.lyric.LyricActivity"/>
-
+        <activity android:name=".ui.activity.player.PlayerTestActivity" />
+        <activity android:name=".ui.activity.PartnerLoginActivity" />
+        <activity android:name=".ui.activity.songlist.AlbumActivity" />
+        <activity android:name=".ui.activity.lyric.LyricActivity" />
         <activity
             android:name="com.tencent.qqmusicrecognition.wxapi.WXEntryActivity"
             android:exported="true"
@@ -62,6 +62,10 @@
         <activity
             android:name=".ui.activity.main.PlayProcessReportTestActivity"
             android:process=":QQPlayerProcess" />
+        <activity android:name=".ui.activity.main.OtherActivity" />
+        <activity android:name=".ui.activity.audio.LongAudioRankActivity" />
+        <activity android:name=".ui.activity.audio.LongAudioCategoryActivity" />
+        <activity android:name=".ui.activity.audio.LongAudioModuleContentActivity" />
     </application>
 
 </manifest>

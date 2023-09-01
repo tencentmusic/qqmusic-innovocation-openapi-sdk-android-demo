@@ -12,10 +12,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.openapisdk.model.Folder
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
+import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 
 //
@@ -28,7 +31,22 @@ fun FolderScreen(folders: List<Folder>) {
     Scaffold(
         topBar = { TopBar() }
     ) {
-        FolderPage(folders = folders)
+        ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+            val (folder, player) = createRefs()
+
+            Box(modifier = Modifier.constrainAs(folder) {
+                height = Dimension.fillToConstraints
+                top.linkTo(parent.top)
+                bottom.linkTo(player.top)
+            }) {
+                FolderPage(folders = folders)
+            }
+            Box(modifier = Modifier.constrainAs(player) {
+                bottom.linkTo(parent.bottom)
+            }) {
+                FloatingPlayerPage()
+            }
+        }
     }
 }
 
@@ -45,8 +63,10 @@ fun FolderPage(folders: List<Folder>) {
                     .fillMaxWidth()
                     .padding(8.dp)
                     .clickable {
-                        activity.startActivity(Intent(activity, SongListActivity::class.java)
-                            .putExtra(SongListActivity.KEY_FOLDER_ID, folder.id))
+                        activity.startActivity(
+                            Intent(activity, SongListActivity::class.java)
+                                .putExtra(SongListActivity.KEY_FOLDER_ID, folder.id)
+                        )
                     }
             ) {
                 Image(
