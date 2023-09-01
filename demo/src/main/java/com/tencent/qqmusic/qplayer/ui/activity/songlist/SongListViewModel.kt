@@ -21,13 +21,21 @@ import kotlinx.coroutines.withContext
 
 class SongListViewModel : ViewModel() {
 
-    fun pagingFolderSongs(folderId: String) = Pager(PagingConfig(pageSize = 50)) {
-        FolderSongPagingSource(folderId)
-    }.flow
+   suspend fun pagingFolderSongs(folderId: String, block: suspend (List<SongInfo>, Boolean) -> Unit) {
+        var nextPage = 0
+        while (nextPage >= 0) {
+            val list = SongListRepo().fetchSongInfoByFolder(folderId, nextPage, 50).data
+                ?: emptyList()
+            if (list.isEmpty()) {
+                nextPage = -1
+                block(list, true)
+            } else {
+                nextPage++
+                block(list, false)
+            }
+        }
+    }
 
-    fun pagingPlayList() = Pager(PagingConfig(pageSize = 50)) {
-        PlayListPagingSource()
-    }.flow
 
     fun pagingAlbumSongs(albumId: String) = Pager(PagingConfig(pageSize = 50)) {
         AlbumSongPagingSource(albumId)
@@ -43,5 +51,9 @@ class SongListViewModel : ViewModel() {
 
     fun pagingRankSongList(rankId: Int) = Pager(PagingConfig(pageSize = 20)) {
         RankSongPagingSource(rankId)
+    }.flow
+
+    fun pagingSongListScene(groupId: Int, subGroupId: Int) = Pager(PagingConfig(pageSize = 20)) {
+        SongListScenePagingSource(groupId, subGroupId)
     }.flow
 }

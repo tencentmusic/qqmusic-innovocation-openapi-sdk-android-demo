@@ -1,4 +1,4 @@
-package com.tencent.qqmusic.qplayer.ui.activity.folder
+package com.tencent.qqmusic.qplayer.ui.activity.songlist
 
 import android.app.Activity
 import android.content.Intent
@@ -12,52 +12,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.constraintlayout.compose.Dimension
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
-import com.tencent.qqmusic.openapisdk.model.Folder
+import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
-import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
-
-//
-// Created by tylertan on 2021/11/2
-// Copyright (c) 2021 Tencent. All rights reserved.
-//
 
 @Composable
-fun FolderScreen(folders: List<Folder>) {
+fun BuyAlbumScreen(albums: List<Album>) {
     Scaffold(
         topBar = { TopBar() }
     ) {
-        ConstraintLayout(modifier = Modifier.fillMaxSize()) {
-            val (folder, player) = createRefs()
-
-            Box(modifier = Modifier.constrainAs(folder) {
-                height = Dimension.fillToConstraints
-                top.linkTo(parent.top)
-                bottom.linkTo(player.top)
-            }) {
-                FolderPage(folders = folders)
-            }
-            Box(modifier = Modifier.constrainAs(player) {
-                bottom.linkTo(parent.bottom)
-            }) {
-                FloatingPlayerPage()
-            }
-        }
+        AlbumPage(albums = albums)
     }
 }
 
 @OptIn(ExperimentalCoilApi::class)
 @Composable
-fun FolderPage(folders: List<Folder>) {
+fun BuyAlbumPage(albums: List<Album>) {
     val activity = LocalContext.current as Activity
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(folders.size) { index ->
-            val folder = folders.getOrNull(index) ?: return@items
+        items(albums.size) { index ->
+            val album = albums.getOrNull(index) ?: return@items
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -65,20 +41,22 @@ fun FolderPage(folders: List<Folder>) {
                     .clickable {
                         activity.startActivity(
                             Intent(activity, SongListActivity::class.java)
-                                .putExtra(SongListActivity.KEY_FOLDER_ID, folder.id)
+                                .putExtra(SongListActivity.KEY_ALBUM_ID, album.id)
                         )
                     }
             ) {
                 Image(
-                    painter = rememberImagePainter(folder.picUrl),
+                    painter = rememberImagePainter(album.pic),
                     contentDescription = null,
                     modifier = Modifier
                         .size(50.dp)
                         .padding(2.dp)
                 )
                 Column {
-                    Text(text = folder.name)
-                    Text(text = "${folder.songNum?.toString() ?: 0}首")
+                    Text(text = album.name)
+                    Text(text = album.singers?.get(0)?.name?:"")
+                    Text(text = "已购${album.songNum?: 0}张")
+
                 }
             }
         }

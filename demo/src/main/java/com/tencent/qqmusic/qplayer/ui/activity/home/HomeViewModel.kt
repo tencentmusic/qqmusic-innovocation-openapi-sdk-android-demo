@@ -9,15 +9,22 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.business_common.Global
+import com.tencent.qqmusic.openapisdk.business_common.event.BaseBusinessEvent
+import com.tencent.qqmusic.openapisdk.business_common.event.BusinessEventHandler
+import com.tencent.qqmusic.openapisdk.business_common.event.event.LoginEvent
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.*
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPagingSource
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlin.math.log
 
 //
 // Created by tylertan on 2021/11/2
@@ -27,7 +34,10 @@ import kotlin.math.log
 class HomeViewModel : ViewModel() {
 
     var categories: List<Category> by mutableStateOf(emptyList())
+    var sceneCategories: List<Category> by mutableStateOf(emptyList())
     var rankGroups: List<RankGroup> by mutableStateOf(emptyList())
+    var newAlbums :List<Album> by mutableStateOf(emptyList())
+    var areaId :List<AreaInfo>by mutableStateOf(emptyList())
 
     var mineFolders: List<Folder> by mutableStateOf(emptyList())
     var favFolders: List<Folder> by mutableStateOf(emptyList())
@@ -36,7 +46,8 @@ class HomeViewModel : ViewModel() {
     var recentAlbums: List<Album> by mutableStateOf(emptyList())
     var recentFolders: List<Folder> by mutableStateOf(emptyList())
     var recentLongRadio: List<Album> by mutableStateOf(emptyList())
-
+    var albumOfRecord :List<Album> by mutableStateOf(emptyList())
+    var songOfRecord : List<SongInfo>by mutableStateOf(emptyList())
     var searchInput: String by mutableStateOf("")
     var searchSongs: List<SongInfo> by mutableStateOf(emptyList())
     var searchFolders: List<Folder> by mutableStateOf(emptyList())
@@ -44,6 +55,8 @@ class HomeViewModel : ViewModel() {
 
     var loginState = MutableLiveData<Pair<Boolean, Boolean>>()
     var userInfo = MutableLiveData<UserInfo?>()
+
+    var longAudioCategoryPages: List<Category> by mutableStateOf(emptyList())
 
     companion object {
         private const val TAG = "HomeViewModel"
@@ -64,17 +77,83 @@ class HomeViewModel : ViewModel() {
     init {
         // 进来直接加载分类
         fetchCategory()
+        //获取新碟的地区分类
+        fetchNewAlbumsByArea()
+
+        OpenApiSDK.registerBusinessEventHandler(object : BusinessEventHandler {
+            override fun handle(event: BaseBusinessEvent) {
+                when (event) {
+                    is LoginEvent -> {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            fetchCategory()
+                            fetchCollectedAlbum()
+                            fetchRecentAlbums()
+                            fetchSceneCategory()
+                            fetchRecentFolders()
+                            fetchRankGroup()
+                            fetchNewAlbumsByArea()
+
+                        }
+                    }
+                }
+            }
+        })
     }
 
     fun fetchCategory() {
         viewModelScope.launch(Dispatchers.IO) {
             OpenApiSDK.getOpenApi().fetchCategoryOfFolder {
-                if (it.isSuccess()) {
-                    categories = it.data ?: emptyList()
+                categories = if (it.isSuccess()) {
+                    it.data ?: emptyList()
                 } else {
+                    emptyList()
+                }
+
+            }
+        }
+    }
+
+    fun fetchSceneCategory() {
+        if (!sceneCategories.isEmpty()) {
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            OpenApiSDK.getOpenApi().fetchCategoryOfSongListScene {
+                sceneCategories = if (it.isSuccess()) {
+                    it.data ?: emptyList()
+                } else {
+                    emptyList()
                 }
             }
         }
+    }
+
+    fun fetchNewAlbumsByArea(){
+        QLog.i(TAG, "fetchAreaByCategory")
+        viewModelScope.launch(Dispatchers.IO) {
+            OpenApiSDK.getOpenApi().fetchNewAlbumsByArea{
+                areaId = if (it.isSuccess()) {
+                    it.data ?: emptyList()
+                } else {
+                    QLog.e(TAG, "fetchAreaByCategory failed:$it")
+                    emptyList()
+                }
+            }
+        }
+    }
+
+    fun fetchNewAlbum(areaId: Int, type: Int?){
+            QLog.i(TAG, "fetchNewAlbum")
+            viewModelScope.launch(Dispatchers.IO) {
+                OpenApiSDK.getOpenApi().fetchNewAlbum(area = areaId , type = type, page = 0, count = 50){
+                    newAlbums = if (it.isSuccess()) {
+                        it.data ?: emptyList()
+                    } else {
+                        QLog.e(TAG, "fetchNewAlbum failed:$it")
+                        emptyList()
+                    }
+                }
+            }
     }
 
     fun fetchRankGroup() {
@@ -82,10 +161,11 @@ class HomeViewModel : ViewModel() {
             QLog.i(TAG, "fetchRankGroup")
             viewModelScope.launch(Dispatchers.IO) {
                 OpenApiSDK.getOpenApi().fetchAllRankGroup {
-                    if (it.isSuccess()) {
-                        rankGroups = it.data ?: emptyList()
+                    rankGroups = if (it.isSuccess()) {
+                        it.data ?: emptyList()
                     } else {
                         QLog.e(TAG, "fetchRankGroup failed:$it")
+                        emptyList()
                     }
                 }
             }
@@ -96,9 +176,10 @@ class HomeViewModel : ViewModel() {
         if (!myFolderRequested) {
             viewModelScope.launch(Dispatchers.IO) {
                 OpenApiSDK.getOpenApi().fetchPersonalFolder {
-                    if (it.isSuccess()) {
-                        mineFolders = it.data ?: emptyList()
+                    mineFolders = if (it.isSuccess()) {
+                        it.data ?: emptyList()
                     } else {
+                        emptyList()
                     }
                 }
             }
@@ -112,7 +193,6 @@ class HomeViewModel : ViewModel() {
                 OpenApiSDK.getOpenApi().fetchCollectedFolder {
                     if (it.isSuccess()) {
                         favFolders = it.data ?: emptyList()
-                    } else {
                     }
                 }
             }
@@ -126,7 +206,6 @@ class HomeViewModel : ViewModel() {
                 OpenApiSDK.getOpenApi().fetchCollectedAlbum(0, 50) {
                     if (it.isSuccess()) {
                         favAlbums = it.data ?: emptyList()
-                    } else {
                     }
                 }
             }
@@ -144,12 +223,15 @@ class HomeViewModel : ViewModel() {
         }
     }
 
+
+
     fun fetchRecentFolders() {
         OpenApiSDK.getOpenApi().fetchRecentPlayFolder {
-            if (it.isSuccess()) {
-                recentFolders = it.data ?: emptyList()
+            recentFolders = if (it.isSuccess()) {
+                it.data ?: emptyList()
             } else {
                 // 请求出错啦
+                emptyList()
             }
         }
     }
@@ -160,18 +242,62 @@ class HomeViewModel : ViewModel() {
                 recentLongRadio = it.data ?: emptyList()
             } else {
                 // 请求出错啦
+
             }
         }
     }
+    var currentPage = 0
+    fun fetchBuyRecordOfAlbum() {
+        val dataList = mutableListOf<Album>()
+        val nextPage = currentPage + 1
+        if (nextPage<=50){
+            OpenApiSDK.getOpenApi().fetchBuyRecord( BuyType.ALBUMS, nextPage,  callback = {
+                if(it.isSuccess() && it.data?.albums?.isNotEmpty() == true){
+                    albumOfRecord += it.data?.albums!!
+                }
+                if (albumOfRecord.isEmpty()){
+                    currentPage = nextPage
+                    dataList.addAll(albumOfRecord)
+                }
+            })
+
+
+
+
+        }
+
+
+    }
+    var currentPages=0
+    fun fetchBuyRecordOfSong() {
+        val dataLists = mutableListOf<SongInfo>()
+        val nextPages = currentPages.toInt() + 1
+        if (nextPages<=50){
+            OpenApiSDK.getOpenApi().fetchBuyRecord(BuyType.SONGS, page = currentPages,  callback = {
+                if(it.isSuccess()  && it.data?.songList?.isNotEmpty() == true){
+                    songOfRecord += it.data?.songList!!
+                }
+            })
+            if (songOfRecord.isEmpty()){
+                dataLists.clear()
+                currentPages = nextPages
+                dataLists.addAll(songOfRecord)
+                 // 将新数据添加到列表末尾
+            }
+
+
+        }
+
+
+}
+
+
+
 
     fun pagingRecentSong(): Flow<PagingData<SongInfo>>? {
         return Pager(PagingConfig(pageSize = 50)) { RecentSongPagingSource() }.flow
-//        if (!myRecentRequested) {
-//            myRecentRequested = true
-//            return Pager(PagingConfig(pageSize = 50)) { RecentSongPagingSource() }.flow
-//        }
-//        return null
     }
+
 
     fun pagingSearchSong(): Flow<PagingData<SongInfo>> {
         return Pager(PagingConfig(pageSize = 50)) { SongListPagingSource(searchSongs, emptyList()) }.flow
@@ -195,7 +321,8 @@ class HomeViewModel : ViewModel() {
         })
     }
 
-    fun fetchHotKeys(type: Int)  {
+
+    fun fetchHotKeys(type: Int) {
         QLog.i(TAG, "fetchHotKeys type = $type")
         viewModelScope.launch(Dispatchers.IO) {
             OpenApiSDK.getOpenApi().fetchHotKeyList(type = type) {
@@ -213,14 +340,16 @@ class HomeViewModel : ViewModel() {
         QLog.i(TAG, "fetchUserLoginStatus.")
         viewModelScope.launch(Dispatchers.IO) {
             flow<Pair<Boolean, Boolean>> {
-                emit(Pair(
-                    Global.getLoginModuleApi().openIdInfo != null,
-                    Global.getOpenApi().hasPartnerEnvSet()
-                ))
+                emit(
+                    Pair(
+                        Global.getLoginModuleApi().openIdInfo != null,
+                        Global.getOpenApi().hasPartnerEnvSet()
+                    )
+                )
             }.map {
                 loginState.postValue(it)
                 it
-            }.map {loginStatus->
+            }.map { loginStatus ->
                 userInfo.postValue(
                     if (loginStatus.first) {
                         OpenApiSDK.getOpenApi().blockingGet<UserInfo> {
@@ -231,7 +360,7 @@ class HomeViewModel : ViewModel() {
                     }
                 )
                 loginStatus
-            }.map {loginStatus->
+            }.map { loginStatus ->
                 val status = if (loginStatus.second) {
                     OpenApiSDK.getOpenApi().blockingGet<Boolean> {
                         OpenApiSDK.getOpenApi().hasBindPartnerAccount(it)
@@ -255,7 +384,7 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    fun fetchHiresSection(callback:(Area?)-> Unit) {
+    fun fetchHiresSection(callback: (Area?) -> Unit) {
         QLog.i(TAG, "fetch hires")
         viewModelScope.launch(Dispatchers.IO) {
             OpenApiSDK.getOpenApi().fetchHiresSectionByShelfTypes(emptyList(), callback = {
@@ -284,24 +413,41 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    fun fetchShelfContent(areaId:Int,
-                          shelfId: Int,
-                          contentSize:Int,
-                          lastContentId:String,
-                          callback:(AreaShelf?) -> Unit) {
+    fun fetchShelfContent(
+        areaId: Int,
+        shelfId: Int,
+        contentSize: Int,
+        lastContentId: String,
+        callback: (AreaShelf?) -> Unit
+    ) {
         QLog.i(TAG, "fetch area: $areaId, shelf by id: $shelfId")
         viewModelScope.launch(Dispatchers.IO) {
-            OpenApiSDK.getOpenApi().fetchShelfContent(shelfId, contentSize, lastContentId,AreaId.AreaHires, callback = {
+            OpenApiSDK.getOpenApi().fetchShelfContent(shelfId, contentSize, lastContentId, AreaId.AreaHires, callback = {
                 if (it.isSuccess()) {
                     QLog.i(TAG, "fetch area: $areaId, shelf by id: $shelfId success")
                     callback.invoke(it.data)
-                }
-                else {
+                } else {
                     callback.invoke(null)
                 }
             })
         }
     }
+
+    fun fetchLongAudioCategoryPages() {
+        if (longAudioCategoryPages.isNotEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            OpenApiSDK.getOpenApi().fetchCategoryPageOfLongAudio {
+                longAudioCategoryPages = it.data ?: emptyList()
+            }
+        }
+    }
+
+    fun pagingCategoryPageDetail(fId: Int, sId: Int) = Pager(PagingConfig(pageSize = 5)) {
+        CategoryPageDetailSource(fId, sId)
+    }.flow.cachedIn(viewModelScope)
+
+
+
 
 
 }

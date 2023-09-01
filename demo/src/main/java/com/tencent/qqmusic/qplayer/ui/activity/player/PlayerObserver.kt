@@ -33,19 +33,35 @@ object PlayerObserver {
     var mCurrentQuality: Int? by mutableStateOf<Int?>(null)
 
     var playStateText: String by mutableStateOf<String>("播放状态: Idle")
-    var playPosition: Float by  mutableStateOf(0f)
+    var playPosition: Float by mutableStateOf(0f)
     var seekPosition: Float by mutableStateOf(-1f)
 
 
     init {
         MusicPlayerHelper.getInstance().registerProgressChangedInterface { curTime: Long, totalTime: Long ->
-            playPosition = curTime.toFloat()
+            playPosition = if (currentSong == null) 0f else curTime.toFloat()
             if (seekPosition in 0.0..playPosition.toDouble()) {
                 seekPosition = -1f
             }
-            Log.i(TAG, "registerProgressChangedInterface slidePosition = $playPosition")
         }
     }
+
+
+    fun convertTime(num: Long): String {
+        val time = num.toInt()
+        val min = time / 60
+        val sec = time % 60
+
+        val secString = if (sec <= 9) "0$sec" else sec.toString()
+        val minString = if (sec <= 9) "0$min" else min.toString()
+
+        return if (min == 0) {
+            secString
+        } else {
+            "$minString:$secString"
+        }
+    }
+
     private val handler = object : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             super.handleMessage(msg)
@@ -68,39 +84,51 @@ object PlayerObserver {
 
     private val event = object : IMediaEventListener {
         override fun onEvent(event: String, arg: Bundle) {
-            Log.i(TAG, "onEvent: event $event")
 
             when (event) {
                 PlayerEvent.Event.API_EVENT_PLAY_SONG_CHANGED -> {
                     if (arg.containsKey(PlayerEvent.Key.API_EVENT_KEY_PLAY_SONG)) {
-                        val curr =
-                            arg.getParcelable(PlayerEvent.Key.API_EVENT_KEY_PLAY_SONG) as? SongInfo
-
+                        val curr = arg.getParcelable(PlayerEvent.Key.API_EVENT_KEY_PLAY_SONG) as? SongInfo
                         currentSong = curr
-
                         val currentPlaySongQuality =
                             OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()
                         Log.d(TAG, "play song changed: $curr")
+                        Log.d(TAG, "play currentPlaySongQuality: $currentPlaySongQuality")
 
-                        if (currentPlaySongQuality != null && (currentPlaySongQuality > 0)) {
+                        if (currentPlaySongQuality != null) {
                             mCurrentQuality = currentPlaySongQuality
                         }
-                        Log.d(TAG, "curTime: ${OpenApiSDK.getPlayerApi().getCurrentPlayTime()}, total: ${OpenApiSDK.getPlayerApi().getDuration()}")
-                        if (OpenApiSDK.getPlayerApi().getCurrentPlayTime() == OpenApiSDK.getPlayerApi().getDuration()) {
-                            resetPlayProgress()
-                        }
+                        seekPosition = -1F
                     }
                 }
                 PlayerEvent.Event.API_EVENT_SONG_PLAY_ERROR -> {
                     val errorCode = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_ERROR_CODE)
                     Log.i(TAG, "onEvent: current error $errorCode")
-                    Toast.makeText(
-                        UtilContext.getApp(),
-                        "播放遇到错误，code:$errorCode",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    if (currentSong?.canPlay() != true) {
+                        Toast.makeText(
+                            UtilContext.getApp(),
+                            currentSong?.unplayableMsg ?: "",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Toast.makeText(
+                            UtilContext.getApp(),
+                            "播放遇到错误，code:$errorCode",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                     setPlayState("播放错误(code=${errorCode})")
                     resetPlayProgress()
+                }
+
+                PlayerEvent.Event.API_EVENT_PLAY_LIST_CHANGED -> {
+                    val size = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_PLAY_LIST_SIZE, 0)
+                    if (size == 0) {
+                        currentSong = null
+                    } else {
+                        val list = OpenApiSDK.getPlayerApi().getPlayList()
+                        list.contains(currentSong)
+                    }
                 }
                 PlayerEvent.Event.API_EVENT_PLAY_STATE_CHANGED -> {
                     val state = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_PLAY_STATE)
@@ -133,6 +161,11 @@ object PlayerObserver {
                         }
                         PlayDefine.PlayState.MEDIAPLAYER_STATE_PREPARED -> {
                             setPlayState("已准备")
+                            if (mCurrentQuality == -1) {
+                                mCurrentQuality = OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()
+                                Log.d(TAG, "play mCurrentQuality: $mCurrentQuality")
+
+                            }
                         }
                     }
                 }

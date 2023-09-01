@@ -3,7 +3,6 @@ package com.tencent.qqmusic.qplayer.ui.activity.home
 import android.app.Activity
 import android.content.Intent
 import android.util.Log
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,7 +21,7 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderActivity
-import com.tencent.qqmusic.qplayer.ui.activity.main.AreaSectionPage
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -33,7 +32,6 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "HomePage"
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalPagerApi::class)
 @Composable
 fun HomePage(homeViewModel: HomeViewModel) {
     Column(
@@ -47,10 +45,10 @@ fun HomePage(homeViewModel: HomeViewModel) {
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun homePageTabs(homeViewModel: HomeViewModel){
+fun homePageTabs(homeViewModel: HomeViewModel) {
     val pages = mutableListOf(
-        "分类歌单","排行榜",
-        "专区"
+        "分类歌单", "排行榜",
+        "专区","长音频"
     )
 
     val pagerState = rememberPagerState()
@@ -95,15 +93,21 @@ fun homePageTabs(homeViewModel: HomeViewModel){
             2 -> {
                 AreaSectionPage(homeViewModel)
             }
+            3 -> {
+                LongAudioPage(homeViewModel = homeViewModel)
+            }
         }
     }
 }
 
 
 @Composable
-fun categoryFoldersPage(homeViewModel: HomeViewModel){
+fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolean = false) {
     val activity = LocalContext.current as Activity
-    var categories = homeViewModel.categories
+    if (fetchSceneSongList) {
+        homeViewModel.fetchSceneCategory()
+    }
+    var categories = if (fetchSceneSongList) homeViewModel.sceneCategories else homeViewModel.categories
     LazyColumn {
         items(categories.count()) { it ->
             val topCategory = categories.getOrNull(it) ?: return@items
@@ -129,13 +133,24 @@ fun categoryFoldersPage(homeViewModel: HomeViewModel){
                             .wrapContentWidth()
                             .padding(16.dp)
                             .clickable {
-                                activity.startActivity(
-                                    Intent(activity, FolderActivity::class.java)
-                                        .putIntegerArrayListExtra(
-                                            FolderActivity.KEY_CATEGORY_IDS,
-                                            arrayListOf(topCategory.id, subId)
-                                        )
-                                )
+                                if (fetchSceneSongList) {
+                                    activity.startActivity(
+                                        Intent(activity, SongListActivity::class.java)
+                                            .putIntegerArrayListExtra(
+                                                SongListActivity.KEY_CATEGORY_IDS,
+                                                arrayListOf(topCategory.id, subId)
+                                            )
+                                    )
+                                } else {
+                                    activity.startActivity(
+                                        Intent(activity, FolderActivity::class.java)
+                                            .putIntegerArrayListExtra(
+                                                FolderActivity.KEY_CATEGORY_IDS,
+                                                arrayListOf(topCategory.id, subId)
+                                            )
+                                    )
+                                }
+
                             },
                         contentAlignment = Alignment.Center
                     ) {

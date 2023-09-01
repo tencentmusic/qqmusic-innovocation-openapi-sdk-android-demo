@@ -1,4 +1,4 @@
-package com.tencent.qqmusic.qplayer.ui.activity.main
+package com.tencent.qqmusic.qplayer.ui.activity.home
 
 import android.app.Activity
 import android.content.Intent
@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.sp
 import com.google.accompanist.flowlayout.FlowRow
 import com.tencent.qqmusic.openapisdk.model.*
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderActivity
-import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 

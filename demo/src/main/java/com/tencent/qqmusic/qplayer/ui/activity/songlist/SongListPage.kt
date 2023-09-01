@@ -8,6 +8,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -17,8 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
@@ -27,8 +32,12 @@ import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderPage
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
+import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -43,217 +52,188 @@ private const val TAG = "SongListPage"
 
 @Composable
 fun SongListScreen(flow: Flow<PagingData<SongInfo>>, displayOnly: Boolean = false) {
-    val activity = LocalContext.current as Activity
     Scaffold(
         topBar = { TopBar() },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                gotoPlayerActivity(activity)
-                },
-                backgroundColor = Color.Blue
-            ) {
-                Text(text = "去播放页", color = Color.White)
-            }}
     ) {
-        SongListPage(flow, displayOnly = displayOnly)
-    }
-}
 
-@Composable
-fun DialogDemo(showDialog: Boolean, callback: (type: String) -> Unit, setShowDialog: (Boolean) -> Unit) {
+        ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+            val (folder, player) = createRefs()
 
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = {
-               setShowDialog(false)
-            },
-            title = {
-                Text("选择你要执行的动作")
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        setShowDialog(false)
-                        callback.invoke("播放")
-
-                    }
-                ) {
-                    Text("播放")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = {
-                        setShowDialog(false)
-                        callback.invoke("添加到下一首播放")
-                    }
-                ) {
-                    Text("添加到下一首播放")
-                }
+            Box(modifier = Modifier.constrainAs(folder) {
+                height = Dimension.fillToConstraints
+                top.linkTo(parent.top)
+                bottom.linkTo(player.top)
+            }) {
+                SongListPage(flow, displayOnly = displayOnly)
             }
-        )
+            Box(modifier = Modifier.constrainAs(player) {
+                bottom.linkTo(parent.bottom)
+            }) {
+                FloatingPlayerPage()
+            }
+        }
+
     }
 }
 
 @ExperimentalCoilApi
 @Composable
-fun SongListPage(flow: Flow<PagingData<SongInfo>>?, displayOnly: Boolean = false) {
+fun SongListPage(flow: Flow<PagingData<SongInfo>>?, displayOnly: Boolean = false, observer: PlayerObserver = PlayerObserver) {
     flow ?: return
-    val activity = LocalContext.current as Activity
-    val composableScope = rememberCoroutineScope()
     val songs = flow.collectAsLazyPagingItems()
     Log.i(TAG, "SongListPage: songs count: ${songs.itemCount}")
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    val listState = rememberLazyListState()
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+
         this.items(songs) { song ->
             song ?: return@items
-            val (showDialog, setShowDialog) =  remember { mutableStateOf(false) }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-                    .clickable {
-                        if (displayOnly) {
-                            return@clickable
-                        }
-                        setShowDialog(true)
-                    }
-            ) {
-                Image(
-                    painter = rememberImagePainter(song.smallCoverUrl()),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(50.dp)
-                        .padding(2.dp)
-                )
-                Column {
-                    Text(text = song.songName, color = Color.Black)
-                    Text(
-                        text = song.singerName ?: "未知",
-//                            color = if (canPlay) Color.Black else Color.Gray
-                        color = Color.Black
-                    )
-                }
-            }
-
-            DialogDemo(showDialog, callback = {
-                when (it) {
-                    "播放" -> {
-                        composableScope.launch(Dispatchers.Main) {
-                            val playList = songs.snapshot().items
-                            val cur = System.currentTimeMillis()
-                            val ret = OpenApiSDK
-                                .getPlayerApi()
-                                .playSongs(playList, playList.indexOf(song))
-                            OpenApiSDK.getOpenApi().reportRecentPlay(song.songId.toString(), 2, callback=null)
-                            Log.d(TAG, "启播歌曲数量: ${playList.size}, ret=$ret")
-                            when (ret) {
-                                PlayDefine.PlayError.PLAY_ERR_NONETWORK -> {
-                                    Toast
-                                        .makeText(activity, "无网络连接", Toast.LENGTH_SHORT)
-                                        .show()
-                                }
-                                else -> {
-                                    delay(500L)
-                                    gotoPlayerActivity(activity)
-                                }
-                            }
-                        }
-                    }
-                    "添加到下一首播放" -> {
-                        OpenApiSDK.getPlayerApi().addToNext(songInfo = song)
-                    }
-                    else -> {
-
-                    }
-                }
-            }, setShowDialog = setShowDialog)
+            itemUI(songs = songs.snapshot().filterNotNull().toList(), song = song)
         }
     }
 }
 
-private fun gotoPlayerActivity(activity: Activity) {
-    activity.startActivity(
-        Intent(
-            activity,
-            PlayerActivity::class.java
-        ).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        }
-    )
-}
 
 @Composable
-fun SongListPage(songs: List<SongInfo>, displayOnly: Boolean = false) {
-    val composableScope = rememberCoroutineScope()
+fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) {
     val activity = LocalContext.current as Activity
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        this.items(songs.size) { index ->
-            val song = songs.elementAtOrNull(index) ?: return@items
-            val (showDialog, setShowDialog) =  remember { mutableStateOf(false) }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-                    .clickable {
-                        if (displayOnly) {
-                            return@clickable
+    val currentSong = PlayerObserver.currentSong
+    val coroutineScope = rememberCoroutineScope()
+    ConstraintLayout(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(5.dp)
+            .height(60.dp)
+            .clickable {
+                if (displayOnly.not()) {
+                    val result = OpenApiSDK
+                        .getPlayerApi()
+                        .playSongs(
+                            songs,
+                            songs.indexOf(song)
+                        )
+                    if (result == 0) {
+                        activity.startActivity(Intent(activity, PlayerActivity::class.java))
+                    } else {
+                        coroutineScope.launch(Dispatchers.Main) {
+                            Toast
+                                .makeText(activity, "播放失败 Code is $result", Toast.LENGTH_SHORT)
+                                .show()
                         }
-                        setShowDialog(true)
                     }
-            ) {
-                Image(
-                    painter = rememberImagePainter(song.smallCoverUrl()),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(50.dp)
-                        .padding(2.dp)
-                )
-                Column {
-                    Text(text = song.songName, color = Color.Black)
-                    Text(
-                        text = song.singerName ?: "未知",
+                }
+            }
+    ) {
+        val (cover, songInfo, next, playingIcon) = createRefs()
+
+        Image(
+            painter = rememberImagePainter(song.smallCoverUrl()),
+            contentDescription = null,
+            modifier = Modifier
+                .size(50.dp)
+                .padding(2.dp)
+                .constrainAs(cover) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                    start.linkTo(parent.start)
+                }
+        )
+        Column(
+            modifier = Modifier
+                .padding(start = 10.dp)
+                .constrainAs(songInfo) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                    start.linkTo(cover.end)
+                }
+        ) {
+            Text(text = song.songName, color = Color.Black)
+            Text(
+                text = song.singerName ?: "未知",
 //                            color = if (canPlay) Color.Black else Color.Gray
-                        color = Color.Black
+                color = Color.Black
+            )
+            Row {
+                if (song.vip == 1) {
+                    Image(
+                        painter = painterResource(R.drawable.pay_icon_in_cell_old),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(end = 5.dp)
+                            .width(18.dp)
+                            .height(10.dp)
+                    )
+                }
+                if (song.hasQualityHQ()) {
+                    Image(
+                        painter = painterResource(R.drawable.hq_icon), contentDescription = null, modifier = Modifier
+                            .width(18.dp)
+                            .height(10.dp)
                     )
                 }
             }
-            DialogDemo(showDialog, callback = {
-                when (it) {
-                    "播放" -> {
-                        composableScope.launch(Dispatchers.Main) {
-                            val cur = System.currentTimeMillis()
-                            val ret = OpenApiSDK
-                                .getPlayerApi()
-                                .playSongs(songs, songs.indexOf(song))
-                            OpenApiSDK.getOpenApi().reportRecentPlay(song.songId.toString(), 2, callback=null)
-                            Log.d(TAG, "起播歌曲数量: ${songs.size}, ret=$ret")
-                            when (ret) {
-                                PlayDefine.PlayError.PLAY_ERR_NONETWORK -> {
-                                    Toast
-                                        .makeText(activity, "无网络连接", Toast.LENGTH_SHORT)
-                                        .show()
-                                }
-                                else -> {
-                                    delay(500L)
-                                    activity.startActivity(
-                                        Intent(
-                                            activity,
-                                            PlayerActivity::class.java
-                                        )
-                                    )
-                                }
-                            }
-                        }
+        }
+
+        if (currentSong?.songId == song.songId) {
+            Image(
+                painter = painterResource(R.drawable.list_icon_playing), contentDescription = null, modifier = Modifier
+                    .padding(start = 10.dp)
+                    .width(30.dp)
+                    .height(30.dp)
+                    .constrainAs(playingIcon) {
+                        top.linkTo(parent.top)
+                        bottom.linkTo(parent.bottom)
+                        end.linkTo(next.start)
                     }
-                    "添加到下一首播放" -> {
-                        OpenApiSDK.getPlayerApi().setPlayList(listOf(song))
-                    }
-                    else -> {
-                    }
+            )
+        }
+
+        if (displayOnly.not()) {
+            Column(modifier = Modifier
+                .fillMaxHeight()
+                .constrainAs(next) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                    end.linkTo(parent.end)
+                }) {
+                TextButton(
+                    modifier = Modifier.height(20.dp),
+                    contentPadding = PaddingValues(0.dp),
+                    onClick = { OpenApiSDK.getPlayerApi().addToNext(songInfo = song) }) {
+                    Text(text = "添加下一曲", fontSize = 10.sp)
                 }
-            }, setShowDialog = setShowDialog);
+                TextButton(modifier = Modifier.height(20.dp),
+                    contentPadding = PaddingValues(0.dp),
+                    onClick = { OpenApiSDK.getPlayerApi().appendSongToPlaylist(listOf(song)) }) {
+                    Text(text = "添加末尾", fontSize = 10.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SongListPage(songs: List<SongInfo>, displayOnly: Boolean = false, needPlayer: Boolean = true) {
+    ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+        val (folder, player) = createRefs()
+
+        Box(modifier = Modifier.constrainAs(folder) {
+            height = Dimension.fillToConstraints
+            top.linkTo(parent.top)
+            bottom.linkTo(player.top)
+        }) {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                this.items(songs.size) { index ->
+                    val song = songs.elementAtOrNull(index) ?: return@items
+                    itemUI(songs = songs, song = song, displayOnly)
+                }
+            }
+        }
+        if (needPlayer) {
+            Box(modifier = Modifier.constrainAs(player) {
+                bottom.linkTo(parent.bottom)
+            }) {
+                FloatingPlayerPage()
+            }
         }
     }
 }

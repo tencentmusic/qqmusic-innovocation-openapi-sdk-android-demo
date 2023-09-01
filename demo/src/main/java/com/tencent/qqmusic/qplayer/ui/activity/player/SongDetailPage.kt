@@ -74,6 +74,13 @@ fun DetailPage(observer: PlayerObserver? = null) {
                 Text(text = if (songInfo?.vip == 1) "是" else "否")
             }
 
+            if (songInfo?.isDigitalAlbum() == true) {
+                Row(modifier = Modifier.padding(bottom = 10.dp)) {
+                    Text(text = "数字专辑 ： ")
+                    Text(text = "%.2f元".format((songInfo.payPrice ?: 0) / 100f))
+                }
+            }
+
             Row(modifier = Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(text = "歌手 ： ")
                 Text(text = songInfo?.singerName ?: "无")
@@ -86,6 +93,7 @@ fun DetailPage(observer: PlayerObserver? = null) {
                     contentDescription = "",
                     modifier = Modifier
                         .padding(start = 10.dp)
+                        .size(60.dp)
                         .clip(CircleShape)
                 )
 
@@ -94,9 +102,9 @@ fun DetailPage(observer: PlayerObserver? = null) {
 
             Row(modifier = Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(text = "专辑 ： ")
-                Text(text = songInfo?.albumName ?: "无")
+                Text(text = if (songInfo?.albumName.isNullOrEmpty()) "无" else songInfo?.albumName ?: "无")
                 Image(
-                    painter = rememberImagePainter(songInfo?.albumPic150x150 ?: plachImageID,
+                    painter = rememberImagePainter(songInfo?.bigCoverUrl() ?: plachImageID,
                         builder = {
                             crossfade(false)
                             placeholder(plachImageID)
@@ -104,10 +112,16 @@ fun DetailPage(observer: PlayerObserver? = null) {
                     contentDescription = "",
                     modifier = Modifier
                         .padding(start = 10.dp)
+                        .size(60.dp)
                         .clip(CircleShape)
                 )
-
             }
+
+            Row(modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)) {
+                Text(text = "歌曲流派 ： ")
+                Text(text = songInfo?.genre ?: "")
+            }
+
             //技术类信息
             Box(
                 Modifier
@@ -148,7 +162,7 @@ fun DetailPage(observer: PlayerObserver? = null) {
             }
             Button(
                 onClick = {
-                    OpenApiSDK.getPlayerApi().tryToOpenExcellentQuality(object: PlayCallback {
+                    OpenApiSDK.getPlayerApi().tryToOpenExcellentQuality(object : PlayCallback {
                         override fun onSuccess() {
                             Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
                         }

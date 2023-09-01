@@ -96,7 +96,7 @@ fun SearchResultTabs(viewModel: HomeViewModel) {
         val index = pagerState.currentPage
         when (index) {
             0 -> {
-                SongListPage(viewModel.searchSongs)
+                SongListPage(viewModel.searchSongs, needPlayer = false)
             }
             1 -> {
                 FolderPage(viewModel.searchFolders)

@@ -17,6 +17,7 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.SongCacheCallback
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 
 // 
 // Created by clydeazhang on 2021/12/20 2:49 下午.
@@ -111,8 +112,8 @@ class SongCacheDemoActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.size).setOnClickListener {
             val cacheSize = OpenApiSDK.getSongCacheApi().getCacheSize()
-            Log.d(TAG, "cacheSize=${cacheSize / 1024 /1024} MB")
-            Toast.makeText(this, "size: ${cacheSize / 1024 /1024} MB", Toast.LENGTH_SHORT).show()
+            Log.d(TAG, "cache : $cacheSize cacheSize=${cacheSize / 1024 /1024} MB")
+            Toast.makeText(this, "size: ${UiUtils.getFormatSize(cacheSize)}", Toast.LENGTH_SHORT).show()
         }
 
         edit.addTextChangedListener(object : TextWatcher {

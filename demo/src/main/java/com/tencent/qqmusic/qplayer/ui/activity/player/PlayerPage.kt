@@ -6,30 +6,30 @@ import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Button
+import androidx.compose.material.Scaffold
+import androidx.compose.material.Slider
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.qplayer.core.utils.pref.QQPlayerPreferencesNew
 import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricActivity
 import kotlin.concurrent.thread
-import kotlin.math.log10
 
 
 //
@@ -41,16 +41,7 @@ private const val TAG = "PlayerPage"
 
 @Composable
 fun PlayerScreen(observer: PlayerObserver) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = "QPlayer", fontSize = 18.sp) },
-                contentColor = Color.White,
-                actions = {
-                }
-            )
-        }
-    ) {
+    Scaffold {
         PlayerPage(observer)
     }
 }
@@ -81,22 +72,20 @@ fun Int.qualityToStr(): String {
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun PlayerPage(observer: PlayerObserver) {
     val activity = LocalContext.current as Activity
-
     val currSong = observer.currentSong
     val currState = observer.currentState
     val currMode = observer.currentMode
-    val qualityNew = observer.mCurrentQuality
     val playStateText = observer.playStateText
-    val quality = remember(currSong) { mutableStateOf(OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()) }
+    var quality = observer.mCurrentQuality
 
     val modeOrder =
         mutableListOf(PlayerEnums.Mode.LIST, PlayerEnums.Mode.ONE, PlayerEnums.Mode.SHUFFLE)
-
-    val scope = rememberCoroutineScope()
+    val lyricView = lyric() {
+        activity.startActivity(Intent(activity, LyricActivity::class.java))
+    }
 
     Column(
         modifier = Modifier
@@ -110,10 +99,8 @@ fun PlayerPage(observer: PlayerObserver) {
             painter = rememberImagePainter(currSong?.bigCoverUrl()),
             contentDescription = null,
             modifier = Modifier
-                .clickable {
-                    activity.startActivity(Intent(activity, LyricActivity::class.java))
-                }
                 .size(300.dp)
+                .clip(RoundedCornerShape(20.dp))
         )
 
         // 歌曲信息
@@ -133,45 +120,25 @@ fun PlayerPage(observer: PlayerObserver) {
             }
         )
 
+
+        AndroidView(
+            factory = {
+                lyricView
+            }, modifier = Modifier.size(width = 400.dp, height = 40.dp)
+        )
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            val icMode: Int = when (currMode) {
-                PlayerEnums.Mode.LIST -> {
-                    R.drawable.ic_play_mode_normal
-                }
-                PlayerEnums.Mode.ONE -> {
-                    R.drawable.ic_play_mode_single
-                }
-                PlayerEnums.Mode.SHUFFLE -> {
-                    R.drawable.ic_play_mode_random
-                }
-                else -> {
-                    R.drawable.ic_play_mode_normal
-                }
-            }
+
 
             // 播放模式
-            Image(
-                painter = painterResource(id = icMode),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(50.dp)
-                    .clickable {
-                        val currIndex = modeOrder.indexOf(currMode)
-                        OpenApiSDK
-                            .getPlayerApi()
-                            .setPlayMode(
-                                modeOrder.getOrNull(currIndex + 1)
-                                    ?: PlayerEnums.Mode.LIST
-                            )
-                    }
-            )
 
-            val icQuality: Int = when (quality.value) {
+
+            val icQuality: Int = when (quality) {
                 PlayerEnums.Quality.HQ -> {
                     R.drawable.ic_hq
                 }
@@ -207,22 +174,8 @@ fun PlayerPage(observer: PlayerObserver) {
                                 .getPlayerApi()
                                 .setCurrentPlaySongQuality(it)
                         }, {
-                            quality.value = it
+                            quality = it
                         })
-                    }
-            )
-
-            // 播放列表
-            Image(
-                painter = painterResource(id = R.drawable.ic_playlist),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(50.dp)
-                    .clickable {
-                        val intent = Intent(activity, PlayListActivity::class.java).apply {
-                            putExtra(PlayListActivity.KEY_DISPLAY_ONLY, false)
-                        }
-                        activity.startActivity(intent)
                     }
             )
 
@@ -254,17 +207,6 @@ fun PlayerPage(observer: PlayerObserver) {
             }, content = {
                 Text("进入播放测试页")
             })
-//            Button(onClick = {
-//                thread {
-//                    OpenApiSDK.getPlayerApi().getDuration()?.let {
-//                        val position = it.toInt() / 2
-//                        QLog.i(TAG, "before seek duration = $it,  position = $position")
-//                        OpenApiSDK.getPlayerApi().seek(position)
-//                    }
-//                }
-//            }, content = {
-//                Text("seek")
-//            })
         }
         // 播放控制
         Row(
@@ -278,9 +220,8 @@ fun PlayerPage(observer: PlayerObserver) {
                 text = if (currSong == null) {
                     ""
                 } else {
-                    OpenApiSDK.getPlayerApi().getDuration()?.let {
-                        "%${log10(it.toDouble()).toInt() + 1}.0f".format(observer.playPosition)
-                    } ?: ""
+                    val time = observer.playPosition / 1000
+                    observer.convertTime(time.toLong())
                 },
                 fontFamily = FontFamily.Monospace
             )
@@ -309,7 +250,7 @@ fun PlayerPage(observer: PlayerObserver) {
             )
 
             Text(
-                text = OpenApiSDK.getPlayerApi().getDuration().toString(),
+                text = PlayerObserver.convertTime((OpenApiSDK.getPlayerApi().getDuration() ?: 0L) / 1000L),
                 fontFamily = FontFamily.Monospace
             )
         }
@@ -319,8 +260,41 @@ fun PlayerPage(observer: PlayerObserver) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 30.dp),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
+
+            val icMode: Int = when (currMode) {
+                PlayerEnums.Mode.LIST -> {
+                    R.drawable.ic_play_mode_normal
+                }
+                PlayerEnums.Mode.ONE -> {
+                    R.drawable.ic_play_mode_single
+                }
+                PlayerEnums.Mode.SHUFFLE -> {
+                    R.drawable.ic_play_mode_random
+                }
+                else -> {
+                    R.drawable.ic_play_mode_normal
+                }
+            }
+            Image(
+                painter = painterResource(id = icMode),
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier
+                    .size(30.dp)
+                    .clickable {
+                        val currIndex = modeOrder.indexOf(currMode)
+                        OpenApiSDK
+                            .getPlayerApi()
+                            .setPlayMode(
+                                modeOrder.getOrNull(currIndex + 1)
+                                    ?: PlayerEnums.Mode.LIST
+                            )
+                    }
+            )
+
             Image(
                 painter = painterResource(id = R.drawable.ic_previous),
                 contentDescription = null,
@@ -356,7 +330,14 @@ fun PlayerPage(observer: PlayerObserver) {
                             }
                             Log.d(TAG, "play or pause, ret=$ret")
                             if (ret != 0) {
-                                observer.playStateText = "暂停或开始失败(ret=$ret)"
+                                val song = OpenApiSDK
+                                    .getPlayerApi()
+                                    .getCurrentSongInfo()
+                                observer.playStateText = if (song?.canPlay() != true) {
+                                    song?.unplayableMsg ?: ""
+                                } else {
+                                    "暂停或开始失败(ret=$ret)"
+                                }
                             }
                         }
                     }
@@ -375,6 +356,18 @@ fun PlayerPage(observer: PlayerObserver) {
                                 observer.playStateText = "下一曲失败(ret=$ret)"
                             }
                         }
+                    }
+            )
+
+
+            Image(
+                painter = painterResource(id = R.drawable.ic_playlist),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(30.dp)
+                    .clickable {
+                        val intent = Intent(activity, PlayListActivity::class.java)
+                        activity.startActivity(intent)
                     }
             )
         }

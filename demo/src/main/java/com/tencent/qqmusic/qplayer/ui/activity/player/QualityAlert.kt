@@ -36,27 +36,28 @@ object QualityAlert {
     fun showQualityAlert(activity: Activity, setBlock: (Int)->Int, refresh: (Int)->Unit) {
         val curSong = Global.getPlayerModuleApi().getCurrentSongInfo()
         val stringArray = qualityOrderString.map {
+            val quality = qualityOrder.getOrNull(qualityOrderString.indexOf(it)) ?: qualityOrder[0]
             when (it) {
                 "LQ" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeLQ())
+                    it + UiUtils.getFormatSize(curSong?.getSizeLQ()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
                 }
                 "STANDARD" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeStandard())
+                    it + UiUtils.getFormatSize(curSong?.getSizeStandard()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
                 }
                 "HQ" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeHQ())
+                    it + UiUtils.getFormatSize(curSong?.getSizeHQ()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
                 }
                 "SQ" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeSQ())
+                    it + UiUtils.getFormatSize(curSong?.getSizeSQ()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
                 }
                 "DOLBY" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeDolby())
+                    it + UiUtils.getFormatSize(curSong?.getSizeDolby()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
                 }
                 "HIRES" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeHiRes())
+                    it + UiUtils.getFormatSize(curSong?.getSizeHiRes()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
                 }
                 "EXCELLENT" -> {
-                    "臻品音质2.0"
+                    "臻品音质2.0" + UiUtils.getFormatAccessLabel(curSong, quality)
                 }
                 else -> {
                     it
@@ -82,6 +83,10 @@ object QualityAlert {
                         PlayDefine.PlayError.PLAY_ERR_CANNOT_PLAY -> "歌曲不能播放"
                         PlayDefine.PlayError.PLAY_ERR_NONETWORK -> "无网络"
                         PlayDefine.PlayError.PLAY_ERR_UNSUPPORT -> "试听歌曲无法切换音质"
+                        PlayDefine.PlayError.PLAY_ERR_NEED_SUPER_VIP -> "需要超级会员"
+                        PlayDefine.PlayError.PLAY_ERR_NEED_PAY_ALBUM -> "需要专辑付费"
+                        PlayDefine.PlayError.PLAY_ERR_NEED_PAY_TRACK -> "需要单曲付费"
+                        PlayDefine.PlayError.PLAY_ERR_NEED_VIP_LONG_AUDIO -> "需要听书会员"
                         else -> "切换歌曲品质失败, ret=$ret"
                     }
                     activity.runOnUiThread {
