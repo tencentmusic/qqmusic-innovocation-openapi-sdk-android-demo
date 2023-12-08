@@ -2,12 +2,10 @@ package com.tencent.qqmusic.qplayer
 
 import android.app.Application
 import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
 import com.tencent.qqmusic.innovation.common.util.DeviceUtils
-import com.tencent.qqmusic.openapisdk.business_common.Global
+import com.tencent.qqmusic.openapisdk.core.InitConfig
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
-import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 
 /**
@@ -28,13 +26,18 @@ class App : Application() {
 
         fun init(context: Context) {
             Log.i(TAG, "init Application")
-            OpenApiSDK.init(
-                context.applicationContext,
+
+	    val initConfig = InitConfig(context.applicationContext,
                 MustInitConfig.APP_ID,
                 MustInitConfig.APP_KEY,
-                DeviceUtils.getAndroidID(),
-                false
-            )
+                DeviceUtils.getAndroidID()
+            ).apply {
+                this.isUseForegroundService = isUseForegroundService
+                this.crashConfig = InitConfig.CrashConfig(enableNativeCrashReport = true, enableAnrReport = true)
+            }
+            val start = System.currentTimeMillis()
+            OpenApiSDK.init(initConfig)
+            Log.i(TAG, "init cost:${System.currentTimeMillis() - start}")
         }
     }
 }

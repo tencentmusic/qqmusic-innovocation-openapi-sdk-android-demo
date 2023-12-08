@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/lightGray"
+    tools:ignore="MissingDefaultResource">
+
+    <!-- 如果这里不设置clipChildren = true, 歌词不会截断 -->
+    <FrameLayout
+        android:id="@+id/qmlyric_view_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="0dp"
+        android:layout_marginRight="0dp"
+        android:clipChildren="true"
+        android:clipToPadding="true"
+        android:background="@color/lightGray"
+        android:layout_above="@+id/switch_lyric_btn"
+        >
+
+        <com.tencent.qqmusic.openapisdk.core.view.lyric.MultiLineLyricView
+            android:id="@+id/scroll_lyric"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:focusable="false"
+            android:overScrollMode="never"
+            android:scrollbars="none"
+            android:fadingEdgeLength="66dp"
+            android:requiresFadingEdge="vertical"
+            android:layout_marginBottom="60dp"
+            android:layout_marginTop="33dp"
+            app:layout_goneMarginBottom="120dp"
+            app:lyric_tr_margin="5dp"
+            app:noLyricTips="暂无歌词"
+            app:lyric_color_h="#D37C90"
+            app:lyric_color_n="#A8DCE2"
+            app:lyric_color_tr="#DD9ABD"
+            app:lyric_font_size_h="23dp"
+            app:lyric_font_size_n="17.5dp"
+            app:lyric_font_size_tr="14dp"
+            app:lyric_font_bold_h="true"
+            app:lyric_line_margin="0dp"
+            app:lyric_sentence_margin="28dp"
+            app:lyric_vertical_gravity="top"
+            app:lyric_horizontal_gravity="center"
+            app:lyric_horizontal_padding="15dp"
+            app:lyric_refresh_interval="50" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:textSize="20sp"
+            android:textColor="@color/white"
+            android:visibility="gone"
+            android:id="@+id/loading_lyric_status"/>
+
+    </FrameLayout>
+
+    <Button
+        android:id="@+id/switch_lyric_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_toLeftOf="@+id/btn_old_style"
+        android:layout_marginRight="20dp"/>
+
+    <Button
+        android:id="@+id/btn_old_style"
+        android:text="查看旧版"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="20dp"/>
+
+</RelativeLayout>

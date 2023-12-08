@@ -55,6 +55,7 @@ fun DetailPage(observer: PlayerObserver? = null) {
     val songInfo = observer?.currentSong
     var vipInfo by remember { mutableStateOf(Global.getLoginModuleApi().vipInfo) }
     var canTryExcellentQuality by remember { mutableStateOf(false) }
+    var canTryGalaxyQuality by remember { mutableStateOf(false) }
 
     QPlayerTheme {
         Column(
@@ -158,7 +159,7 @@ fun DetailPage(observer: PlayerObserver? = null) {
 
                 }
             ) {
-                Text(text = "查看臻品试听状态")
+                Text(text = "查看臻品音质试听状态")
             }
             Button(
                 onClick = {
@@ -177,6 +178,41 @@ fun DetailPage(observer: PlayerObserver? = null) {
             }
 
             Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+
+            Text(
+                text = "能否试听臻品全景声：$canTryGalaxyQuality, 是否试听过：${vipInfo?.galaxyQualityTried}," +
+                        "试听剩余时间：${vipInfo?.galaxyQualityTryTimeLeft}"
+            )
+
+            Button(
+                onClick = {
+                    Global.getOpenApi().canTryPlayGalaxyQuality {
+                        canTryGalaxyQuality = it.data ?: true
+                        vipInfo = Global.getLoginModuleApi().vipInfo
+                    }
+
+                }
+            ) {
+                Text(text = "查看臻品全景声试听状态")
+            }
+            Button(
+                onClick = {
+                    OpenApiSDK.getPlayerApi().tryToOpenGalaxyQuality(object : PlayCallback {
+                        override fun onSuccess() {
+                            Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
+                        }
+
+                        override fun onFailure(errCode: Int, msg: String?) {
+                            Toast.makeText(UtilContext.getApp(), "试听失败！$errCode, msg: $msg", Toast.LENGTH_SHORT).show()
+                        }
+                    })
+                }
+            ) {
+                Text(text = "试听臻品全景声")
+            }
+
+            Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+
         }
     }
 

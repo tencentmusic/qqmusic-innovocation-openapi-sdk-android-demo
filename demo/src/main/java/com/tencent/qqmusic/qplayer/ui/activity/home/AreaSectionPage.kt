@@ -16,7 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
-import com.tencent.qqmusic.qplayer.ui.activity.main.DolbySectionPage
+import com.tencent.qqmusic.openapisdk.model.AreaId
+import com.tencent.qqmusic.qplayer.ui.activity.main.AreaSectionDetailPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.FreeSongPagingSource
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPage
 
@@ -38,6 +39,7 @@ fun areaScreen(homeViewModel: HomeViewModel) {
     val pages = mutableListOf(
         "Hires专区",
         "Dolby专区",
+        "臻品全景声专区",
         "免登录专区",
         "场景歌单",
         "新碟"
@@ -78,22 +80,24 @@ fun areaScreen(homeViewModel: HomeViewModel) {
         }
 
         0 -> {
-            HiresSectionPage(homeViewModel)
+            AreaSectionDetailPage(AreaId.AreaHires, homeViewModel)
         }
-
         1 -> {
-            DolbySectionPage(homeViewModel)
+            AreaSectionDetailPage(AreaId.AreaDolby, homeViewModel)
+        }
+        2 -> {
+            AreaSectionDetailPage(AreaId.AreaGalaxy, homeViewModel)
         }
 
-        2 -> {
+        3 -> {
             SongListPage(Pager(PagingConfig(pageSize = 20)) {
                 FreeSongPagingSource()
             }.flow)
         }
-        3 -> {
+        4 -> {
             categoryFoldersPage(homeViewModel = homeViewModel, true)
         }
-        4 -> {
+        5 -> {
             NewAlbumPage(homeViewModel)
         }
     }

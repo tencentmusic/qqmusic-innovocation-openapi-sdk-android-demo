@@ -43,38 +43,41 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
+    <TextView
+        android:id="@+id/tv_login_info"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
     <Button
         android:id="@+id/btn_send"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:text="发送请求" />
-
-    <TextView
-        android:id="@+id/tv_login_info"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-
     <LinearLayout
         android:orientation="horizontal"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content">
-
         <Button
-            android:layout_weight="1"
             android:id="@+id/btn_test"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="一键测试所有opi接口连通状态" />
+            android:text="一键测试所有opi接口连通状态"
+            android:visibility="gone"/>
+    </LinearLayout>
 
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
         <Button
             android:layout_weight="1"
             android:id="@+id/btn_test2"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="15dp"
             android:text="设置校验token为过期状态" />
     </LinearLayout>
+
+
 
     <HorizontalScrollView
         android:layout_width="wrap_content"

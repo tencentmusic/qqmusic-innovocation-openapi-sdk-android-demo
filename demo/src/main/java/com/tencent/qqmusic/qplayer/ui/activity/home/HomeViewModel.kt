@@ -413,6 +413,20 @@ class HomeViewModel : ViewModel() {
         }
     }
 
+    fun fetchGalaxySection(callback: (Area?) -> Unit) {
+        QLog.i(TAG, "fetch galaxy")
+        viewModelScope.launch(Dispatchers.IO) {
+            OpenApiSDK.getOpenApi().fetchGalaxySectionByShelfTypes(emptyList(), callback = {
+                if (it.isSuccess()) {
+                    QLog.i(TAG, "fetch galaxy success")
+                    callback.invoke(it.data)
+                } else {
+                    callback.invoke(null)
+                }
+            })
+        }
+    }
+
     fun fetchShelfContent(
         areaId: Int,
         shelfId: Int,

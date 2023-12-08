@@ -3,12 +3,9 @@ package com.tencent.qqmusic.qplayer.ui.activity.login
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.webkit.*
-import android.widget.Toast
-import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusicsdk.sdklog.SDKLog
 
@@ -17,6 +14,9 @@ import com.tencent.qqmusicsdk.sdklog.SDKLog
 // Copyright (c) 2022 Tencent. All rights reserved.
 // 
 class WebViewActivity : Activity() {
+
+    private var webView: WebView? = null
+
     companion object {
         private const val TAG = "@@@WebViewActivity"
 
@@ -33,15 +33,15 @@ class WebViewActivity : Activity() {
         setContentView(R.layout.activity_web)
         val url = intent.getStringExtra("url") ?: "null"
         SDKLog.i(TAG, "load url:$url")
-        val web = findViewById<WebView>(R.id.web)
-        web.loadUrl(url)
-        web.settings.apply {
+        webView = findViewById<WebView>(R.id.web)
+        webView?.loadUrl(url)
+        webView?.settings?.apply {
             this.javaScriptEnabled = true
         }
-        web.webChromeClient = object : WebChromeClient() {
+        webView?.webChromeClient = object : WebChromeClient() {
 
         }
-        web.webViewClient = object : WebViewClient() {
+        webView?.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(
                 view: WebView?,
                 request: WebResourceRequest?
@@ -56,6 +56,14 @@ class WebViewActivity : Activity() {
             }
         }
 
+    }
+
+    override fun onBackPressed() {
+        if (webView?.canGoBack() == true) {
+            webView?.goBack()
+        } else {
+            super.onBackPressed()
+        }
     }
 
 }

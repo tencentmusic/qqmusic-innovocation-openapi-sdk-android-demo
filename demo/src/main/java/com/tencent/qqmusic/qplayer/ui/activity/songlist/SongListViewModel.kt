@@ -37,23 +37,23 @@ class SongListViewModel : ViewModel() {
     }
 
 
-    fun pagingAlbumSongs(albumId: String) = Pager(PagingConfig(pageSize = 50)) {
+    fun pagingAlbumSongs(albumId: String) = Pager(PagingConfig(pageSize = 50, prefetchDistance = 10, initialLoadSize = 50)) {
         AlbumSongPagingSource(albumId)
     }.flow
 
-    fun pagingSongIds(songIds: List<Long>) = Pager(PagingConfig(pageSize = 50)) {
+    fun pagingSongIds(songIds: List<Long>) = Pager(PagingConfig(pageSize = 50, prefetchDistance = 10, initialLoadSize = 50)) {
         SongListPagingSource(emptyList(), songIds)
     }.flow
 
-    fun pagingSongListSongs(songList: List<SongInfo>) = Pager(PagingConfig(pageSize = 50)) {
+    fun pagingSongListSongs(songList: List<SongInfo>) = Pager(PagingConfig(pageSize = 50, prefetchDistance = 10, initialLoadSize = 50)) {
         SongListPagingSource(songList, emptyList())
     }.flow
 
-    fun pagingRankSongList(rankId: Int) = Pager(PagingConfig(pageSize = 20)) {
+    fun pagingRankSongList(rankId: Int) = Pager(PagingConfig(pageSize = 20, prefetchDistance = 10, initialLoadSize = 20)) {
         RankSongPagingSource(rankId)
     }.flow
 
-    fun pagingSongListScene(groupId: Int, subGroupId: Int) = Pager(PagingConfig(pageSize = 20)) {
+    fun pagingSongListScene(groupId: Int, subGroupId: Int) = Pager(PagingConfig(pageSize = 20, prefetchDistance = 10, initialLoadSize = 20)) {
         SongListScenePagingSource(groupId, subGroupId)
     }.flow
 }

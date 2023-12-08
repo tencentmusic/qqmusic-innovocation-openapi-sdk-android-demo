@@ -1,55 +1,47 @@
 package com.tencent.qqmusic.qplayer.ui.activity.main
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
-import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.qplayer.R
-import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
-import com.tencent.qqmusic.sharedfileaccessor.SPBridge
 
 
 @Composable
 @Preview
 fun AppSetting() {
-
-    val strict = "严格模式"
-    val no_strict = "无检查模式"
-
-    val sharedPreferences: SharedPreferences? = remember {
-        try {
-            UtilContext.getApp().getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
-        } catch (e: Exception) {
-            QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
-            null
-        }
-    }
     val activity = LocalContext.current as Activity
     Column {
-        SingleItem(title = "测试设置页面", item = "") {
+        SingleItem(title = "其他设置页面", item = "") {
             activity.startActivity(Intent(activity, OtherActivity::class.java).apply {
                 flags = flags xor Intent.FLAG_ACTIVITY_NEW_TASK
             })
         }
-        var showDialog by remember { mutableStateOf(false) }
-        
+
+        SingleItem(title = "Debug调试页面", item = "") {
+            activity.startActivity(Intent(activity, DebugActivity::class.java))
+        }
+
+        SingleItem(title = "关于", item = "") {
+            activity.startActivity(Intent(activity, AboutActivity::class.java))
+        }
+
     }
 }
 
@@ -86,14 +78,20 @@ fun SingleItem(title: String, item: String?, block: () -> Unit) {
 @Composable
 fun MyMultiSelectDialog(
     options: List<String>,
-    onOptionsSelected: (String) -> Unit
+    onOptionsSelected: (String) -> Unit,
+    onDismissRequest: () -> Unit
 ) {
     AlertDialog(
         title = { Text(text = "选择应用ID模式") },
-        onDismissRequest = {},
+        onDismissRequest = onDismissRequest,
         buttons = {},
         text = {
-            Column {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .clickable(onClick = onDismissRequest)
+            ) {
                 options.forEach { option ->
                     Row(
                         Modifier

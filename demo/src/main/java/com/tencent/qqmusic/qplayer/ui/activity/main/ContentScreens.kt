@@ -15,7 +15,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tencent.qqmusic.qplayer.R
-import com.tencent.qqmusic.qplayer.ui.activity.home.HiresSectionPage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomePage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.login.MinePage
@@ -61,16 +60,6 @@ fun RadioScreen() {
             fontSize = 25.sp
         )
     }
-}
-
-@Composable
-fun HiresScreen() {
-    HiresSectionPage(viewModel())
-}
-
-@Composable
-fun DolbyScreen() {
-    DolbySectionPage(viewModel())
 }
 
 @Composable

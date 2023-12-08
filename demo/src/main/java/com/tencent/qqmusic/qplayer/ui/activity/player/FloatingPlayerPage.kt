@@ -186,6 +186,8 @@ fun lyric(
                 setSingeMode(LyricViewParams.SINGLE_STATE_FIRST)
                 setSingleLine(true)
                 setFontSize(fontSize.dp.value.toInt())
+                setColor(android.graphics.Color.parseColor("#30888888"))
+                setColorH(android.graphics.Color.parseColor("#888888"))
                 setOnClickListener {
                     click?.let { it.invoke() }
                 }

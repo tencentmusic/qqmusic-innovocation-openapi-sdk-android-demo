@@ -168,6 +168,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_open_api_demo)
+        val showDebugButton = intent.getBooleanExtra("isDebug",false)
         spinner = findViewById<Spinner>(R.id.spinner)
         param1 = findViewById(R.id.edt_param_1)
         param2 = findViewById(R.id.edt_param_2)
@@ -229,8 +230,9 @@ class OpenApiDemoActivity : AppCompatActivity() {
             }
 
         }
-
-        findViewById<View>(R.id.btn_test).setOnClickListener {
+        val debugBottom = findViewById<View>(R.id.btn_test)
+        debugBottom.visibility= if (showDebugButton) View.VISIBLE else View.GONE
+        debugBottom.setOnClickListener {
             errorOpiNameAndMsg.clear()
             displayTv.text = "正在请求, 请稍等..."
             thread {
@@ -635,6 +637,11 @@ class OpenApiDemoActivity : AppCompatActivity() {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
             openApi.fetchLyric(paramStr1?.toLong(), paramStr2, commonCallback)
+        }
+        methodNameToBlock["fetchAllLyric"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.fetchAllLyric(paramStr1?.toLong(), paramStr2, commonCallback)
         }
         methodNameToBlock["fetchCategoryOfPublicRadio"] = {
             val commonCallback = CallbackWithName(it)
@@ -1120,6 +1127,11 @@ class OpenApiDemoActivity : AppCompatActivity() {
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "fetchLyric", listOf("歌曲id", "歌曲mid"), listOf("314818717")
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchAllLyric", listOf("歌曲id", "歌曲mid"), listOf("335918510")
             )
         )
         methodNameWithParamList.add(

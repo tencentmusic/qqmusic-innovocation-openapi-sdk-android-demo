@@ -22,6 +22,10 @@ android {
         archivesBaseName = project.hasProperty('git_version')
                 ? "qplay-edge-demo-${appVersionName}-${git_version}_SDKv${sdk_version}"
                 : "qplay-edge-demo-${appVersionName}_SDKv${sdk_version}"
+
+        ndk{                                            // add this
+            abiFilters "arm64-v8a"
+        }
     }
 
     buildTypes {

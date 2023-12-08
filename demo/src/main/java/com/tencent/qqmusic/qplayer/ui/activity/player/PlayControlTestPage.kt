@@ -1,6 +1,7 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
@@ -50,6 +51,8 @@ fun PlayControlArea() {
     var contentType by remember { mutableStateOf(TextFieldValue("3")) }
 
     var streamType by remember { mutableStateOf(TextFieldValue("2")) }
+
+    val padding = 5.dp
 
     Column(
         modifier = Modifier.padding(5.dp)
@@ -109,6 +112,18 @@ fun PlayControlArea() {
             .padding(top = 9.dp)
             .fillMaxWidth()
             .height(3.dp))
+
+        var enableReplayGain by remember {
+            mutableStateOf(Global.getPlayerModuleApi().getEnableReplayGain())
+        }
+
+        Button(onClick = {
+            val curValue = Global.getPlayerModuleApi().getEnableReplayGain()
+            Global.getPlayerModuleApi().setEnableReplayGain(curValue.not())
+            enableReplayGain = curValue.not()
+        }, modifier = Modifier.padding(padding)) {
+            Text(text = "开启音量均衡 ${if (enableReplayGain) "开启" else "关闭"}")
+        }
     }
 
 }

@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.business_common.login.OpenIdInfo
-import com.tencent.qqmusic.openapisdk.business_common.login.PartnerIdInfo
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
 import com.tencent.qqmusic.openapisdk.model.UserInfo
@@ -24,15 +23,15 @@ class MineViewModel : ViewModel() {
     private val _loginInfo = MutableStateFlow<OpenIdInfo?>(null)
     val loginInfo: StateFlow<OpenIdInfo?> = _loginInfo
 
-    private val _partnerAccountInfo = MutableStateFlow<PartnerIdInfo?>(null)
-    val partnerAccountInfo: StateFlow<PartnerIdInfo?> = _partnerAccountInfo
+    private val _partnerAccountInfo = MutableStateFlow<String?>(null)
+    val partnerAccountInfo: StateFlow<String?> = _partnerAccountInfo
 
     fun updateData() {
         viewModelScope.launch {
             OpenApiSDK.getOpenApi().fetchUserInfo(callback = {
                 _userInfo.value = it.data
                 _loginInfo.value = Global.getLoginModuleApi().openIdInfo
-                _partnerAccountInfo.value = Global.getLoginModuleApi().partnerIdInfo
+                _partnerAccountInfo.value = Global.getPartnerApi().queryThirdPartyAccountID()
             })
 
             OpenApiSDK.getOpenApi().fetchGreenMemberInformation {
@@ -50,6 +49,7 @@ class MineViewModel : ViewModel() {
                 AuthType.QRCode -> "扫码登录"
                 AuthType.WX -> "微信"
                 AuthType.PHONE -> "手机"
+                AuthType.PARTNER -> "三方帐号登录"
                 else -> {
                     "未知"
                 }

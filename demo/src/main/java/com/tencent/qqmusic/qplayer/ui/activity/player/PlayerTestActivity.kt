@@ -165,6 +165,12 @@ class PlayerTestActivity : ComponentActivity() {
             PlayerEnums.Quality.HIRES -> {
                 "HiRes"
             }
+            PlayerEnums.Quality.EXCELLENT -> {
+                "臻品音质2.0"
+            }
+            PlayerEnums.Quality.GALAXY -> {
+                "臻品全景声"
+            }
             else -> {
                 "未知"
             }
