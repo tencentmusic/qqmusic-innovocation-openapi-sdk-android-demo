@@ -36,10 +36,8 @@ import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderPage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.person.MinePageNew
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumPage
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPage
-import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.*
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -213,13 +211,15 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, info: MutableState<String
             }
         }
 
-        Button(
-            modifier = Modifier.padding(0.dp),
-            onClick = {
-                activity.startActivity(Intent(activity, PartnerLoginActivity::class.java))
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Button(
+                modifier = Modifier.padding(0.dp),
+                onClick = {
+                    activity.startActivity(Intent(activity, PartnerLoginActivity::class.java))
+                }
+            ) {
+                Text(text = "第三方登录")
             }
-        ) {
-            Text(text = "第三方登录")
         }
     }
 }
@@ -286,35 +286,42 @@ fun MineSongList(viewModel: HomeViewModel) {
                     FolderPage(viewModel.mineFolders)
                 }
             }
+
             1 -> {
                 // 收藏歌单
                 viewModel.fetchCollectedFolder()
                 FolderPage(viewModel.favFolders)
             }
+
             2 -> {
                 // 收藏专辑
                 viewModel.fetchCollectedAlbum()
                 AlbumPage(viewModel.favAlbums)
             }
+
             3 -> {
                 // 最近播放（单曲）
                 SongListPage(viewModel.pagingRecentSong())
             }
+
             4 -> {
                 // 最近播放（专辑）
                 viewModel.fetchRecentAlbums()
                 AlbumPage(albums = viewModel.recentAlbums)
             }
+
             5 -> {
                 // 最近播放（歌单）
                 viewModel.fetchRecentFolders()
                 FolderPage(folders = viewModel.recentFolders)
             }
+
             6 -> {
                 // 最近播放（长音频）
                 viewModel.fetchRecentLongRadios()
                 AlbumPage(albums = viewModel.recentLongRadio)
             }
+
             7 -> {
                 // 已购数字专辑
                 LaunchedEffect(Unit) {
@@ -322,110 +329,110 @@ fun MineSongList(viewModel: HomeViewModel) {
                 }
                 BuyAlbumPage(albums = viewModel.albumOfRecord)
             }
+
             8 -> {
                 // 已购单曲
                 LaunchedEffect(Unit) {
-                   viewModel.fetchBuyRecordOfSong()
+                    viewModel.fetchBuyRecordOfSong()
                 }
                 SongListPage(songs = viewModel.songOfRecord, needPlayer = false)
-                }
-
-                }
             }
-        }
 
-        @Composable
-        fun NewFolder(viewModel: HomeViewModel) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-            ) {
-                val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
-                FolderDialog(viewModel, showDialog = showDialog, setShowDialog = setShowDialog)
-                Image(
-                    painter = rememberImagePainter(""),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(50.dp)
-                        .padding(2.dp)
-                        .clickable {
-                            setShowDialog(true)
-                        }
-                )
-                Column(modifier = Modifier.clickable { setShowDialog(true) }) {
-                    Text(text = "Click to Create New Folder")
-                    Text(text = "点击创建新个人歌单")
+        }
+    }
+}
+
+@Composable
+fun NewFolder(viewModel: HomeViewModel) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
+        FolderDialog(viewModel, showDialog = showDialog, setShowDialog = setShowDialog)
+        Image(
+            painter = rememberImagePainter(""),
+            contentDescription = null,
+            modifier = Modifier
+                .size(50.dp)
+                .padding(2.dp)
+                .clickable {
+                    setShowDialog(true)
                 }
-            }
+        )
+        Column(modifier = Modifier.clickable { setShowDialog(true) }) {
+            Text(text = "Click to Create New Folder")
+            Text(text = "点击创建新个人歌单")
         }
+    }
+}
 
-        @Composable
-        fun FolderDialog(
-            viewModel: HomeViewModel,
-            showDialog: Boolean,
-            setShowDialog: (Boolean) -> Unit
+@Composable
+fun FolderDialog(
+    viewModel: HomeViewModel,
+    showDialog: Boolean,
+    setShowDialog: (Boolean) -> Unit
+) {
+    if (!showDialog) return
+
+    var foldName by rememberSaveable { mutableStateOf("") }
+    Dialog(onDismissRequest = {
+        Log.d(TAG, "FolderDialog Dismiss Request")
+        setShowDialog(false)
+    }) {
+        Column(
+            modifier = Modifier
+                .background(Color.White)
+                .padding(5.dp)
         ) {
-            if (!showDialog) return
+            OutlinedTextField(
+                value = foldName,
+                onValueChange = {
+                    foldName = it
+                },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("输入歌单名字") }
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                OutlinedButton(onClick = { setShowDialog(false) }) {
+                    Text("取消")
+                }
 
-            var foldName by rememberSaveable { mutableStateOf("") }
-            Dialog(onDismissRequest = {
-                Log.d(TAG, "FolderDialog Dismiss Request")
-                setShowDialog(false)
-            }) {
-                Column(
-                    modifier = Modifier
-                        .background(Color.White)
-                        .padding(5.dp)
-                ) {
-                    OutlinedTextField(
-                        value = foldName,
-                        onValueChange = {
-                            foldName = it
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("输入歌单名字") }
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        OutlinedButton(onClick = { setShowDialog(false) }) {
-                            Text("取消")
+                OutlinedButton(onClick = {
+                    Log.d(TAG, "New Folder: $foldName")
+                    if (foldName.isEmpty()) return@OutlinedButton
+
+                    com.tencent.qqmusic.openapisdk.business_common.Global.getOpenApi()
+                        .createFolder(foldName) {
+                            if (it.isSuccess()) {
+                                Log.d(
+                                    TAG,
+                                    "succeeded to create folder: $foldName. ret: $it"
+                                )
+                                setShowDialog(false)
+                                HomeViewModel.clearRequestState()
+                                viewModel.fetchMineFolder()
+                                return@createFolder
+                            } else {
+                                Log.w(TAG, "failed to create folder: $foldName. ret: $it")
+                                foldName = ""
+                            }
                         }
-
-                        OutlinedButton(onClick = {
-                            Log.d(TAG, "New Folder: $foldName")
-                            if (foldName.isEmpty()) return@OutlinedButton
-
-                            com.tencent.qqmusic.openapisdk.business_common.Global.getOpenApi()
-                                .createFolder(foldName) {
-                                    if (it.isSuccess()) {
-                                        Log.d(
-                                            TAG,
-                                            "succeeded to create folder: $foldName. ret: $it"
-                                        )
-                                        setShowDialog(false)
-                                        HomeViewModel.clearRequestState()
-                                        viewModel.fetchMineFolder()
-                                        return@createFolder
-                                    } else {
-                                        Log.w(TAG, "failed to create folder: $foldName. ret: $it")
-                                        foldName = ""
-                                    }
-                                }
-                        }) {
-                            Text("确定")
-                        }
-                    }
+                }) {
+                    Text("确定")
                 }
             }
         }
-
+    }
+}
 
 
 @Composable
-fun PhoneLoginDialog(viewModel: HomeViewModel , model: MineViewModel,  showDialog: Boolean, setShowDialog: (Boolean) -> Unit) {
+fun PhoneLoginDialog(viewModel: HomeViewModel, model: MineViewModel, showDialog: Boolean, setShowDialog: (Boolean) -> Unit) {
     if (!showDialog) return
 
     val activity = LocalContext.current as Activity
@@ -482,7 +489,7 @@ fun PhoneLoginDialog(viewModel: HomeViewModel , model: MineViewModel,  showDialo
                     if (code == 0) {
                         UiUtils.showToast("登录成功")
                         viewModel.fetchUserLoginStatus()
-                    } else if (code == 1){
+                    } else if (code == 1) {
                         UiUtils.showToast("需要绑定Q音账号")
                     } else {
                         UiUtils.showToast("登录失败:$msg")

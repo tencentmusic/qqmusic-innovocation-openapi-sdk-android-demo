@@ -1,136 +1,221 @@
 package com.tencent.qqmusic.qplayer.ui.activity
 
-import android.app.Activity
+
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
-import android.text.SpannableStringBuilder
-import android.view.View
-import android.widget.EditText
-import android.widget.TextView
-import com.google.gson.GsonBuilder
-import com.tencent.qqmusic.openapisdk.business_common.Global
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.Button
+import androidx.compose.material.Text
+import androidx.compose.material.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
+import com.tencent.qqmusic.openapisdk.business_common.login.IPartnerLogin
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
-import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
-import com.tencent.qqmusic.qplayer.R
-import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
 
-class PartnerLoginActivity : Activity() {
+class PartnerLoginActivity : ComponentActivity() {
+    private val impl = OpenApiSDK.getPartnerApi()
 
-    companion object {
-        private const val TAG = "PartnerLoginActivity"
-    }
-
-    private lateinit var partner_app_id_edt: EditText
-    private lateinit var partner_account_id_edt: EditText
-    private lateinit var partner_access_token_edt: EditText
-    private val messageTextView: TextView by lazy {
-        findViewById<TextView>(R.id.return_message)
-    }
-
-    private var partner_app_id_str: String? = null
-    private var partner_id_str: String? = null
-    private var partner_name_str: String? = null
-    private var partner_account_id_str: String? = null
-    private var partner_access_token_str: String? = null
-
-    private val prettyGson by lazy {
-        GsonBuilder().setPrettyPrinting().create()
-    }
-
-    private fun getParamStr() {
-        partner_app_id_str = partner_app_id_edt.text?.toString()
-        partner_account_id_str = partner_account_id_edt.text?.toString()
-        partner_access_token_str = partner_access_token_edt.text?.toString()
-        if (partner_app_id_str.isNullOrEmpty()) {
-            partner_app_id_str = null
-            partner_name_str = partner_app_id_str
+    private val sharedPreferences: SharedPreferences? by lazy {
+        try {
+            getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+        } catch (e: Exception) {
+            QLog.e("PartnerLoginActivity", "getSharedPreferences error e = ${e.message}")
+            null
         }
-        if (partner_account_id_str.isNullOrEmpty()) {
-            partner_account_id_str = null
-            partner_id_str = partner_account_id_str
-        }
-        if (partner_access_token_str.isNullOrEmpty()) {
-            partner_access_token_str = null
-        }
-    }
-
-    private fun displayResult(response: OpenApiResponse<*>?, message: String?) {
-        val builder = StringBuilder()
-        if (response != null) {
-            builder.append("OpenApiResponse: ").append("\n")
-            builder.append("ret=").append(response.ret).append("\n")
-            builder.append("subRet=").append(response.subRet).append("\n")
-            builder.append("errorMsg=").append(response.errorMsg).append("\n")
-            builder.append("page=").append(response.page).append("\n")
-            builder.append("totalCount=").append(response.totalCount).append("\n")
-            builder.append("hasMore=").append(response.hasMore).append("\n")
-            builder.append("data=").append(prettyGson.toJson(response.data)).append("\n")
-        }
-        if (!message.isNullOrEmpty()) {
-            builder.append("\n").append(message).append("\n")
-        }
-        val text = builder.toString()
-        val spannable = SpannableStringBuilder(text)
-        messageTextView.text = spannable
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_partner_login)
-
-        partner_app_id_edt = findViewById(R.id.edt_partner_app_id)
-        partner_account_id_edt = findViewById(R.id.edt_partner_account_id)
-        partner_access_token_edt = findViewById(R.id.edt_partner_access_token)
-
-        findViewById<View>(R.id.btn_setupPartnerEnv).setOnClickListener {
-            JobDispatcher.doOnBackground {
-                getParamStr()
-                val bindStatus = OpenApiSDK.getOpenApi().setupPartnerEnv(
-                    partner_app_id_str ?: "",
-                    partner_access_token_str ?: "",
-                    partner_account_id_str ?: "",
-                )
-                val message = if (bindStatus == 1) {
-                    "成功设置第三方信息，该第三方信息已经绑定"
-                } else {
-                    "成功设置第三方信息，该第三方信息没有绑定或出错，code：$bindStatus"
-                }
-                JobDispatcher.doOnMain {
-                    displayResult(null, message)
-                }
-            }
-        }
-
-        findViewById<View>(R.id.btn_clearPartnerEnv).setOnClickListener {
-            JobDispatcher.doOnBackground {
-                getParamStr()
-                OpenApiSDK.getOpenApi().removePartnerEnv()
-                JobDispatcher.doOnMain {
-                    displayResult(null, "已清空第三方信息")
-                }
-            }
-        }
-
-        findViewById<View>(R.id.btn_bind).setOnClickListener {
-            JobDispatcher.doOnBackground {
-                OpenApiSDK.getOpenApi().bindPartnerAccount(
-                    Global.getLoginModuleApi().partnerIdInfo?.partnerAccountId ?: "",
-                    callback = {
-                        JobDispatcher.doOnMain {
-                            displayResult(it, null)
-                        }
-                    }
-                )
-            }
-        }
-
-        findViewById<View>(R.id.btn_unbind).setOnClickListener {
-            JobDispatcher.doOnBackground {
-                OpenApiSDK.getOpenApi().unbindPartnerAccount(callback = {
-                    JobDispatcher.doOnMain {
-                        displayResult(it, null)
-                    }
-                })
-            }
-        }
+        setContent { PartnerLoginPage(impl, sharedPreferences) }
     }
 }
+
+@Preview
+@Composable
+fun PartnerLoginPage(impl: IPartnerLogin? = null, sharedPreferences: SharedPreferences? = null) {
+    val execute = " 执行中  "
+    val appId = remember {
+        mutableStateOf(sharedPreferences?.getString("appId", "") ?: "")
+    }
+
+    val accountId = remember {
+        mutableStateOf(sharedPreferences?.getString("accountId", "") ?: "")
+    }
+
+    val token = remember {
+        mutableStateOf(sharedPreferences?.getString("token", "") ?: "")
+    }
+
+    val result = remember {
+        mutableStateOf("")
+    }
+
+    ConstraintLayout(modifier = Modifier.fillMaxSize()) {
+        val (appIdView, appAccountView, appTokenView, loginView, writeAccount, bindView, deleteView, queryView, queryAccountIdView, resultView) = createRefs()
+        TextField(value = appId.value, onValueChange = {
+            appId.value = it
+        }, label = { Text(text = "AppId") }, modifier = Modifier
+            .padding(10.dp)
+            .constrainAs(appIdView) {
+                top.linkTo(parent.top)
+                start.linkTo(parent.start)
+                end.linkTo(writeAccount.start)
+                width = Dimension.fillToConstraints
+            })
+
+        TextField(value = accountId.value, onValueChange = {
+            accountId.value = it
+        }, label = { Text(text = "AccountId") }, modifier = Modifier
+            .padding(10.dp)
+            .constrainAs(appAccountView) {
+                top.linkTo(appIdView.bottom)
+                start.linkTo(appIdView.start)
+                end.linkTo(appIdView.end)
+                width = Dimension.fillToConstraints
+            })
+
+        TextField(value = token.value, onValueChange = {
+            token.value = it
+        }, label = { Text(text = "token") }, modifier = Modifier
+            .padding(10.dp)
+            .constrainAs(appTokenView) {
+                top.linkTo(appAccountView.bottom)
+                start.linkTo(appAccountView.start)
+                end.linkTo(appAccountView.end)
+                width = Dimension.fillToConstraints
+            })
+
+        Button(onClick = {
+            val com = sharedPreferences?.edit()?.apply {
+                putString("appId", appId.value)
+                putString("accountId", accountId.value)
+                putString("token", token.value)
+            }?.commit()
+            result.value = if (sharedPreferences != null && com == true) "写入成功" else "写入失败"
+        }, modifier = Modifier
+            .fillMaxHeight()
+            .padding(10.dp)
+            .constrainAs(writeAccount) {
+                height = Dimension.fillToConstraints
+                width = Dimension.preferredWrapContent
+                end.linkTo(parent.end)
+                top.linkTo(parent.top)
+                bottom.linkTo(appTokenView.bottom)
+
+            }) {
+            Text(text = "写入帐号信息")
+        }
+        Box(
+            modifier = Modifier
+                .height(60.dp)
+                .width(200.dp)
+                .constrainAs(resultView) {
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                    top.linkTo(writeAccount.bottom)
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = result.value)
+        }
+
+
+        Button(onClick = {
+            result.value = execute
+            impl?.updateThirdPartyAccount(appId.value, token.value, accountId.value
+            ) { response -> result.value = "ret: ${response?.ret} msg : ${response?.errorMsg}" }
+        }, modifier = Modifier
+            .padding(start = 30.dp, top = 60.dp, end = 30.dp)
+            .height(60.dp)
+            .constrainAs(bindView) {
+                width = Dimension.fillToConstraints
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+                top.linkTo(resultView.bottom)
+            }) {
+            Text(text = "绑定音乐帐号")
+        }
+
+        Button(onClick = {
+            result.value = execute
+            impl?.deleteThirdPartyAccountBindState(appId.value, token.value, accountId.value
+            ) { response -> result.value = "ret: ${response?.ret} msg : ${response?.errorMsg}" }
+        }, modifier = Modifier
+            .padding(start = 30.dp, top = 30.dp, end = 30.dp)
+            .height(60.dp)
+            .constrainAs(deleteView) {
+                width = Dimension.fillToConstraints
+                start.linkTo(bindView.start)
+                end.linkTo(bindView.end)
+                top.linkTo(bindView.bottom)
+            }) {
+            Text(text = "解除绑定")
+        }
+
+        Button(onClick = {
+            result.value = execute
+            impl?.queryThirdPartyAccountBindState(appId.value, token.value, accountId.value
+            ) { response -> result.value = "ret: ${response?.ret} msg : ${response?.errorMsg}" }
+        }, modifier = Modifier
+            .padding(start = 30.dp, top = 30.dp, end = 30.dp)
+            .height(60.dp)
+            .constrainAs(queryView) {
+                width = Dimension.fillToConstraints
+                start.linkTo(deleteView.start)
+                end.linkTo(deleteView.end)
+                top.linkTo(deleteView.bottom)
+            }) {
+            Text(text = "查询绑定状态")
+        }
+
+        Button(onClick = {
+            result.value = execute
+            result.value = "当前登录帐号的ID 是  ${impl?.queryThirdPartyAccountID()}"
+        }, modifier = Modifier
+            .padding(start = 30.dp, top = 30.dp, end = 30.dp)
+            .height(60.dp)
+            .constrainAs(queryAccountIdView) {
+                width = Dimension.fillToConstraints
+                start.linkTo(queryView.start)
+                end.linkTo(queryView.end)
+                top.linkTo(queryView.bottom)
+            }) {
+            Text(text = "查询当前第三方帐号ID")
+        }
+
+        Button(onClick = {
+            result.value = execute
+            impl?.thirdPartyAccountLogin(appId.value, token.value, accountId.value
+            ) { response -> result.value = "ret: ${response?.ret} msg : ${response?.errorMsg}" }
+        }, modifier = Modifier
+            .padding(start = 30.dp, top = 30.dp, end = 30.dp)
+            .height(60.dp)
+            .constrainAs(loginView) {
+                width = Dimension.fillToConstraints
+                start.linkTo(queryAccountIdView.start)
+                end.linkTo(queryAccountIdView.end)
+                top.linkTo(queryAccountIdView.bottom)
+            }) {
+            Text(text = "登录第三方帐号")
+        }
+
+    }
+}
+
+

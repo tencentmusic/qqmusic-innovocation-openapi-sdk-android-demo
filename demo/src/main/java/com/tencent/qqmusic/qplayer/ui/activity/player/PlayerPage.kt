@@ -29,6 +29,7 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricActivity
+import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricNewActivity
 import kotlin.concurrent.thread
 
 
@@ -46,32 +47,6 @@ fun PlayerScreen(observer: PlayerObserver) {
     }
 }
 
-fun Int.qualityToStr(): String {
-    return when (this) {
-        PlayerEnums.Quality.DOLBY -> {
-            "DOLBY"
-        }
-        PlayerEnums.Quality.HIRES -> {
-            "HIRES"
-        }
-        PlayerEnums.Quality.SQ -> {
-            "SQ"
-        }
-        PlayerEnums.Quality.HQ -> {
-            "HQ"
-        }
-        PlayerEnums.Quality.STANDARD -> {
-            "STANDARD"
-        }
-        PlayerEnums.Quality.LQ -> {
-            "LQ"
-        }
-        else -> {
-            "unknown"
-        }
-    }
-}
-
 @Composable
 fun PlayerPage(observer: PlayerObserver) {
     val activity = LocalContext.current as Activity
@@ -84,7 +59,7 @@ fun PlayerPage(observer: PlayerObserver) {
     val modeOrder =
         mutableListOf(PlayerEnums.Mode.LIST, PlayerEnums.Mode.ONE, PlayerEnums.Mode.SHUFFLE)
     val lyricView = lyric() {
-        activity.startActivity(Intent(activity, LyricActivity::class.java))
+        activity.startActivity(Intent(activity, LyricNewActivity::class.java))
     }
 
     Column(
@@ -136,26 +111,27 @@ fun PlayerPage(observer: PlayerObserver) {
 
 
             // 播放模式
-
-
             val icQuality: Int = when (quality) {
                 PlayerEnums.Quality.HQ -> {
-                    R.drawable.ic_hq
+                    R.drawable.action_icon_quality_hq
                 }
                 PlayerEnums.Quality.SQ -> {
-                    R.drawable.ic_sq
+                    R.drawable.action_icon_quality_sq
                 }
                 PlayerEnums.Quality.STANDARD -> {
-                    R.drawable.ic_standard_quality
+                    R.drawable.action_icon_quality_standard
                 }
                 PlayerEnums.Quality.DOLBY -> {
-                    R.drawable.ic_dolby_quality
+                    R.drawable.action_icon_dolby_quality
                 }
                 PlayerEnums.Quality.HIRES -> {
-                    R.drawable.ic_hires
+                    R.drawable.action_icon_quality_hires
                 }
                 PlayerEnums.Quality.EXCELLENT -> {
                     R.drawable.action_icon_excellent_quality
+                }
+                PlayerEnums.Quality.GALAXY -> {
+                    R.drawable.action_icon_galaxy_quality
                 }
                 else -> {
                     R.drawable.ic_lq

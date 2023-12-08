@@ -75,16 +75,20 @@ class SoundEffectActivity : ComponentActivity() {
                                 UiUtils.showToast("设置音效->${effect.name}")
                                 curId.value = effect.sdkId
                             } else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT) {
-                                UiUtils.showToast("为保证您的听歌体验，杜比歌曲播放中不建议叠加其他音效等效果")
-                            } else {
+                                UiUtils.showToast("为保证您的听歌体验，杜比或臻品类歌曲播放中不建议叠加其他音效等效果")
+                            } else if (ret == PlayDefine.PlayError.PLAY_ERR_NEED_VIP){
                                 UiUtils.showToast("需要vip")
+                            } else if (ret == PlayDefine.PlayError.PLAY_ERR_NEED_SUPER_VIP) {
+                                UiUtils.showToast("需要超级会员")
+                            } else {
+                                UiUtils.showToast("ret:$ret")
                             }
                         }) {
                         Row(modifier = Modifier.weight(1f)) {
                             Text(text = effect.name)
                             if (effect.vipFlag == 1) {
                                 Text(
-                                    text = "VIP",
+                                    text = " 超级会员",
                                     modifier = Modifier.padding(5.dp, 0.dp),
                                     color = Color.Green,
                                 )

@@ -1,25 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/lightGray"
-    tools:context=".ui.activity.MainActivity">
+    android:background="@color/lightGray">
 
     <!-- 如果这里不设置clipChildren = true, 歌词不会截断 -->
     <FrameLayout
         android:id="@+id/qmlyric_view_layout"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/dp800"
+        android:layout_height="match_parent"
         android:layout_marginTop="0dp"
         android:layout_marginRight="0dp"
         android:clipChildren="true"
         android:clipToPadding="true"
         android:background="@color/lightGray"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        android:layout_above="@+id/switch_lyric_btn"
+        >
 
         <com.tencent.qqmusic.openapisdk.core.view.lyric.QMLyricView
             android:id="@+id/scroll_lyric"
@@ -51,8 +49,8 @@
             app:transTextSize="@dimen/tv_search_search_flow_layout_word_size" />
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:layout_gravity="center"
             android:textSize="20sp"
             android:textColor="@color/white"
@@ -65,16 +63,15 @@
         android:id="@+id/switch_lyric_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="right"
+        android:layout_above="@+id/twoline_lyric_layout"
+        android:layout_alignParentRight="true"
         android:layout_marginRight="20dp"/>
-
 
     <com.tencent.qqmusic.openapisdk.core.view.lyric.TwoLineLyricLayout
         android:id="@+id/twoline_lyric_layout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_constraintTop_toBottomOf="@+id/qmlyric_view_layout"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
         app:hiLightColor="@color/lyric_hilight_text_color"
         app:hiLightSize="@dimen/albummode_lyric_highlight_text_size"
         app:hiLightThinColor="@color/lyric_interim_text_color"
@@ -88,4 +85,4 @@
 
 
 
-</LinearLayout>
+</RelativeLayout>

@@ -19,7 +19,8 @@ object QualityAlert {
             PlayerEnums.Quality.SQ,
             PlayerEnums.Quality.DOLBY,
             PlayerEnums.Quality.HIRES,
-            PlayerEnums.Quality.EXCELLENT
+            PlayerEnums.Quality.EXCELLENT,
+            PlayerEnums.Quality.GALAXY
         )
 
     val qualityOrderString =
@@ -30,7 +31,8 @@ object QualityAlert {
             "SQ",
             "DOLBY",
             "HIRES",
-            "EXCELLENT"
+            "EXCELLENT",
+            "GALAXY"
         )
 
     fun showQualityAlert(activity: Activity, setBlock: (Int)->Int, refresh: (Int)->Unit) {
@@ -58,6 +60,13 @@ object QualityAlert {
                 }
                 "EXCELLENT" -> {
                     "臻品音质2.0" + UiUtils.getFormatAccessLabel(curSong, quality)
+                }
+                "GALAXY" -> {
+                    if (curSong?.isGalaxyEffectType() == true) {
+                        "臻品全景声" + UiUtils.getFormatAccessLabel(curSong, quality)
+                    } else {
+                        "臻品全景声" + UiUtils.getFormatSize(curSong?.getSizeGalaxy()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
+                    }
                 }
                 else -> {
                     it
