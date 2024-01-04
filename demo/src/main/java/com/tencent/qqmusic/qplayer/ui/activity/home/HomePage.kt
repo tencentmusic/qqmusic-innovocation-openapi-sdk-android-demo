@@ -47,8 +47,8 @@ fun HomePage(homeViewModel: HomeViewModel) {
 @Composable
 fun homePageTabs(homeViewModel: HomeViewModel) {
     val pages = mutableListOf(
-        "分类歌单", "排行榜",
-        "专区","长音频"
+        "分类歌单", "AI歌单", "排行榜",
+        "专区", "长音频"
     )
 
     val pagerState = rememberPagerState()
@@ -87,13 +87,21 @@ fun homePageTabs(homeViewModel: HomeViewModel) {
             0 -> {
                 categoryFoldersPage(homeViewModel)
             }
+
             1 -> {
+                aiIndex.value = Base
+                AIFolder(homeViewModel = homeViewModel)
+            }
+
+            2 -> {
                 rankPage(homeViewModel)
             }
-            2 -> {
+
+            3 -> {
                 AreaSectionPage(homeViewModel)
             }
-            3 -> {
+
+            4 -> {
                 LongAudioPage(homeViewModel = homeViewModel)
             }
         }

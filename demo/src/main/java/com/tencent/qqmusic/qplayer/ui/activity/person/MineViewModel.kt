@@ -40,7 +40,6 @@ class MineViewModel : ViewModel() {
         }
     }
 
-
     fun getLoginType(openIdInfo: OpenIdInfo?): String {
         return openIdInfo?.let {
             when (it.type) {
@@ -50,6 +49,7 @@ class MineViewModel : ViewModel() {
                 AuthType.WX -> "微信"
                 AuthType.PHONE -> "手机"
                 AuthType.PARTNER -> "三方帐号登录"
+                AuthType.OPEN_ID -> "OpenID登录"
                 else -> {
                     "未知"
                 }
@@ -57,32 +57,27 @@ class MineViewModel : ViewModel() {
         } ?: "未知"
     }
 
-    fun isVip(vipInfo: VipInfo?): Boolean {
-        return vipInfo?.greenVipFlag == 1   // 普通绿钻
-                || vipInfo?.eightFlag == 1       // 8元付费包
-                || vipInfo?.twelveFlag == 1      // 12元付费包
-                || vipInfo?.yearGreenVipFlag == 1   // 年费绿钻
-                || vipInfo?.superGreenVipFlag == 1  // 豪华绿钻
-                || vipInfo?.hugeVipFlag == 1
-    }
-
 
     fun getVipText(vipInfo: VipInfo?): String {
-        return if (!isVip(vipInfo)) {
+        return if (vipInfo?.isVip() == false) {
             "非vip用户"
-        } else if (vipInfo?.hugeVipFlag == 1) {
+        } else if (vipInfo?.isSuperVip() == true) {
             "超级会员"
-        }  else if (vipInfo?.superGreenVipFlag == 1) {
+        } else if (vipInfo?.superGreenVipFlag == 1) {
             "豪华绿钻"
         } else if (vipInfo?.greenVipFlag == 1) {
             "绿钻"
-        }  else {
+        } else if (vipInfo?.twelveFlag == 1) {
+            "12元付费包用户"
+        } else if (vipInfo?.eightFlag == 1) {
+            "8元付费包用户"
+        } else {
             "信息获取不明"
         }
     }
 
     fun getVipTimeStartText(vipInfo: VipInfo?): String {
-        return if (!isVip(vipInfo)) {
+        return if (vipInfo?.isVip() == false) {
             ""
         } else if (vipInfo?.greenVipFlag == 1) {
             vipInfo.greenVipStartTime
@@ -90,13 +85,17 @@ class MineViewModel : ViewModel() {
             vipInfo.superGreenVipStartTime
         } else if (vipInfo?.hugeVipFlag == 1) {
             vipInfo.hugeVipStartTime
+        } else if (vipInfo?.twelveFlag == 1) {
+            vipInfo.twelveStartTime
+        } else if (vipInfo?.eightFlag == 1) {
+            vipInfo.eightStartTime
         } else {
             "信息获取不明"
         }
     }
 
     fun getVipEndTimeText(vipInfo: VipInfo?): String {
-        return if (!isVip(vipInfo)) {
+        return if (vipInfo?.isVip() == false) {
             ""
         } else if (vipInfo?.greenVipFlag == 1) {
             vipInfo.greenVipEndTime
@@ -104,6 +103,10 @@ class MineViewModel : ViewModel() {
             vipInfo.superGreenVipEndTime
         } else if (vipInfo?.hugeVipFlag == 1) {
             vipInfo.hugeVipEndTime
+        } else if (vipInfo?.twelveFlag == 1) {
+            vipInfo.twelveEndTime
+        } else if (vipInfo?.eightFlag == 1) {
+            vipInfo.eightEndTime
         } else {
             "信息获取不明"
         }

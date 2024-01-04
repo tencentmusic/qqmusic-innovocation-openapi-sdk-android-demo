@@ -208,6 +208,15 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, info: MutableState<String
                     Text(text = "手机登录")
                 }
 
+                val showOpenIdLoginDialog = remember { mutableStateOf(false) }
+                Button(onClick = {
+                    showOpenIdLoginDialog.value = true
+                }, modifier = Modifier.padding(0.dp)) {
+                    Text(text = "OpenId登录")
+                }
+                if (showOpenIdLoginDialog.value) {
+                    OpenIdLoginDialog(vm, showOpenIdLoginDialog)
+                }
             }
         }
 
@@ -430,6 +439,48 @@ fun FolderDialog(
     }
 }
 
+@Composable
+fun OpenIdLoginDialog(homeViewModel: HomeViewModel, showDialog: MutableState<Boolean>) {
+    var openId by rememberSaveable {
+        mutableStateOf("")
+    }
+    var accessToken by rememberSaveable {
+        mutableStateOf("")
+    }
+    Dialog(onDismissRequest = {
+        showDialog.value = false
+    }) {
+        Column(modifier = Modifier.background(Color.White).padding(5.dp)) {
+            OutlinedTextField(
+                value = openId,
+                onValueChange = {
+                    openId = it
+                },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(text = "请输入OpenId") }
+            )
+            OutlinedTextField(
+                value = accessToken,
+                onValueChange = {
+                    accessToken = it
+                },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(text = "请输入AccessToken") }
+            )
+            OutlinedButton(onClick = {
+                OpenApiSDK.getLoginApi().openIdLogin(openId, accessToken) { suc, msg ->
+                    UiUtils.showToast("登录结果：$suc $msg")
+                    if (suc) {
+                        homeViewModel.fetchUserLoginStatus()
+                    }
+                }
+                showDialog.value = false
+            }) {
+                Text(text = "登录")
+            }
+        }
+    }
+}
 
 @Composable
 fun PhoneLoginDialog(viewModel: HomeViewModel, model: MineViewModel, showDialog: Boolean, setShowDialog: (Boolean) -> Unit) {

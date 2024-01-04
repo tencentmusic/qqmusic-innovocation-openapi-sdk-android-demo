@@ -24,7 +24,7 @@ android {
                 : "qplay-edge-demo-${appVersionName}_SDKv${sdk_version}"
 
         ndk{                                            // add this
-            abiFilters "arm64-v8a"
+            abiFilters "arm64-v8a","x86_64","x86","armeabi-v7a"
         }
     }
 
@@ -49,8 +49,12 @@ android {
     packagingOptions {
         pickFirst 'lib/armeabi-v7a/libc++_shared.so'
         pickFirst 'lib/arm64-v8a/libc++_shared.so'
+        pickFirst 'lib/x86/libc++_shared.so'
+        pickFirst 'lib/x86_64/libc++_shared.so'
         pickFirst 'lib/armeabi-v7a/libnetbase.so'
         pickFirst 'lib/arm64-v8a/libnetbase.so'
+        pickFirst 'lib/x86/libnetbase.so'
+        pickFirst 'lib/x86_64/libnetbase.so'
 
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
