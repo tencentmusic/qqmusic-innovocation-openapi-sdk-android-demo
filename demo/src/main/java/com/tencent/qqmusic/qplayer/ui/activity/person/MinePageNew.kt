@@ -35,7 +35,8 @@ fun MinePageNew(model: MineViewModel = viewModel()) {
             override fun handle(event: BaseBusinessEvent) {
                 if (event.code == LoginEvent.MusicUserLogIn
                     || event.code == LoginEvent.MusicUserLogOut
-                    || event.code == LoginEvent.UserVipInfoUpdate) {
+                    || event.code == LoginEvent.UserVipInfoUpdate
+                ) {
                     model.updateData()
                 }
             }
@@ -64,13 +65,12 @@ fun MinePageNew(model: MineViewModel = viewModel()) {
                     val vip = model.userVipInfo.collectAsState().value
                     val vipText = model.getVipText(vip)
                     val vipLevelText = "会员 Level : ${vip?.vipLevel}级"
-                    Text(text = model.userInfo.collectAsState().value?.nickName ?: " ")
+                    Text(text = "用户昵称：${model.userInfo.collectAsState().value?.nickName ?: " "}")
                     Text(text = vipLevelText)
-
                     Text(text = vipText)
-                    if (model.isVip(vip)) {
-                        Text(text = "会员开始时间：${model.getVipTimeStartText(vip)}")
-                        Text(text = "会员结束时间：${model.getVipEndTimeText(vip)}")
+                    if (vip?.isVip() == true) {
+                        Text(text = "开始时间：${model.getVipTimeStartText(vip)}")
+                        Text(text = "结束时间：${model.getVipEndTimeText(vip)}")
                     }
                     Text(text = "登录方式：${model.getLoginType(model.loginInfo.collectAsState().value)}")
                     val partnerIdInfo = model.partnerAccountInfo.collectAsState().value ?: ""

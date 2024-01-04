@@ -62,6 +62,16 @@
     </FrameLayout>
 
     <Button
+        android:id="@+id/seek_play"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_toLeftOf="@+id/switch_lyric_btn"
+        android:text="播放seek"
+        android:visibility="gone"
+        android:layout_marginRight="20dp"/>
+
+    <Button
         android:id="@+id/switch_lyric_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

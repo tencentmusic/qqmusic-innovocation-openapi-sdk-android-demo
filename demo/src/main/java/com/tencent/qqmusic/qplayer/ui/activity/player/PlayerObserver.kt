@@ -29,7 +29,7 @@ object PlayerObserver {
 
     var currentSong: SongInfo? by mutableStateOf<SongInfo?>(null)
     var currentState: Int? by mutableStateOf<Int?>(null)
-    var currentMode: Int? by mutableStateOf<Int?>(null)
+    var currentMode: Int by mutableStateOf(OpenApiSDK.getPlayerApi().getPlayMode())
     var mCurrentQuality: Int? by mutableStateOf<Int?>(null)
 
     var playStateText: String by mutableStateOf<String>("播放状态: Idle")
@@ -156,9 +156,15 @@ object PlayerObserver {
                                 ).show()
                             }
                         }
+
                         PlayDefine.PlayState.MEDIAPLAYER_STATE_STOPPED -> {
-                            //setPlayState("已停止")
+                            setPlayState("停止")
                         }
+
+                        PlayDefine.PlayState.MEDIAPLAYER_STATE_PLAYBACKCOMPLETED -> {
+                            setPlayState("当前歌曲播放已经完成")
+                        }
+
                         PlayDefine.PlayState.MEDIAPLAYER_STATE_PREPARED -> {
                             setPlayState("已准备")
                             if (mCurrentQuality == -1) {

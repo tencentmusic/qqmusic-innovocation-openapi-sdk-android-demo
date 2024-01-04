@@ -24,6 +24,7 @@ import androidx.paging.compose.items
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.model.SoundEffectItem
+import com.tencent.qqmusic.openapisdk.model.VipType
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.utils.UiUtils
@@ -87,8 +88,20 @@ class SoundEffectActivity : ComponentActivity() {
                         Row(modifier = Modifier.weight(1f)) {
                             Text(text = effect.name)
                             if (effect.vipFlag == 1) {
+                                val vipType = OpenApiSDK.getPlayerApi().getSoundEffectVipType()
+                                val soundEffectVipText = when (vipType) {
+                                    VipType.SUPER_VIP -> {
+                                        " 超级会员"
+                                    }
+                                    VipType.GREEN_VIP -> {
+                                        " 豪华绿钻"
+                                    }
+                                    else -> {
+                                        ""
+                                    }
+                                }
                                 Text(
-                                    text = " 超级会员",
+                                    text = soundEffectVipText,
                                     modifier = Modifier.padding(5.dp, 0.dp),
                                     color = Color.Green,
                                 )

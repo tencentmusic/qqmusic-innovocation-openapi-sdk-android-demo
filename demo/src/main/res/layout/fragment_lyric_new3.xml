@@ -63,12 +63,22 @@
     </FrameLayout>
 
     <Button
+        android:id="@+id/seek_play"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginRight="20dp"
+        android:visibility="gone"
+        android:layout_toLeftOf="@+id/switch_lyric_btn"
+        android:text="播放seek" />
+
+    <Button
         android:id="@+id/switch_lyric_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_toLeftOf="@+id/btn_old_style"
-        android:layout_marginRight="20dp"/>
+        android:layout_marginRight="20dp"
+        android:layout_toLeftOf="@+id/btn_old_style" />
 
     <Button
         android:id="@+id/btn_old_style"
