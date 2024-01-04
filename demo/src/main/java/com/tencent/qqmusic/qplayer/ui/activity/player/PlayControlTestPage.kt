@@ -2,13 +2,26 @@ package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material.Button
+import androidx.compose.material.Divider
+import androidx.compose.material.Scaffold
+import androidx.compose.material.Text
+import androidx.compose.material.TextField
+import androidx.compose.material.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
@@ -16,7 +29,10 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.business_common.Global
+import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.player.PlayCallback
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 
 /**
@@ -57,6 +73,9 @@ fun PlayControlArea() {
     Column(
         modifier = Modifier.padding(5.dp)
     ) {
+        var vipInfo by remember { mutableStateOf(Global.getLoginModuleApi().vipInfo) }
+        var canTryExcellentQuality by remember { mutableStateOf(false) }
+        var canTryGalaxyQuality by remember { mutableStateOf(false) }
         Text(text = "设置音频参数", modifier = Modifier.padding(4.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -108,10 +127,12 @@ fun PlayControlArea() {
             Text("setUsageAndType")
         }
 
-        Divider(modifier = Modifier
-            .padding(top = 9.dp)
-            .fillMaxWidth()
-            .height(3.dp))
+        Divider(
+            modifier = Modifier
+                .padding(top = 9.dp)
+                .fillMaxWidth()
+                .height(3.dp)
+        )
 
         var enableReplayGain by remember {
             mutableStateOf(Global.getPlayerModuleApi().getEnableReplayGain())
@@ -124,6 +145,75 @@ fun PlayControlArea() {
         }, modifier = Modifier.padding(padding)) {
             Text(text = "开启音量均衡 ${if (enableReplayGain) "开启" else "关闭"}")
         }
+
+        Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+        Text(
+            text = "能否试听臻品音质：$canTryExcellentQuality, 是否试听过：${vipInfo?.excellentQualityTried}," +
+                    "试听剩余时间：${vipInfo?.excellentQualityTryTimeLeft}"
+        )
+
+        Button(
+            onClick = {
+                Global.getOpenApi().canTryPlayExcellentQuality {
+                    canTryExcellentQuality = it.data ?: true
+                    vipInfo = Global.getLoginModuleApi().vipInfo
+                }
+
+            }
+        ) {
+            Text(text = "查看臻品音质试听状态")
+        }
+        Button(
+            onClick = {
+                OpenApiSDK.getPlayerApi().tryToOpenExcellentQuality(object : PlayCallback {
+                    override fun onSuccess() {
+                        Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
+                    }
+
+                    override fun onFailure(errCode: Int, msg: String?) {
+                        Toast.makeText(UtilContext.getApp(), "试听失败！$errCode, msg: $msg", Toast.LENGTH_SHORT).show()
+                    }
+                })
+            }
+        ) {
+            Text(text = "试听臻品音质")
+        }
+
+        Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+
+        Text(
+            text = "能否试听臻品全景声：$canTryGalaxyQuality, 是否试听过：${vipInfo?.galaxyQualityTried}," +
+                    "试听剩余时间：${vipInfo?.galaxyQualityTryTimeLeft}"
+        )
+
+        Button(
+            onClick = {
+                Global.getOpenApi().canTryPlayGalaxyQuality {
+                    canTryGalaxyQuality = it.data ?: true
+                    vipInfo = Global.getLoginModuleApi().vipInfo
+                }
+
+            }
+        ) {
+            Text(text = "查看臻品全景声试听状态")
+        }
+        Button(
+            onClick = {
+                OpenApiSDK.getPlayerApi().tryToOpenGalaxyQuality(object : PlayCallback {
+                    override fun onSuccess() {
+                        Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
+                    }
+
+                    override fun onFailure(errCode: Int, msg: String?) {
+                        Toast.makeText(UtilContext.getApp(), "试听失败！$errCode, msg: $msg", Toast.LENGTH_SHORT).show()
+                    }
+                })
+            }
+        ) {
+            Text(text = "试听臻品全景声")
+        }
+
+        Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
     }
 
 }
