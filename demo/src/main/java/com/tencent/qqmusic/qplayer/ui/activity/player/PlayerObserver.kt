@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.IMediaEventListener
@@ -35,17 +36,29 @@ object PlayerObserver {
     var playStateText: String by mutableStateOf<String>("播放状态: Idle")
     var playPosition: Float by mutableStateOf(0f)
     var seekPosition: Float by mutableStateOf(-1f)
+    var playSpeed: Float by mutableStateOf(OpenApiSDK.getPlayerApi().getPlaySpeed())
 
 
+    var isSeekBarTracking by mutableStateOf(false)
     init {
         MusicPlayerHelper.getInstance().registerProgressChangedInterface { curTime: Long, totalTime: Long ->
-            playPosition = if (currentSong == null) 0f else curTime.toFloat()
+            MLog.i("PlayerPage","curTime$curTime,(${PlayerObserver.convertTime(curTime/1000)}),${convertTime(OpenApiSDK.getPlayerApi().getDuration()!!.toLong()/1000)}")
+            if (isSeekBarTracking){
+                MLog.i("PlayerPage", "isSeekBarTracking = true")
+                return@registerProgressChangedInterface
+            }
+            val duration = OpenApiSDK.getPlayerApi().getDuration() ?: 0
+            playPosition = if (curTime > duration) {
+                duration.toFloat()
+            } else {
+                if (currentSong == null) 0f else curTime.toFloat()
+            }
+            Log.i(TAG,"$playPosition")
             if (seekPosition in 0.0..playPosition.toDouble()) {
                 seekPosition = -1f
             }
         }
     }
-
 
     fun convertTime(num: Long): String {
         val time = num.toInt()
@@ -53,13 +66,17 @@ object PlayerObserver {
         val sec = time % 60
 
         val secString = if (sec <= 9) "0$sec" else sec.toString()
-        val minString = if (sec <= 9) "0$min" else min.toString()
+        val minString = if (min <= 9) "0$min" else min.toString()
 
         return if (min == 0) {
-            secString
+            "00:$secString"
         } else {
             "$minString:$secString"
         }
+    }
+
+    fun toOneDigits(num: Float): Float {
+        return "%.1f".format(num).toFloatOrNull() ?: num
     }
 
     private val handler = object : Handler(Looper.getMainLooper()) {
@@ -89,6 +106,9 @@ object PlayerObserver {
                 PlayerEvent.Event.API_EVENT_PLAY_SONG_CHANGED -> {
                     if (arg.containsKey(PlayerEvent.Key.API_EVENT_KEY_PLAY_SONG)) {
                         val curr = arg.getParcelable(PlayerEvent.Key.API_EVENT_KEY_PLAY_SONG) as? SongInfo
+                        if (currentSong?.songId != curr?.songId) {
+                            playPosition = -1F
+                        }
                         currentSong = curr
                         val currentPlaySongQuality =
                             OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()
@@ -99,6 +119,7 @@ object PlayerObserver {
                             mCurrentQuality = currentPlaySongQuality
                         }
                         seekPosition = -1F
+                        playSpeed = OpenApiSDK.getPlayerApi().getPlaySpeed()
                     }
                 }
                 PlayerEvent.Event.API_EVENT_SONG_PLAY_ERROR -> {
@@ -183,6 +204,10 @@ object PlayerObserver {
                 PlayerEvent.Event.API_EVENT_SEEK_CHANGED -> {
                     val pos = arg.getLong(PlayerEvent.Key.API_EVENT_KEY_SEEK)
                     Log.i(TAG, "seek pos=$pos")
+                }
+
+                PlayerEvent.Event.API_EVENT_PLAY_SPEED_CHANGED -> {
+                    playSpeed = arg.getFloat(PlayerEvent.Key.API_EVENT_KEY_PLAY_SPEED, 1.0f)
                 }
                 else -> {
                 }

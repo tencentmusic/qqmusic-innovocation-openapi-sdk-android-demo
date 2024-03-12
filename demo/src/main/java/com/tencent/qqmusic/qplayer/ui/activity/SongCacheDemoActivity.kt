@@ -149,7 +149,7 @@ class SongCacheDemoActivity : AppCompatActivity() {
             if (size == 0 || songNum == 0) {
                 Toast.makeText(this, "请输入正确的参数", Toast.LENGTH_SHORT).show()
             } else {
-                val ret = Global.getSongCacheApi().setCacheMaxSize(size, songNum)
+                val ret = OpenApiSDK.getSongCacheApi().setCacheMaxSize(size, songNum)
                 if (ret == 0) {
                     Toast.makeText(this, "设置成功", Toast.LENGTH_SHORT).show()
                 } else {

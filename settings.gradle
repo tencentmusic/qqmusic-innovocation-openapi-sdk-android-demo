@@ -1,9 +1,27 @@
 rootProject.name = "QPlay Edge (Demo)"
 include ':demo'
 
-if (useSdkSource == "true") {
+def localPropertiesFile = file("local.properties")
+def useSdkSource = false
+
+if (localPropertiesFile.exists()) {
+    def localProperties = new Properties()
+    localProperties.load(new FileInputStream(localPropertiesFile))
+    useSdkSource = localProperties.getProperty("useSdkSource", "false").toBoolean()
+}
+
+if (useSdkSource) {
     try {
-        apply from: 'config_sdk.gradle'
+        includeBuild '../Android',{
+           dependencySubstitution {
+                substitute module('com.tencent.qqmusic.openapi:openapi-sdk') using project(':entry')
+            }
+        }
+        includeBuild '../module_playback_audio',{
+            dependencySubstitution {
+                substitute module('com.tencent.qqmusic.innovation:module-playback-audio') using project(':playback')
+            }
+        }
     } catch (ignored) {
         println("settings.gradle include failed. ignore:${ignored}")
     }

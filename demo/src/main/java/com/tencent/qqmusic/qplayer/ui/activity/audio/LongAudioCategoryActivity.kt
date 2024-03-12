@@ -17,6 +17,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.pager.*
 import com.tencent.qqmusic.openapisdk.business_common.Global
+import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.JumpInfo
@@ -224,7 +225,7 @@ class LongAudioCategoryActivity : ComponentActivity() {
         fun fetchCategoryAudio() {
             if (categories.isEmpty().not()) return
             viewModelScope.launch(Dispatchers.IO) {
-                Global.getOpenApi().fetchCategoryOfLongAudio() {
+                OpenApiSDK.getOpenApi().fetchCategoryOfLongAudio() {
                     categories = it.data ?: emptyList()
                 }
             }
@@ -233,7 +234,7 @@ class LongAudioCategoryActivity : ComponentActivity() {
         fun fetchCategoryDetail(cateId: Int, subCateId: Int) {
             if (curCateId == cateId && curSucCateId == subCateId) return
             viewModelScope.launch(Dispatchers.IO) {
-                Global.getOpenApi()
+                OpenApiSDK.getOpenApi()
                     .fetchAlbumListOfLongAudioByCategory(listOf(cateId, subCateId), listOf(-1), count = 60) {
                         albums = it.data ?: emptyList()
                         if (it.isSuccess()) {

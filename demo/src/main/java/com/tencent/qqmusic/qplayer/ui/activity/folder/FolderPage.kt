@@ -2,7 +2,9 @@ package com.tencent.qqmusic.qplayer.ui.activity.folder
 
 import android.app.Activity
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +12,7 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -58,15 +61,20 @@ fun FolderPage(folders: List<Folder>) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(folders.size) { index ->
             val folder = folders.getOrNull(index) ?: return@items
+            val folderDeleted = folder.deleteStatus == 1
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp)
                     .clickable {
-                        activity.startActivity(
-                            Intent(activity, SongListActivity::class.java)
-                                .putExtra(SongListActivity.KEY_FOLDER_ID, folder.id)
-                        )
+                        if (folderDeleted) {
+                            Toast.makeText(activity, "原歌单已删除，无法请求详情", Toast.LENGTH_SHORT).show()
+                        } else {
+                            activity.startActivity(
+                                Intent(activity, SongListActivity::class.java)
+                                    .putExtra(SongListActivity.KEY_FOLDER_ID, folder.id)
+                            )
+                        }
                     }
             ) {
                 Image(
@@ -76,9 +84,16 @@ fun FolderPage(folders: List<Folder>) {
                         .size(50.dp)
                         .padding(2.dp)
                 )
+
+                // 原歌单已删除，需要置灰处理
+                val textColor = if (folderDeleted) {
+                    Color.Gray
+                } else {
+                    Color.Black
+                }
                 Column {
-                    Text(text = folder.name)
-                    Text(text = "${folder.songNum?.toString() ?: 0}首")
+                    Text(text = folder.name, color = textColor)
+                    Text(text = "${folder.songNum?.toString() ?: 0}首", color = textColor)
                 }
             }
         }

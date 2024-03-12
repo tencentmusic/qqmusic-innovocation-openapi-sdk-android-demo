@@ -1,17 +1,16 @@
 package com.tencent.qqmusic.qplayer.ui.activity.home
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.business_common.event.BaseBusinessEvent
 import com.tencent.qqmusic.openapisdk.business_common.event.BusinessEventHandler
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LoginEvent
@@ -26,16 +25,14 @@ import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.Folder
 import com.tencent.qqmusic.openapisdk.model.HotKey
 import com.tencent.qqmusic.openapisdk.model.RankGroup
-import com.tencent.qqmusic.openapisdk.model.SearchType
+import com.tencent.qqmusic.openapisdk.model.SearchResult
+import com.tencent.qqmusic.openapisdk.model.Singer
 import com.tencent.qqmusic.openapisdk.model.SongInfo
-import com.tencent.qqmusic.openapisdk.model.UserInfo
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPagingSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 //
@@ -61,15 +58,10 @@ class HomeViewModel : ViewModel() {
     var recentLongRadio: List<Album> by mutableStateOf(emptyList())
     var albumOfRecord: List<Album> by mutableStateOf(emptyList())
     var songOfRecord: List<SongInfo> by mutableStateOf(emptyList())
-    var searchInput: String by mutableStateOf("")
-    var searchSongs: List<SongInfo> by mutableStateOf(emptyList())
-    var searchFolders: List<Folder> by mutableStateOf(emptyList())
-    var searchAlbums: List<Album> by mutableStateOf(emptyList())
-
-    var loginState = MutableLiveData<Pair<Boolean, Boolean>>()
-    var userInfo = MutableLiveData<UserInfo?>()
 
     var longAudioCategoryPages: List<Category> by mutableStateOf(emptyList())
+    private val _searchResult = MutableStateFlow<SearchResult?>(null)
+    val searchResult: StateFlow<SearchResult?> = _searchResult
 
     var aiFolder: List<Folder> by mutableStateOf(emptyList())
     var newAiFolder = SnapshotStateList<Folder>()
@@ -79,7 +71,7 @@ class HomeViewModel : ViewModel() {
         private const val TAG = "HomeViewModel"
         var myFolderRequested = false
         var myFavRequested = false
-        var myFavAlbumRequested = false
+        var myFavAlbumRequested = -1
         var myRecentRequested = false
         var fetchHotKey = false
         fun clearRequestState() {
@@ -87,7 +79,7 @@ class HomeViewModel : ViewModel() {
             myFavRequested = false
             myRecentRequested = false
             fetchHotKey = false
-            myFavAlbumRequested = false
+            myFavAlbumRequested = -1
         }
     }
 
@@ -242,16 +234,16 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    fun fetchCollectedAlbum() {
-        if (!myFavAlbumRequested) {
+    fun fetchCollectedAlbum(type: Int = 0) {
+        if (myFavAlbumRequested != type) {
             viewModelScope.launch(Dispatchers.IO) {
-                OpenApiSDK.getOpenApi().fetchCollectedAlbum(0, 50) {
+                OpenApiSDK.getOpenApi().fetchCollectedAlbum(0, 50, type) {
                     if (it.isSuccess()) {
                         favAlbums = it.data ?: emptyList()
                     }
                 }
             }
-            myFavAlbumRequested = true
+            myFavAlbumRequested = type
         }
     }
 
@@ -333,32 +325,27 @@ class HomeViewModel : ViewModel() {
     }
 
 
+    fun pagingLongAudioSong(type: Int): Flow<PagingData<SongInfo>>? {
+        return Pager(PagingConfig(pageSize = 50)) { MyLongAudioSongPagingSource(type) }.flow
+    }
+
+
     fun pagingRecentSong(): Flow<PagingData<SongInfo>>? {
         return Pager(PagingConfig(pageSize = 50)) { RecentSongPagingSource() }.flow
     }
 
 
-    fun pagingSearchSong(): Flow<PagingData<SongInfo>> {
-        return Pager(PagingConfig(pageSize = 50)) { SongListPagingSource(searchSongs, emptyList()) }.flow
-    }
-
-    fun searchSong() {
-        OpenApiSDK.getOpenApi().search(searchInput, SearchType.SONG, 0, 10, callback = {
-            searchSongs = it.data?.songList!!
+    fun search(type: Int, key: String) {
+        OpenApiSDK.getOpenApi().search(key, type, 0, 10, callback = {
+            viewModelScope.launch(Dispatchers.IO) {
+                it.data?.let {
+                    Log.d(TAG, "search: ${it}")
+                    _searchResult.emit(it)
+                }
+            }
         })
     }
 
-    fun searchFolder() {
-        OpenApiSDK.getOpenApi().search(searchInput, SearchType.FOLDER, 0, 10, callback = {
-            searchFolders = it.data?.folderList!!
-        })
-    }
-
-    fun searchAlbum() {
-        OpenApiSDK.getOpenApi().search(searchInput, SearchType.ALBUM, 0, 10, callback = {
-            searchAlbums = it.data?.albumList!!
-        })
-    }
 
 
     fun fetchHotKeys(type: Int) {
@@ -375,53 +362,7 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    fun fetchUserLoginStatus() {
-        QLog.i(TAG, "fetchUserLoginStatus.")
-        viewModelScope.launch(Dispatchers.IO) {
-            flow<Pair<Boolean, Boolean>> {
-                emit(
-                    Pair(
-                        Global.getLoginModuleApi().openIdInfo != null,
-                        Global.getOpenApi().hasPartnerEnvSet()
-                    )
-                )
-            }.map {
-                loginState.postValue(it)
-                it
-            }.map { loginStatus ->
-                userInfo.postValue(
-                    if (loginStatus.first) {
-                        OpenApiSDK.getOpenApi().blockingGet<UserInfo> {
-                            OpenApiSDK.getOpenApi().fetchUserInfo(it)
-                        }.data
-                    } else {
-                        null
-                    }
-                )
-                loginStatus
-            }.map { loginStatus ->
-                val status = if (loginStatus.second) {
-                    OpenApiSDK.getOpenApi().blockingGet<Boolean> {
-                        OpenApiSDK.getOpenApi().hasBindPartnerAccount(it)
-                    }.isSuccess()
-                } else {
-                    false
-                }
-                var isLogin = Pair(loginStatus.first, status)
-                loginState.postValue(isLogin)
-                isLogin
-            }.collect()
-        }
-    }
 
-    fun logout() {
-        QLog.i(TAG, "logout.")
-        viewModelScope.launch {
-            OpenApiSDK.getLoginApi().logout()
-            loginState.value = Pair(false, false)
-            userInfo.value = null
-        }
-    }
 
     fun fetchHiresSection(callback: (Area?) -> Unit) {
         QLog.i(TAG, "fetch hires")
@@ -471,7 +412,7 @@ class HomeViewModel : ViewModel() {
         shelfId: Int,
         contentSize: Int,
         lastContentId: String,
-        callback: (AreaShelf?) -> Unit
+        callback: (AreaShelf?) -> Unit,
     ) {
         QLog.i(TAG, "fetch area: $areaId, shelf by id: $shelfId")
         viewModelScope.launch(Dispatchers.IO) {
@@ -499,5 +440,24 @@ class HomeViewModel : ViewModel() {
         CategoryPageDetailSource(fId, sId)
     }.flow.cachedIn(viewModelScope)
 
+    fun smartSearchKey(key: String, callback: ((List<String>) -> Unit)?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            OpenApiSDK.getOpenApi().searchSmart(key) {
+                callback?.invoke(it.data ?: emptyList())
+            }
+        }
+    }
+
+    fun fetchSingerWiki(id: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            OpenApiSDK.getOpenApi().fetchSingerWiki(id) {
+
+            }
+        }
+    }
+
+    fun pagingCollectedSinger() = Pager(PagingConfig(pageSize = 10)) {
+        OrderedSingerPagingSource()
+    }.flow.cachedIn(viewModelScope)
 
 }

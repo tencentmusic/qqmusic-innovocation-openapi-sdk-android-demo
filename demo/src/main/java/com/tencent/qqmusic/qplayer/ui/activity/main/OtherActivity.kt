@@ -12,14 +12,18 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedButton
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
@@ -28,27 +32,34 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.google.gson.Gson
+import com.tencent.qqmusic.innovation.common.util.GsonHelper
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.network.NetworkTimeoutConfig
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.report.report.LaunchReport
+import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.OpenApiDemoActivity
 import com.tencent.qqmusic.qplayer.ui.activity.SongCacheDemoActivity
 import com.tencent.qqmusic.qplayer.ui.activity.login.WebViewActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusic.sharedfileaccessor.SPBridge
+import okhttp3.internal.toLongOrDefault
 
 class OtherActivity : ComponentActivity() {
 
@@ -228,6 +239,26 @@ fun OtherScreen() {
             playWhenRequestFocusFailed.value = next_value.not()
         }
 
+        val needFadeWhenPlay: MutableState<Boolean> = remember {
+            mutableStateOf(sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false)
+        }
+        SingleItem(title = "切歌时开启淡入淡出", item = if (needFadeWhenPlay.value) "开启" else "关闭") {
+            val next_value = sharedPreferences?.getBoolean("needFadeWhenPlay", true) ?: true
+            sharedPreferences?.edit()?.putBoolean("needFadeWhenPlay", next_value.not())?.apply()
+            Toast.makeText(activity, "设置成功，立即生效", Toast.LENGTH_SHORT).show()
+            needFadeWhenPlay.value = next_value.not()
+        }
+
+        val showTimeoutDialog = remember { mutableStateOf(false) }
+        SingleItem(title = "设置接口超时时间", item = "") {
+            showTimeoutDialog.value = true
+        }
+        if (showTimeoutDialog.value) {
+            sharedPreferences?.let {
+                NetworkTimeoutDialog(activity, it, showTimeoutDialog)
+            }
+        }
+
         Button(onClick = {
             OpenApiSDK.getLogApi().uploadLog(activity) { code, tips, uuid ->
                 Log.i("OtherScreen", "OtherScreen: code $code, tips $tips, uuid $uuid")
@@ -250,7 +281,7 @@ fun OtherScreen() {
         }
         
         Button(onClick = {
-            Global.getOpenApi().getPayUrl("demoOrderId") {
+            OpenApiSDK.getOpenApi().getPayUrl("demoOrderId") {
                 val default = "https://developer.y.qq.com/docs/edge_android#/overview"
                 if (it.isSuccess()) {
                     WebViewActivity.start(activity, it.data ?: default)
@@ -261,6 +292,69 @@ fun OtherScreen() {
             }
         }, modifier = Modifier.padding(padding)) {
             Text(text = "打开VIP购买页面")
+        }
+    }
+}
+
+@Composable
+private fun NetworkTimeoutDialog(activity: Activity, sp: SharedPreferences, showDialog: MutableState<Boolean>) {
+    var readTimeout by rememberSaveable { mutableStateOf("") }
+    var writeTimeout by rememberSaveable { mutableStateOf("") }
+    var connectTimeout by rememberSaveable { mutableStateOf("") }
+    var callTimeout by rememberSaveable { mutableStateOf("") }
+    Dialog(onDismissRequest = {
+        showDialog.value = false
+    }) {
+        Column(modifier = Modifier
+            .background(Color.White)
+            .padding(5.dp)) {
+            OutlinedTextField(
+                value = readTimeout,
+                onValueChange = {
+                    readTimeout = it
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(text = "请输入readTimeout") }
+            )
+            OutlinedTextField(
+                value = writeTimeout,
+                onValueChange = {
+                    writeTimeout = it
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(text = "请输入writeTimeout") }
+            )
+            OutlinedTextField(
+                value = connectTimeout,
+                onValueChange = {
+                    connectTimeout = it
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(text = "请输入connectTimeout") }
+            )
+            OutlinedTextField(
+                value = callTimeout,
+                onValueChange = {
+                    callTimeout = it
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(text = "请输入callTimeout") }
+            )
+            OutlinedButton(onClick = {
+                val config = NetworkTimeoutConfig(readTimeout.toLongOrDefault(10L),
+                    writeTimeout.toLongOrDefault(10L),
+                    connectTimeout.toLongOrDefault(10L),
+                    callTimeout.toLongOrDefault(40L))
+                sp.edit().putString("NetworkTimeoutConfig", GsonHelper.toJson(config).toString()).apply()
+                Toast.makeText(activity, "设置成功，重启应用后生效", Toast.LENGTH_SHORT).show()
+                showDialog.value = false
+            }) {
+                Text(text = "设置")
+            }
         }
     }
 }

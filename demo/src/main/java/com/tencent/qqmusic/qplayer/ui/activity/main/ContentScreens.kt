@@ -18,6 +18,7 @@ import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomePage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.login.MinePage
+import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPage
 
 @Composable
 fun HomeScreen(categoryViewModel: HomeViewModel) {

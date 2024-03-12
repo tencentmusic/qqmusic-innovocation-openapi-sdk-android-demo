@@ -24,7 +24,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
-import com.tencent.qqmusic.openapisdk.business_common.login.IPartnerLogin
+import com.tencent.qqmusic.openapisdk.core.login.IPartnerLogin
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 

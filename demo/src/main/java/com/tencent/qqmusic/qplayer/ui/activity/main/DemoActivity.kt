@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.Button
@@ -26,10 +27,12 @@ import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -62,17 +65,88 @@ import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.home.VIPSuccessDialog
+import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
+import com.tencent.qqmusic.qplayer.utils.PrivacyManager
 import com.tencent.qqmusicplayerprocess.service.NotificationParams
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class DemoActivity : ComponentActivity() {
     private val TAG = "DemoActivity"
+
+    private var showVipDialog = mutableStateOf(false)
+    private var showLoginDialog = mutableStateOf(false)
+    private var isLoginEvent = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        PrivacyManager.init(this) {
+            initView()
+        }
+    }
+
+    private fun initView() {
         initPlay()
+        initGlobalEvent()
         setContent {
+            val scope = rememberCoroutineScope()
             MainScreen()
+            if (showVipDialog.value && isLoginEvent.not()) {
+                LaunchedEffect(Unit) {
+                    scope.launch {
+                        delay(2000)
+                        showVipDialog.value = false
+                    }
+                }
+                AlertDialog(
+                    title = {
+                        Text(text = "用户VIP状态更新")
+                    },
+                    text = {
+                        Text(text = "用户的VIP发生了变化")
+                    },
+                    onDismissRequest = {
+                        showVipDialog.value = false
+                    }, buttons = { /*TODO*/ })
+            }
+
+            if (showLoginDialog.value) {
+                LaunchedEffect(Unit) {
+                    scope.launch {
+                        delay(2000)
+                        showLoginDialog.value = false
+                        isLoginEvent = false
+                    }
+                }
+                isLoginEvent = true
+                showVipDialog.value = false
+                AlertDialog(
+                    title = {
+                        Text(text = "用户登录状态更新")
+                    },
+                    text = {
+                        Text(text = if (OpenApiSDK.getLoginApi().hasLogin()) "登录成功" else "用户退出")
+                    },
+                    onDismissRequest = {
+                        showLoginDialog.value = false
+                    }, buttons = { /*TODO*/ })
+            }
+        }
+    }
+
+    private fun initGlobalEvent() {
+        OpenApiSDK.registerBusinessEventHandler {
+            when (it.code) {
+                LoginEvent.UserVipInfoUpdate -> {
+                    showVipDialog.value = true
+                }
+
+                LoginEvent.MusicUserLogIn, LoginEvent.MusicUserLogOut -> {
+                    showLoginDialog.value = true
+                }
+            }
         }
     }
 
@@ -118,6 +192,7 @@ class DemoActivity : ComponentActivity() {
                             .setCategory(Notification.CATEGORY_SERVICE)
                         notification = builder.build()
                     }
+
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN -> {
                         builder = Notification.Builder(UtilContext.getApp())
                         builder.setContentTitle(NotificationParams.SNotificationTitle)
@@ -125,6 +200,7 @@ class DemoActivity : ComponentActivity() {
                         builder.setOngoing(false)
                         notification = builder.build()
                     }
+
                     else -> {
                         notification = Notification()
                     }
@@ -137,14 +213,14 @@ class DemoActivity : ComponentActivity() {
                 enableRestorePlaylistFunctionality = sharedPreferences?.getBoolean("restore_play_list", true) ?: true
                 autoPlayErrNum = sharedPreferences?.getInt("restore_play_list_err_num", 0) ?: 0
                 playWhenRequestFocusFailed = sharedPreferences?.getBoolean("playWhenRequestFocusFailed", true) ?: true
-
+                needFadeWhenPlayNewSong = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
             }
 
             override fun getPlayerModuleFunctionConfigParam(): PlayerModuleFunctionConfigParam {
-                return param
+                return param.apply {
+                    needFadeWhenPlayNewSong = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
+                }
             }
-
-
         })
 
 
@@ -250,8 +326,7 @@ fun BottomNavigationBar(navController: NavController) {
 }
 
 @Composable
-fun MainScreen(categoryViewModel: HomeViewModel = viewModel()) {
-    categoryViewModel.fetchUserLoginStatus()
+fun MainScreen(categoryViewModel: HomeViewModel = viewModel(), mineViewModel: MineViewModel = viewModel()) {
     val navController = rememberNavController()
     var showVipDialog = remember {
         mutableStateOf(false)
@@ -269,6 +344,7 @@ fun MainScreen(categoryViewModel: HomeViewModel = viewModel()) {
                     LoginEvent.UserAccountLoginExpired -> {
                         setShowDialog(true)
                     }
+
                     TransactionEvent.TransactionEventCode -> {
                         showVipDialog.value = true
                         vipData.value = event.data as TransactionPushData
@@ -286,7 +362,7 @@ fun MainScreen(categoryViewModel: HomeViewModel = viewModel()) {
     if (showVipDialog.value) {
         VIPSuccessDialog(
             vipData.value,
-            categoryViewModel
+            mineViewModel
         ) {
             showVipDialog.value = false
         }

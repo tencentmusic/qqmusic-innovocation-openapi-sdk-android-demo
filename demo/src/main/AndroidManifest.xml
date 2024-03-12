@@ -68,6 +68,7 @@
         <activity android:name=".ui.activity.audio.LongAudioCategoryActivity" />
         <activity android:name=".ui.activity.audio.LongAudioModuleContentActivity" />
         <activity android:name=".ui.activity.login.WebViewActivity" />
+        <activity android:name=".ui.activity.search.SearchPageActivity" />
     </application>
 
 </manifest>

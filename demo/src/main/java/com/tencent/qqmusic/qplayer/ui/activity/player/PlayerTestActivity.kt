@@ -1,8 +1,6 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -13,17 +11,13 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.lifecycle.lifecycleScope
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
-import com.tencent.qqmusic.openapisdk.core.player.PlayCallback
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
-import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
+import com.tencent.qqmusic.openapisdk.model.PlaySpeedType
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
-import kotlinx.coroutines.launch
-import java.io.File
 import kotlin.concurrent.thread
 
 // 
@@ -34,6 +28,9 @@ class PlayerTestActivity : ComponentActivity() {
     companion object {
         private const val TAG = "@@@PlayerTestActivity"
     }
+
+
+    private var reInitPlayerEnv: Button? = null
 
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,7 +46,10 @@ class PlayerTestActivity : ComponentActivity() {
         val btnFolder = findViewById<Button>(R.id.btn_folder)
 
         val btnUseDolby = findViewById<Button>(R.id.btn_use_dolby)
+
+        reInitPlayerEnv = findViewById(R.id.reinit_player_env)
         edt.setText("335918510,317178463,316688109,332183304")
+        initButton()
 
         refresh()
 
@@ -150,31 +150,69 @@ class PlayerTestActivity : ComponentActivity() {
             PlayerEnums.Quality.HQ -> {
                 "hq"
             }
+
             PlayerEnums.Quality.SQ -> {
                 "sq"
             }
+
             PlayerEnums.Quality.STANDARD -> {
                 "standard"
             }
+
             PlayerEnums.Quality.LQ -> {
                 "LQ"
             }
+
             PlayerEnums.Quality.DOLBY -> {
                 "杜比"
             }
+
             PlayerEnums.Quality.HIRES -> {
                 "HiRes"
             }
+
             PlayerEnums.Quality.EXCELLENT -> {
                 "臻品音质2.0"
             }
+
             PlayerEnums.Quality.GALAXY -> {
                 "臻品全景声"
             }
+
             else -> {
                 "未知"
             }
         }
         textQuality.text = "当前默认音质：${qualityStr}"
+    }
+
+
+    private fun initButton() {
+        reInitPlayerEnv?.setOnClickListener {
+            reInitPlayerEnv()
+        }
+    }
+
+
+    private fun reInitPlayerEnv() {
+        OpenApiSDK.getPlayerApi().apply {
+            //音质
+            setCurrentPlaySongQuality(PlayerEnums.Quality.STANDARD)
+            //倍速
+            val playType = getCurrentSongInfo()?.let {
+                if (it.isLongAudioSong()) {
+                    PlaySpeedType.LONG_AUDIO
+                } else {
+                    PlaySpeedType.SONG
+                }
+            }
+            playType?.let {
+                setPlaySpeed(1.0F, playType)
+            }
+
+            //音效
+            setSoundEffectType(null)
+            Toast.makeText(this@PlayerTestActivity, "恢复完成", Toast.LENGTH_SHORT).show()
+        }
     }
 }

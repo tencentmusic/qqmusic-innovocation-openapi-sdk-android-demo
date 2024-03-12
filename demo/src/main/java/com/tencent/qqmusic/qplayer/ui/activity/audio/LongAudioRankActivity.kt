@@ -17,6 +17,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.pager.*
 import com.tencent.qqmusic.openapisdk.business_common.Global
+import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.qplayer.R
@@ -120,6 +121,9 @@ class LongAudioRankActivity : ComponentActivity() {
         }
         val pagerState = rememberPagerState(initFid)
         LaunchedEffect(Unit) {
+            if (pagerState.pageCount == 0) {
+                initFid = 0
+            }
             pagerState.scrollToPage(initFid)
         }
         val stateAdd = pagerState.hashCode()
@@ -214,7 +218,7 @@ class LongAudioRankActivity : ComponentActivity() {
         fun fetchRankCategory() {
             if (categories.isEmpty().not()) return
             viewModelScope.launch(Dispatchers.IO) {
-                Global.getOpenApi().fetchCategoryOfRankLongAudio {
+                OpenApiSDK.getOpenApi().fetchCategoryOfRankLongAudio {
                     categories = it.data ?: emptyList()
                 }
             }
@@ -223,7 +227,7 @@ class LongAudioRankActivity : ComponentActivity() {
         fun fetchRankDetail(cateId: Int, subCateId: Int) {
             if (curCateId == cateId && curSucCateId == subCateId) return
             viewModelScope.launch(Dispatchers.IO) {
-                Global.getOpenApi()
+                OpenApiSDK.getOpenApi()
                     .fetchAlbumListOfRankLongAudioByCategory(listOf(cateId, subCateId)) {
                         albums = it.data ?: emptyList()
                         if (it.isSuccess()) {

@@ -32,7 +32,7 @@ class CategoryPageModuleContentSource(val categoryId: Int):
                 var hasMore = true
                 val nextPage = params.key ?: 0
                 val shelfList = OpenApiSDK.getOpenApi().blockingGet<AreaShelf> {
-                    Global.getOpenApi()
+                    OpenApiSDK.getOpenApi()
                         .fetchCategoryPageModuleContentLongAudio(categoryId, nextPage, it)
                 }.apply {
                     hasMore = this.hasMore
