@@ -104,7 +104,7 @@ class App : Application() {
                 this.isUseForegroundService = isUseForegroundService
                 this.crashConfig = InitConfig.CrashConfig(enableNativeCrashReport = true, enableAnrReport = true)
                 this.deviceConfigInfo.apply {
-                    hardwareInfo = "L9"
+                    hardwareInfo = ""
                 }
                 this.logFileDir = logFileDir
                 this.networkTimeoutConfig = timeoutConfig
