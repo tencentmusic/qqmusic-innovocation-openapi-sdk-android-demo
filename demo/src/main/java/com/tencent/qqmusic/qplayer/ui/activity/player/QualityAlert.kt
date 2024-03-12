@@ -4,6 +4,7 @@ import android.app.Activity
 import android.util.Log
 import android.widget.Toast
 import com.tencent.qqmusic.openapisdk.business_common.Global
+import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.qplayer.utils.UiUtils
@@ -36,7 +37,7 @@ object QualityAlert {
         )
 
     fun showQualityAlert(activity: Activity, setBlock: (Int)->Int, refresh: (Int)->Unit) {
-        val curSong = Global.getPlayerModuleApi().getCurrentSongInfo()
+        val curSong = OpenApiSDK.getPlayerApi().getCurrentSongInfo()
         val stringArray = qualityOrderString.map {
             val quality = qualityOrder.getOrNull(qualityOrderString.indexOf(it)) ?: qualityOrder[0]
             when (it) {

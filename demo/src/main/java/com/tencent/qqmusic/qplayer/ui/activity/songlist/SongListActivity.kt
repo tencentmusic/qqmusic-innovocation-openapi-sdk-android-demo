@@ -25,6 +25,7 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.core.player.MusicPlayList
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderActivity
 import kotlinx.coroutines.*
 
@@ -42,6 +43,9 @@ class SongListActivity : ComponentActivity() {
         const val KEY_RANK_ID = "rank_id"
 
         const val KEY_CATEGORY_IDS = "category_ids"
+
+        const val SONG_TYPE_ALBUM = 1
+        const val SONG_TYPE_SONG_LIST = 2
 
         private const val TAG = "SongListActivity"
     }
@@ -81,14 +85,15 @@ class SongListActivity : ComponentActivity() {
 
     @Composable
     fun mainView() {
-
-        Column(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize()) {
             if (loadingText.value.isNullOrEmpty().not()) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
                     Text(text = loadingText.value, color = Color.Red, fontSize = 32.sp, textAlign = TextAlign.Center)
                 }
             }
             if (!folderId.isNullOrEmpty()) {
+                playlistHeader(songs = songList.value, playListType = MusicPlayList.PLAY_LIST_FOLDER_TYPE, playListTypeId = folderId.toLong())
+
                 DisposableEffect(Unit) {
                     val job = lifecycleScope.launch(Dispatchers.IO) {
                         songListViewModel.pagingFolderSongs(folderId) { songInfos, isEnd ->
@@ -114,7 +119,10 @@ class SongListActivity : ComponentActivity() {
                 }
                 SongListPage(songList.value, false)
             } else if (!albumId.isNullOrEmpty()) {
-                SongListScreen(songListViewModel.pagingAlbumSongs(albumId))
+                songListViewModel.fetchAlbumDetail(albumId)
+                SongListScreen(songListViewModel.pagingAlbumSongs(albumId), album = songListViewModel.albumDetail, type = SONG_TYPE_ALBUM,
+                    playListType = MusicPlayList.PLAY_LIST_ALBUM_TYPE, playListTypeId = albumId.toLong()
+                )
             } else if (songId != 0L) {
                 SongListScreen(songListViewModel.pagingSongIds(listOf(songId)))
             } else if (rankId != 0) {

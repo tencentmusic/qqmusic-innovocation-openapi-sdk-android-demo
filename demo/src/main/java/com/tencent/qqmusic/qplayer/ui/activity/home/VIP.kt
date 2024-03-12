@@ -19,13 +19,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.constraintlayout.compose.ConstraintLayout
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.openapisdk.business_common.event.event.TransactionPushData
+import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 
 @Composable
 fun VIPSuccessDialog(
-    data: TransactionPushData?, categoryViewModel: HomeViewModel, onDismiss: () -> Unit
+    data: TransactionPushData?, categoryViewModel: MineViewModel, onDismiss: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
         ConstraintLayout(
@@ -43,12 +45,12 @@ fun VIPSuccessDialog(
                 end.linkTo(parent.end)
             })
 
-            Text(text = categoryViewModel.userInfo.value?.nickName ?: "", modifier = Modifier.constrainAs(name) {
+            Text(text = categoryViewModel.userInfo.collectAsState().value?.nickName ?: "", modifier = Modifier.constrainAs(name) {
                 top.linkTo(title.bottom)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
             })
-            Image(painter = rememberImagePainter(categoryViewModel.userInfo.value?.avatarUrl),
+            Image(painter = rememberImagePainter(categoryViewModel.userInfo.collectAsState().value?.avatarUrl),
                 contentDescription = "",
                 modifier = Modifier
                     .size(100.dp)

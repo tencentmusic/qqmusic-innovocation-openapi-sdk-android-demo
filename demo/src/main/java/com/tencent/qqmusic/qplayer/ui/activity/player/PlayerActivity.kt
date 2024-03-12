@@ -1,12 +1,17 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
@@ -31,8 +36,32 @@ class PlayerActivity : ComponentActivity() {
     @ExperimentalPagerApi
     @Composable
     fun MainPage() {
+        val activity = LocalContext.current as Activity
+
         val pagerState = rememberPagerState()
         val coroutineScope = rememberCoroutineScope()
+        val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+        val callback = remember {
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    coroutineScope.launch {
+                        if (pagerState.currentPage != 1) {
+                            pagerState.scrollToPage(1)
+                        } else {
+                            activity.finish()
+                        }
+                    }
+
+                }
+            }
+        }
+        DisposableEffect(key1 = Unit, effect = {
+            dispatcher?.addCallback(callback)
+            onDispose {
+                callback.remove()
+            }
+        })
+
 
         HorizontalPager(count = 3, state = pagerState) {
             when (it) {

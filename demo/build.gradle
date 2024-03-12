@@ -20,8 +20,8 @@ android {
         multiDexEnabled true
 
         archivesBaseName = project.hasProperty('git_version')
-                ? "qplay-edge-demo-${appVersionName}-${git_version}_SDKv${sdk_version}"
-                : "qplay-edge-demo-${appVersionName}_SDKv${sdk_version}"
+                ? "qplay-edge-demo-${sdk_version}"
+                : "qplay-edge-demo-${sdk_version}"
 
         ndk{                                            // add this
             abiFilters "arm64-v8a","x86_64","x86","armeabi-v7a"
@@ -71,11 +71,8 @@ android {
 }
 
 dependencies {
-    if (useSdkSource == "true") {
-        implementation project(':entry')
-    } else {
-        implementation "com.tencent.qqmusic.openapi:openapi-sdk:$sdk_version"
-    }
+    implementation fileTree(dir: 'libs', include: ['*.aar'])
+    implementation "com.tencent.qqmusic.openapi:openapi-sdk:$sdk_version"
     implementation 'com.tencent.mm.opensdk:wechat-sdk-android-without-mta:6.8.0'
 
     implementation 'com.google.android.material:material:1.4.0'

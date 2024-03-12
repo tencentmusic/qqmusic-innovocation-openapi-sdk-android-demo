@@ -1,5 +1,6 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
+import android.app.Activity
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
 import androidx.compose.material.Divider
 import androidx.compose.material.Scaffold
+import androidx.compose.material.Slider
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.TopAppBar
@@ -22,8 +24,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,7 +38,11 @@ import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayCallback
+import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
+import com.tencent.qqmusic.openapisdk.model.PlaySpeedType
+import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
 import com.tencent.qqmusic.qplayer.utils.UiUtils
+import kotlin.concurrent.thread
 
 /**
  *
@@ -65,6 +74,7 @@ fun PlayControlTestPage() {
 fun PlayControlArea() {
     var usage by remember { mutableStateOf(TextFieldValue("4")) }
     var contentType by remember { mutableStateOf(TextFieldValue("3")) }
+    val activity = LocalContext.current as Activity
 
     var streamType by remember { mutableStateOf(TextFieldValue("2")) }
 
@@ -73,6 +83,7 @@ fun PlayControlArea() {
     Column(
         modifier = Modifier.padding(5.dp)
     ) {
+        // todo 改造成openApi接口获取
         var vipInfo by remember { mutableStateOf(Global.getLoginModuleApi().vipInfo) }
         var canTryExcellentQuality by remember { mutableStateOf(false) }
         var canTryGalaxyQuality by remember { mutableStateOf(false) }
@@ -117,7 +128,7 @@ fun PlayControlArea() {
         Button(
             onClick = {
                 if (UiUtils.isStrInt(usage.text) && UiUtils.isStrInt(contentType.text)) {
-                    val ret = Global.getPlayerModuleApi().setAudioUsageAndContentType(usage.text.toInt(), contentType.text.toInt())
+                    val ret = OpenApiSDK.getPlayerApi().setAudioUsageAndContentType(usage.text.toInt(), contentType.text.toInt())
                     Log.d(TAG, "setAudioUsageAndContentType, ret: $ret")
                 } else {
                     UiUtils.showToast("该参数必须输入整数！")
@@ -135,12 +146,12 @@ fun PlayControlArea() {
         )
 
         var enableReplayGain by remember {
-            mutableStateOf(Global.getPlayerModuleApi().getEnableReplayGain())
+            mutableStateOf(OpenApiSDK.getPlayerApi().getEnableReplayGain())
         }
 
         Button(onClick = {
-            val curValue = Global.getPlayerModuleApi().getEnableReplayGain()
-            Global.getPlayerModuleApi().setEnableReplayGain(curValue.not())
+            val curValue = OpenApiSDK.getPlayerApi().getEnableReplayGain()
+            OpenApiSDK.getPlayerApi().setEnableReplayGain(curValue.not())
             enableReplayGain = curValue.not()
         }, modifier = Modifier.padding(padding)) {
             Text(text = "开启音量均衡 ${if (enableReplayGain) "开启" else "关闭"}")
@@ -154,7 +165,7 @@ fun PlayControlArea() {
 
         Button(
             onClick = {
-                Global.getOpenApi().canTryPlayExcellentQuality {
+                OpenApiSDK.getOpenApi().canTryPlayExcellentQuality {
                     canTryExcellentQuality = it.data ?: true
                     vipInfo = Global.getLoginModuleApi().vipInfo
                 }
@@ -188,7 +199,7 @@ fun PlayControlArea() {
 
         Button(
             onClick = {
-                Global.getOpenApi().canTryPlayGalaxyQuality {
+                OpenApiSDK.getOpenApi().canTryPlayGalaxyQuality {
                     canTryGalaxyQuality = it.data ?: true
                     vipInfo = Global.getLoginModuleApi().vipInfo
                 }
@@ -213,7 +224,71 @@ fun PlayControlArea() {
             Text(text = "试听臻品全景声")
         }
 
+        Button(
+            onClick = {
+                Global.getPlayerModuleApi().setProgressCallbackFrequency(500)
+            }
+        ) {
+            Text(text = "设置播放进度回调频率500ms")
+        }
+
         Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+        Text(
+            text = "倍速：${PlayerObserver.playSpeed}x",
+            fontFamily = FontFamily.Monospace
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "0.5x",
+                fontFamily = FontFamily.Monospace
+            )
+
+            Slider(
+                value = PlayerObserver.toOneDigits(PlayerObserver.playSpeed),
+                valueRange = 0.5f..2.0f,
+                onValueChange = {
+                    PlayerObserver.playSpeed = PlayerObserver.toOneDigits(it)
+                },
+                onValueChangeFinished = {
+                    thread {
+                        val playSpeed = PlayerObserver.playSpeed
+                        val playType = OpenApiSDK.getPlayerApi().getCurrentSongInfo()?.let {
+                            if (it.isLongAudioSong()) {
+                                PlaySpeedType.LONG_AUDIO
+                            } else {
+                                PlaySpeedType.SONG
+                            }
+                        }
+                        playType?.let {
+                            val result = OpenApiSDK.getPlayerApi().setPlaySpeed(playSpeed, playType)
+                            if (result != PlayDefine.PlayError.PLAY_ERR_NONE) {
+                                JobDispatcher.doOnMain {
+                                    Toast.makeText(UtilContext.getApp(), "播放失败 Code is $result", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } ?: run {
+                            JobDispatcher.doOnMain {
+                                Toast.makeText(UtilContext.getApp(), "未知的播放类型", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .weight(1f, true)
+                    .padding(horizontal = 10.dp)
+            )
+
+            Text(
+                text = "2.0x",
+                fontFamily = FontFamily.Monospace
+            )
+        }
     }
 
 }

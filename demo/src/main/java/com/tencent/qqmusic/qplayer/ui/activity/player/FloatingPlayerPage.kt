@@ -3,15 +3,23 @@ package com.tencent.qqmusic.qplayer.ui.activity.player
 import android.app.Activity
 import android.content.Intent
 import android.text.TextUtils
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -36,7 +44,6 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.core.internal.lyric.LyricLoadInterface
-import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricActivity
 import com.tencent.qqmusictvsdk.internal.lyric.LyricManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -97,6 +104,20 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
                 contentDescription = null,
                 modifier = Modifier
                     .width(18.dp)
+                    .height(10.dp)
+                    .constrainAs(vipIcon) {
+                        start.linkTo(title.end, 10.dp)
+                        bottom.linkTo(title.bottom)
+                        top.linkTo(title.top)
+                    }
+            )
+        }
+        if (currentSong?.longAudioVip == 1) {
+            Image(
+                painter = painterResource(R.drawable.ic_long_audio_vip_new),
+                contentDescription = null,
+                modifier = Modifier
+                    .width(28.dp)
                     .height(10.dp)
                     .constrainAs(vipIcon) {
                         start.linkTo(title.end, 10.dp)
@@ -182,7 +203,7 @@ fun lyric(
     val activity = LocalContext.current as Activity
     val lyricView: LyricScrollView by remember {
         mutableStateOf(
-            LyricScrollView(activity.applicationContext, null).apply {
+            LyricScrollView(activity, null).apply {
                 setSingeMode(LyricViewParams.SINGLE_STATE_FIRST)
                 setSingleLine(true)
                 setFontSize(fontSize.dp.value.toInt())
@@ -191,6 +212,7 @@ fun lyric(
                 setOnClickListener {
                     click?.let { it.invoke() }
                 }
+                setSpeed(OpenApiSDK.getPlayerApi().getCurrentPlayTime() ?: 0L, OpenApiSDK.getPlayerApi().getPlaySpeed())
             }
         )
     }
@@ -226,8 +248,9 @@ fun lyric(
                 lyricView.setState(state)
             }
 
-            override fun onLyricSeek(position: Long) {
+            override fun onLyricSeek(position: Long, playSpeed: Float) {
                 lyricView.seek(position)
+                lyricView.setSpeed(position, playSpeed)
             }
 
             override fun onLyricStart(isStart: Boolean) {

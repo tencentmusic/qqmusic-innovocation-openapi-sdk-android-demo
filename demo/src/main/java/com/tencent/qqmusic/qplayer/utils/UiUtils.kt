@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.widget.Toast
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.business_common.Global
+import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import java.math.BigDecimal
 
@@ -17,7 +18,7 @@ object UiUtils {
     fun getFormatAccessLabel(info: SongInfo?, quality: Int): String {
         info ?: return ""
         val default = ""
-        val access = Global.getPlayerModuleApi().getAccessByQuality(info, quality) ?: return default
+        val access = OpenApiSDK.getPlayerApi().getAccessByQuality(info, quality) ?: return default
         val sb = StringBuilder()
         if (access.vip) {
             sb.append("vip").append("•")

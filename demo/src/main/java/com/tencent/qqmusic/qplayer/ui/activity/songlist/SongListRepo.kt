@@ -37,6 +37,13 @@ class SongListRepo {
         return ret
     }
 
+    fun fetchMyLongAudioSong(type: Int, page: Int): OpenApiResponse<List<SongInfo>> {
+        val ret = OpenApiSDK.getOpenApi().blockingGet<List<SongInfo>> {
+            OpenApiSDK.getOpenApi().fetchCollectedLongAudioSongList (type, page, it)
+        }
+        return ret
+    }
+
     fun fetchSongInfoByALbum(
         albumId: String,
         page: Int,

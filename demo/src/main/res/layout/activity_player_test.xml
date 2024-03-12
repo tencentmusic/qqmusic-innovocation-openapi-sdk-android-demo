@@ -45,19 +45,19 @@
         android:id="@+id/btn_use_dolby"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="填入杜比歌曲"/>
+        android:text="填入杜比歌曲" />
 
     <Button
         android:id="@+id/btn_use_hires"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="填入Hires歌曲"/>
+        android:text="填入Hires歌曲" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="15dp">
+        android:layout_marginTop="15dp"
+        android:orientation="horizontal">
 
         <EditText
             android:id="@+id/edt_folder"
@@ -79,5 +79,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="更新播放列表" />
+
+    <Button
+        android:id="@+id/reinit_player_env"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="初始化播放条件" />
 
 </LinearLayout>

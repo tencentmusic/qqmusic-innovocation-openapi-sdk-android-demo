@@ -20,7 +20,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
+import com.tencent.qqmusic.qplayer.BuildConfig
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.utils.UiUtils
+import com.tencent.qqmusic.qplayer.utils.PrivacyManager
+import com.tencent.qqmusic.qplayer.utils.PrivacyManager.isGrant
 
 
 @Composable
@@ -35,11 +39,16 @@ fun AppSetting() {
         }
 
         SingleItem(title = "Debug调试页面", item = "") {
+            if (!BuildConfig.DEBUG) {
+                UiUtils.showToast("请使用Release包")
+                return@SingleItem
+            }
             activity.startActivity(Intent(activity, DebugActivity::class.java))
         }
-
-        SingleItem(title = "关于", item = "") {
+        val privacyTips = if (!isGrant()) "-协议有更新！" else ""
+        SingleItem(title = "关于${privacyTips}", item = "") {
             activity.startActivity(Intent(activity, AboutActivity::class.java))
+            PrivacyManager.updateGrantTime()
         }
 
     }

@@ -10,6 +10,7 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.addTextChangedListener
+import androidx.lifecycle.lifecycleScope
 import com.google.gson.GsonBuilder
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.business_common.login.OpenIdInfo
@@ -20,6 +21,10 @@ import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.model.SearchType
 import com.tencent.qqmusic.openapisdk.model.VipInfo
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.report.report.ClickExpoReport
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -208,35 +213,27 @@ class OpenApiDemoActivity : AppCompatActivity() {
         setupMethodNameToBlock()
 
         findViewById<Button>(R.id.btn_send).setOnClickListener {
-            displayTv.text = "请求已发送, 正在等待响应..."
-            displayMode = true
-            getParamStr()
+            lifecycleScope.launch(Dispatchers.IO) {
+                ClickExpoReport().report()
+                withContext(Dispatchers.Main) {
+                    displayTv.text = "请求已发送, 正在等待响应..."
+                    displayMode = true
+                }
+                getParamStr()
 
-            val item = arrayAdapter?.getItem(spinner.selectedItemPosition)
-            val methodNameWidthParam = methodNameWithParamList.first { it.name == item }
-            val name = methodNameWidthParam.name
+                val item = arrayAdapter?.getItem(spinner.selectedItemPosition)
+                val methodNameWidthParam = methodNameWithParamList.first { it.name == item }
+                val name = methodNameWidthParam.name
 
-            val block = methodNameToBlock[name]
-            try {
-                block!!.invoke(methodNameWidthParam)
-            } catch (e: Throwable) {
-                Log.i(TAG, "block invoke failed", e)
+                val block = methodNameToBlock[name]
+                try {
+                    block?.invoke(methodNameWidthParam)
+                } catch (e: Throwable) {
+                    Log.i(TAG, "block invoke failed", e)
+                }
             }
         }
 
-        findViewById<View>(R.id.btn_test2).setOnClickListener {
-            val openIdInfo = Global.getLoginModuleApi().openIdInfo
-            openIdInfo?.apply {
-                Global.getLoginModuleApi().openIdInfo = OpenIdInfo(
-                    expireTime = expireTime,
-                    openId = openId,
-                    accessToken = "auh6b4002f6eb9585f13d562b6d2229e052c37daae2e2cb350582832c9ae958c410",
-                    refreshToken = refreshToken,
-                    type = type
-                )
-            }
-
-        }
         val debugBottom = findViewById<View>(R.id.btn_test)
         debugBottom.visibility = if (showDebugButton) View.VISIBLE else View.GONE
         debugBottom.setOnClickListener {
@@ -245,8 +242,8 @@ class OpenApiDemoActivity : AppCompatActivity() {
             thread {
 
                 // 先创建一个歌单，用作后续的deleteFolder、addSongToFolder、deleteSongFromFolder的folderId默认值
-                Global.getOpenApi().blockingGet<String> {
-                    Global.getOpenApi().createFolder("一键测试的前置创建歌单") { callback ->
+                OpenApiSDK.getOpenApi().blockingGet<String> {
+                    OpenApiSDK.getOpenApi().createFolder("一键测试的前置创建歌单") { callback ->
                         if (callback.isSuccess()) {
                             createFolderId = callback.data
                             createFolderSuccess = true
@@ -353,12 +350,16 @@ class OpenApiDemoActivity : AppCompatActivity() {
     }
 
     private fun updateMethodKey(key: String?) {
-        val newList = methodNameWithParamList.filter { it.name.contains(key ?: "", ignoreCase = true) }
-        arrayAdapter?.clear()
-        arrayAdapter?.addAll(newList.map { data -> data.name })
-        arrayAdapter?.notifyDataSetChanged()
-        val item = arrayAdapter?.getItem(0) ?: ""
-        onMethodNameSelected(item)
+        val newList = methodNameWithParamList.filter { it.name.contains(key?.trim() ?: "", ignoreCase = true) }
+        arrayAdapter?.apply {
+            clear()
+            addAll(newList.map { data -> data.name })
+            notifyDataSetChanged()
+            if (newList.isNotEmpty()) {
+                val item = getItem(0) ?: ""
+                onMethodNameSelected(item)
+            }
+        }
     }
 
     private fun onMethodNameSelected(key: String) {
@@ -523,6 +524,14 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 commonCallback.invoke(callback)
             }
         }
+        methodNameToBlock["deleteFolder(批量,分割)"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.deleteFolder(paramStr1!!.split(",")) { callback ->
+                createdFolderDeleted = callback.data!!
+                commonCallback.invoke(callback)
+            }
+        }
         methodNameToBlock["addSongToFolder"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
@@ -564,6 +573,12 @@ class OpenApiDemoActivity : AppCompatActivity() {
             fillDefaultParamIfNull(it)
             // 3805603854: 和周杰伦走过的21年，无与伦比
             openApi.unCollectFolder(paramStr1!!, commonCallback)
+        }
+        methodNameToBlock["unCollectFolder(批量,分割)"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            // 3805603854: 和周杰伦走过的21年，无与伦比
+            openApi.unCollectFolder(paramStr1!!.split(","), commonCallback)
         }
         methodNameToBlock["deleteSongFromFolder"] = {
             val commonCallback = CallbackWithName(it)
@@ -810,6 +825,12 @@ class OpenApiDemoActivity : AppCompatActivity() {
             openApi.fetchRecentPlayLongAudio(commonCallback)
         }
 
+        methodNameToBlock["deleteRecentPlay"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.deleteRecentPlay(type = paramStr2?.toIntOrNull() ?: 0, paramStr1!!.split(","), commonCallback)
+        }
+
         methodNameToBlock["fetchRecentPlaySong"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
@@ -888,7 +909,8 @@ class OpenApiDemoActivity : AppCompatActivity() {
             fillDefaultParamIfNull(it)
             val start: Int = paramStr1?.toIntOrNull() ?: 0
             val size: Int = paramStr2?.toIntOrNull() ?: 0
-            openApi.fetchCollectedAlbum(start, size, commonCallback)
+            val type: Int = paramStr3?.toIntOrNull() ?: 0
+            openApi.fetchCollectedAlbum(start, size, type, commonCallback)
         }
 
         methodNameToBlock["collectAlbum"] = {
@@ -920,6 +942,43 @@ class OpenApiDemoActivity : AppCompatActivity() {
             val page = paramStr2?.toIntOrNull() ?: 0
             openApi.fetchAllTypeAiSongList(size, page, commonCallback)
         }
+
+        methodNameToBlock["collectSinger"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            val isCollect = paramStr1?.toBoolean() ?: true
+            val singerIdList = paramStr2?.edtParamToList()
+                ?.mapNotNull {singerId-> singerId.toIntOrNull() }
+                ?: emptyList()
+            openApi.collectSinger(isCollect, singerIdList, commonCallback)
+        }
+
+        methodNameToBlock["fetchCollectedSinger"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            val page = paramStr1?.toIntOrNull() ?: 0
+            val size = paramStr2?.toIntOrNull() ?: 20
+            openApi.fetchCollectedSinger(page, size, commonCallback)
+        }
+        methodNameToBlock["fetchCollectedLongAudioSongList"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            val type = paramStr1?.toIntOrNull() ?: 1
+            val page = paramStr2?.toIntOrNull() ?: 0
+            openApi.fetchCollectedLongAudioSongList(type, page, commonCallback)
+        }
+        methodNameToBlock["collectLongAudioSong"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            val type = paramStr1 == "true"
+            val list = paramStr2?.edtParamToList()?.map { songId -> songId.toLong() } ?: emptyList()
+            openApi.collectLongAudioSong(type, list, commonCallback)
+        }
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "collectLongAudioSong", listOf("收藏", "歌曲id列表"), listOf("true", "314377847")
+            )
+        )
     }
 
     private fun initMethodNameList() {
@@ -1027,14 +1086,21 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "addSongToFolder", listOf("歌单id", "歌曲id列表", "歌曲mid列表", "歌曲类型"), listOf("8219435055", "314818717,317968884,316868744,291130348", null, null)
+                "addSongToFolder", listOf("歌单id", "歌曲id列表", "歌曲mid列表", "歌曲类型"), listOf(null, null, null)
             )
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "deleteSongFromFolder", listOf("歌单id", "歌曲id列表", "歌曲mid列表", "歌曲类型"), listOf("8219435055", "314818717", null, null)
+                "deleteSongFromFolder", listOf("歌单id", "歌曲id列表", "歌曲mid列表", "歌曲类型"), listOf(null, null, null)
             )
         )
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "deleteRecentPlay", listOf("id列表", "播放类型"), listOf("8219435055", "314818717", null, null)
+            )
+        )
+
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "fetchCategoryOfFolder", listOf(), listOf()
@@ -1288,7 +1354,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "fetchCollectedAlbum", listOf("起始偏移量", "每页返回数量"), listOf("0", "20")
+                "fetchCollectedAlbum", listOf("起始偏移量", "每页返回数量", "类型"), listOf("0", "20", "0")
             )
         )
         methodNameWithParamList.add(
@@ -1300,6 +1366,29 @@ class OpenApiDemoActivity : AppCompatActivity() {
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "fetchAllTypeAiSongList", listOf("歌单分页数量", "取第几页"), listOf("12", "0")
+            )
+        )
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "collectSinger", listOf("订阅/取消订阅歌手", "歌手ID列表"), listOf("true", null)
+            )
+        )
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchCollectedSinger", listOf("页码", "分页大小"), listOf("0", "20")
+            )
+        )
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchCollectedLongAudioSongList", listOf("类型", "页码"), listOf("1", "0")
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "collectLongAudioSong", listOf("收藏", "歌曲id列表"), listOf("true", "314377847")
             )
         )
         methodNameWithParamList.sortBy {

@@ -12,37 +12,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberImagePainter
-import com.tencent.qqmusic.openapisdk.business_common.event.BaseBusinessEvent
-import com.tencent.qqmusic.openapisdk.business_common.event.BusinessEventHandler
-import com.tencent.qqmusic.openapisdk.business_common.event.event.LoginEvent
-import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 
 
 @Composable
-fun MinePageNew(model: MineViewModel = viewModel()) {
-
-    LaunchedEffect(key1 = Unit) {
-        OpenApiSDK.registerBusinessEventHandler(object : BusinessEventHandler {
-            override fun handle(event: BaseBusinessEvent) {
-                if (event.code == LoginEvent.MusicUserLogIn
-                    || event.code == LoginEvent.MusicUserLogOut
-                    || event.code == LoginEvent.UserVipInfoUpdate
-                ) {
-                    model.updateData()
-                }
-            }
-        })
-    }
-
+fun MinePageNew(model: MineViewModel) {
     model.updateData()
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -68,7 +48,7 @@ fun MinePageNew(model: MineViewModel = viewModel()) {
                     Text(text = "用户昵称：${model.userInfo.collectAsState().value?.nickName ?: " "}")
                     Text(text = vipLevelText)
                     Text(text = vipText)
-                    if (vip?.isVip() == true) {
+                    if (vip?.isVip() == true || vip?.isLongAudioVip() == true) {
                         Text(text = "开始时间：${model.getVipTimeStartText(vip)}")
                         Text(text = "结束时间：${model.getVipEndTimeText(vip)}")
                     }

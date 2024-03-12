@@ -4,14 +4,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayListPagingSource
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 //
@@ -20,6 +23,8 @@ import kotlinx.coroutines.withContext
 //
 
 class SongListViewModel : ViewModel() {
+
+    var albumDetail: Album? by mutableStateOf(null)
 
    suspend fun pagingFolderSongs(folderId: String, block: suspend (List<SongInfo>, Boolean) -> Unit) {
         var nextPage = 0
@@ -36,6 +41,11 @@ class SongListViewModel : ViewModel() {
         }
     }
 
+    fun fetchAlbumDetail(albumId: String) {
+        OpenApiSDK.getOpenApi().fetchAlbumDetail(albumId) {
+            albumDetail = it.data
+        }
+    }
 
     fun pagingAlbumSongs(albumId: String) = Pager(PagingConfig(pageSize = 50, prefetchDistance = 10, initialLoadSize = 50)) {
         AlbumSongPagingSource(albumId)

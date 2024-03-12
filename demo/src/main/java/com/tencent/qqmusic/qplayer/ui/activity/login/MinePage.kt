@@ -20,8 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.Observer
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.PagingData
+import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.rememberImagePainter
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
@@ -29,16 +30,21 @@ import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.login.AuthType
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
+import com.tencent.qqmusic.openapisdk.model.Singer
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.PartnerLoginActivity
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderPage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
+import com.tencent.qqmusic.qplayer.ui.activity.home.OrderedSingerPagingSource
 import com.tencent.qqmusic.qplayer.ui.activity.person.MinePageNew
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
+import com.tencent.qqmusic.qplayer.ui.activity.search.singerPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.*
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 private const val TAG = "MinePage"
@@ -52,6 +58,7 @@ fun MinePage() {
     val homeViewModel by lazy {
         HomeViewModel()
     }
+    val mineViewModel by lazy { MineViewModel() }
 
     DisposableEffect(lifecycleOwner) {
         // Create an observer that triggers our remembered callbacks
@@ -59,7 +66,7 @@ fun MinePage() {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
-                    homeViewModel.fetchUserLoginStatus()
+                    mineViewModel.updateData()
                 }
             }
         }
@@ -77,10 +84,10 @@ fun MinePage() {
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        MinePageNew()
+        MinePageNew(mineViewModel)
         Spacer(modifier = Modifier.height(16.dp))
 
-        LoginButton(activity, homeViewModel, loginText)
+        LoginButton(activity, homeViewModel, mineViewModel, loginText)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -89,17 +96,16 @@ fun MinePage() {
 }
 
 @Composable
-fun LoginButton(activity: Activity, vm: HomeViewModel, info: MutableState<String>, model: MineViewModel = viewModel()) {
+fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewModel, info: MutableState<String>) {
     var isLogin by remember {
         mutableStateOf(false)
     }
     var isBind by remember {
         mutableStateOf(false)
     }
-    vm.loginState.observe(LocalLifecycleOwner.current, Observer {
-        isLogin = it.first
-        isBind = it.second
-    })
+    val userInfo = mineViewModel.loginInfo.collectAsState()
+    isLogin = userInfo.value != null
+    isBind = userInfo.value != null && userInfo.value?.type == AuthType.PARTNER
     Column(modifier = Modifier.fillMaxWidth()) {
         if (isLogin) {
             Row(
@@ -108,9 +114,8 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, info: MutableState<String
             ) {
 
                 Button(onClick = {
-                    vm.logout()
-                    model.updateData()
-                    Global.getPlayerModuleApi().setPreferSongQuality(Quality.HQ)
+                    mineViewModel.logout()
+                    OpenApiSDK.getPlayerApi().setPreferSongQuality(Quality.HQ)
                     HomeViewModel.clearRequestState()
                 }, modifier = Modifier.padding(8.dp, 0.dp, 0.dp, 0.dp)) {
                     Text(text = "退出登录")
@@ -126,15 +131,12 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, info: MutableState<String
                     onClick = {
                         OpenApiSDK.getLoginApi().wxLogin(activity, MustInitConfig.WX_APP_ID) { ret, msg ->
                             Log.i(TAG, "LoginPage: wechat ret $ret")
-                            if (ret) {
-                                Toast.makeText(activity, "微信登录成功", Toast.LENGTH_SHORT).show()
-                            } else {
+                            if (ret.not()) {
                                 Toast.makeText(activity, "微信登录失败: $msg", Toast.LENGTH_SHORT).show()
                             }
 
                             info.value = "微信已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                            vm.fetchUserLoginStatus()
-                            model.updateData()
+                            mineViewModel.updateData()
                             HomeViewModel.clearRequestState()
                         }
                     },
@@ -146,15 +148,12 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, info: MutableState<String
                     OpenApiSDK.getLoginApi().qqLoginWeb(activity) { ret, msg ->
                         activity.runOnUiThread {
                             Log.i(TAG, "LoginPage: qq ret $ret, msg: $msg")
-                            if (ret) {
-                                Toast.makeText(activity, "QQ登录成功", Toast.LENGTH_SHORT).show()
-                            } else {
+                            if (ret.not()) {
                                 Toast.makeText(activity, "QQ登录失败: $msg", Toast.LENGTH_SHORT).show()
                             }
                             HomeViewModel.clearRequestState()
-                            model.updateData()
+                            mineViewModel.updateData()
                             info.value = "QQ已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                            vm.fetchUserLoginStatus()
                         }
                     }
                 }, modifier = Modifier.padding(0.dp)) {
@@ -163,14 +162,12 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, info: MutableState<String
                 Button(onClick = {
                     OpenApiSDK.getLoginApi().qqMusicLogin(activity) { b, msg ->
                         if (b) {
-                            Toast.makeText(activity, "登录成功", Toast.LENGTH_SHORT).show()
 
                             info.value = "QQ音乐已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                            vm.fetchUserLoginStatus()
                         } else {
                             Toast.makeText(activity, "登录失败: $msg", Toast.LENGTH_SHORT).show()
                         }
-                        model.updateData()
+                        mineViewModel.updateData()
                         HomeViewModel.clearRequestState()
                     }
                 }, modifier = Modifier.padding(0.dp)) {
@@ -184,24 +181,22 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, info: MutableState<String
                 Button(onClick = {
                     OpenApiSDK.getLoginApi().qrCodeLogin(activity) { b, msg ->
                         if (b) {
-                            Toast.makeText(activity, "登录成功", Toast.LENGTH_SHORT).show()
 
                             info.value = "扫码已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                            vm.fetchUserLoginStatus()
+                            mineViewModel.updateData()
                         } else {
                             Toast.makeText(activity, "登录失败: $msg", Toast.LENGTH_SHORT).show()
                         }
                         HomeViewModel.clearRequestState()
-                        model.updateData()
+                        mineViewModel.updateData()
                     }
                     info.value = "扫码登录结果:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                    vm.fetchUserLoginStatus()
                 }, modifier = Modifier.padding(0.dp)) {
                     Text(text = "扫码登录")
                 }
 
                 val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
-                PhoneLoginDialog(vm, model, showDialog = showDialog, setShowDialog = setShowDialog)
+                PhoneLoginDialog(mineViewModel, showDialog = showDialog, setShowDialog = setShowDialog)
                 Button(onClick = {
                     setShowDialog(true)
                 }, modifier = Modifier.padding(0.dp)) {
@@ -215,7 +210,7 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, info: MutableState<String
                     Text(text = "OpenId登录")
                 }
                 if (showOpenIdLoginDialog.value) {
-                    OpenIdLoginDialog(vm, showOpenIdLoginDialog)
+                    OpenIdLoginDialog(mineViewModel, showOpenIdLoginDialog)
                 }
             }
         }
@@ -246,7 +241,12 @@ fun MineSongList(viewModel: HomeViewModel) {
         "最近播放长音频",
         "已购专辑",
         "已购单曲",
+        "收藏有声单曲",
+        "收藏播客单曲",
+        "收藏有声专辑",
+        "收藏有声播客",
 //        "已购有声书"
+        "订阅歌手",
 
     )
 
@@ -278,6 +278,9 @@ fun MineSongList(viewModel: HomeViewModel) {
             )
         }
     }
+
+    // 避免多次创建PagingSource
+    val orderedSingerPagingSource by lazy { viewModel.pagingCollectedSinger() }
 
     HorizontalPager(
         count = pages.size,
@@ -347,6 +350,32 @@ fun MineSongList(viewModel: HomeViewModel) {
                 SongListPage(songs = viewModel.songOfRecord, needPlayer = false)
             }
 
+            9 -> {
+                // 收藏有声单曲
+                SongListPage(viewModel.pagingLongAudioSong(1))
+            }
+
+            10 -> {
+                // 收藏播客单曲
+                SongListPage(viewModel.pagingLongAudioSong(2))
+            }
+
+            11 -> {
+                // 收藏有声专辑
+                viewModel.fetchCollectedAlbum(1)
+                AlbumPage(viewModel.favAlbums)
+            }
+
+            12 -> {
+                // 收藏有声播客
+                viewModel.fetchCollectedAlbum(2)
+                AlbumPage(viewModel.favAlbums)
+            }
+            13 -> {
+                // 订阅歌手
+                singerPage(orderedSingerPagingSource)
+            }
+
         }
     }
 }
@@ -381,7 +410,7 @@ fun NewFolder(viewModel: HomeViewModel) {
 fun FolderDialog(
     viewModel: HomeViewModel,
     showDialog: Boolean,
-    setShowDialog: (Boolean) -> Unit
+    setShowDialog: (Boolean) -> Unit,
 ) {
     if (!showDialog) return
 
@@ -415,7 +444,7 @@ fun FolderDialog(
                     Log.d(TAG, "New Folder: $foldName")
                     if (foldName.isEmpty()) return@OutlinedButton
 
-                    com.tencent.qqmusic.openapisdk.business_common.Global.getOpenApi()
+                    OpenApiSDK.getOpenApi()
                         .createFolder(foldName) {
                             if (it.isSuccess()) {
                                 Log.d(
@@ -440,7 +469,7 @@ fun FolderDialog(
 }
 
 @Composable
-fun OpenIdLoginDialog(homeViewModel: HomeViewModel, showDialog: MutableState<Boolean>) {
+fun OpenIdLoginDialog(mineViewModel: MineViewModel, showDialog: MutableState<Boolean>) {
     var openId by rememberSaveable {
         mutableStateOf("")
     }
@@ -450,7 +479,11 @@ fun OpenIdLoginDialog(homeViewModel: HomeViewModel, showDialog: MutableState<Boo
     Dialog(onDismissRequest = {
         showDialog.value = false
     }) {
-        Column(modifier = Modifier.background(Color.White).padding(5.dp)) {
+        Column(
+            modifier = Modifier
+                .background(Color.White)
+                .padding(5.dp)
+        ) {
             OutlinedTextField(
                 value = openId,
                 onValueChange = {
@@ -468,10 +501,10 @@ fun OpenIdLoginDialog(homeViewModel: HomeViewModel, showDialog: MutableState<Boo
                 placeholder = { Text(text = "请输入AccessToken") }
             )
             OutlinedButton(onClick = {
-                OpenApiSDK.getLoginApi().openIdLogin(openId, accessToken) { suc, msg ->
+                OpenApiSDK.getLoginApi().openIdLogin(MustInitConfig.APP_ID, openId, accessToken) { suc, msg ->
                     UiUtils.showToast("登录结果：$suc $msg")
                     if (suc) {
-                        homeViewModel.fetchUserLoginStatus()
+                        mineViewModel.updateData()
                     }
                 }
                 showDialog.value = false
@@ -483,7 +516,7 @@ fun OpenIdLoginDialog(homeViewModel: HomeViewModel, showDialog: MutableState<Boo
 }
 
 @Composable
-fun PhoneLoginDialog(viewModel: HomeViewModel, model: MineViewModel, showDialog: Boolean, setShowDialog: (Boolean) -> Unit) {
+fun PhoneLoginDialog(model: MineViewModel, showDialog: Boolean, setShowDialog: (Boolean) -> Unit) {
     if (!showDialog) return
 
     val activity = LocalContext.current as Activity
@@ -511,7 +544,7 @@ fun PhoneLoginDialog(viewModel: HomeViewModel, model: MineViewModel, showDialog:
                 Log.d(TAG, "phoneNum: $phoneNum")
                 if (phoneNum.isEmpty()) return@OutlinedButton
 
-                Global.getLoginModuleApi().sendPhoneVerificationCode(phoneNum) { b, msg, info ->
+                OpenApiSDK.getLoginApi().sendPhoneVerificationCode(phoneNum) { b, msg, info ->
                     if (b == 0) {
                         UiUtils.showToast("获取验证码成功")
                     } else {
@@ -536,11 +569,8 @@ fun PhoneLoginDialog(viewModel: HomeViewModel, model: MineViewModel, showDialog:
                 if (phoneNum.isEmpty()) return@OutlinedButton
                 if (verifyCode.isEmpty()) return@OutlinedButton
 
-                Global.getLoginModuleApi().phoneLogin(phoneNum, verifyCode, activity, false) { code, msg, info ->
-                    if (code == 0) {
-                        UiUtils.showToast("登录成功")
-                        viewModel.fetchUserLoginStatus()
-                    } else if (code == 1) {
+                OpenApiSDK.getLoginApi().phoneLogin(phoneNum, verifyCode, activity, false) { code, msg, info ->
+                    if (code == 1) {
                         UiUtils.showToast("需要绑定Q音账号")
                     } else {
                         UiUtils.showToast("登录失败:$msg")

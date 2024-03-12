@@ -34,7 +34,7 @@ class AreaListContentSource(val areaId: Int, val shelfId: Int):
                 var shelfType = 0
                 val nextPage = params.key ?: ""
                 val shelfList = OpenApiSDK.getOpenApi().blockingGet<AreaShelf> {
-                    Global.getOpenApi()
+                    OpenApiSDK.getOpenApi()
                         .fetchShelfContent(shelfId, 20, nextPage, areaId, it)
                 }.apply {
                     hasMore = this.hasMore

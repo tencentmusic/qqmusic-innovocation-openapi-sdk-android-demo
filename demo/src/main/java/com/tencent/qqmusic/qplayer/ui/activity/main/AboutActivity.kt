@@ -25,9 +25,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tencent.qqmusic.openapisdk.business_common.Global.versionName
 import com.tencent.qqmusic.openapisdk.business_common.cgi.CgiConfig
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.qplayer.BuildConfig
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 
 class AboutActivity : ComponentActivity() {
@@ -50,7 +50,7 @@ fun AboutScreen() {
             .verticalScroll(state = rememberScrollState())
     ){
         CopyableText(title = "包名", content = "com.tencent.qqmusicrecognition")
-        CopyableText(title = "SDK版本号",content = versionName)
+        CopyableText(title = "SDK版本号",content = BuildConfig.VERSION_NAME)
         CopyableText(title = "uin",content = CgiConfig.uin())
         CopyableText(title = "协议",content = if (OpenApiSDK.isNewProtocol) "新协议" else "旧协议")
         Button(onClick = {

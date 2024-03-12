@@ -59,7 +59,7 @@ class OpiQRCodeActivity : Activity() {
 
     private fun startGetQrCode() {
         showTips("二维码加载中...", false)
-        Global.getOpenApi().getLoginQrCode(devName) {
+        OpenApiSDK.getOpenApi().getLoginQrCode(devName) {
             if (it.isSuccess()) {
                 JobDispatcher.doOnBackground {
                     val bitmap = Global.getQRCodeApi().createQRCodeByUrl(it.data!!.qrCode)
@@ -83,7 +83,7 @@ class OpiQRCodeActivity : Activity() {
     }
 
     private fun requestQrCodeAuthResult(pollAuthCode: String) {
-        Global.getOpenApi().pollQrCodeLoginResult(pollAuthCode) {
+        OpenApiSDK.getOpenApi().pollQrCodeLoginResult(pollAuthCode) {
             if (it.isSuccess()) {
                 // 登录成功
                 QLog.i(TAG, "扫码登录成功, authCode=${it.data}")

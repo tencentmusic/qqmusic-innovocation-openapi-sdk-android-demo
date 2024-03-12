@@ -3,18 +3,25 @@ package com.tencent.qqmusic.qplayer.ui.activity.player
 import android.app.Activity
 import android.content.Intent
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
-import androidx.compose.material.Slider
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -27,9 +34,13 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricActivity
 import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricNewActivity
+import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPageActivity
+import com.tencent.qqmusic.qplayer.ui.activity.ui.QQMusicSlider
+import com.tencent.qqmusic.qplayer.ui.activity.ui.Segment
+import com.tencent.qqmusicplayerprocess.audio.playermanager.EKeyDecryptor
 import kotlin.concurrent.thread
 
 
@@ -88,9 +99,11 @@ fun PlayerPage(observer: PlayerObserver) {
             fontSize = 20.sp,
             modifier = Modifier.clickable {
                 currSong?.singerId?.let {
-                    OpenApiSDK.getOpenApi().fetchSingerWiki(it) {
-                        QLog.i(TAG, "singerWiki: ${it.data}")
-                    }
+                    activity.startActivity(
+                        Intent(activity, SearchPageActivity::class.java)
+                            .putExtra(SearchPageActivity.searchType, SearchPageActivity.singerIntentTag)
+                            .putExtra(SearchPageActivity.singerIntentTag, it)
+                    )
                 }
             }
         )
@@ -155,6 +168,11 @@ fun PlayerPage(observer: PlayerObserver) {
                     }
             )
 
+            Text(
+                text = "倍速：${observer.playSpeed}x",
+                fontFamily = FontFamily.Monospace
+            )
+
             // 音效
             Image(
                 painter = painterResource(id = R.drawable.ic_sound_effect),
@@ -162,6 +180,8 @@ fun PlayerPage(observer: PlayerObserver) {
                 modifier = Modifier
                     .size(50.dp)
                     .clickable {
+//                        val path = activity.cacheDir.absolutePath
+//                        EKeyDecryptor.decryptFile("$path/D0M1001vpnQI0PTUUg.mmp4","$path/D0M1001vpnQI0PTUUg.mp4", "NzJyMk1HVWNUpnJZ5PGNpRWxwutZKLtrvB6r5y4EreIJ7FJaMQjwO5tsnBDMALmO/ZlM5cEKWc1a/zO81WRRqMqJJjrSmYuNHXRR6ZWRFxJ0N1IKsXrHgm7zX5Hba93Pg6M+fTOClR+tV6Sc2zJ/NcVwTj0E0/G+OSdM41n40piEOxSjqHnU10YuSYUhaGem5ofR+DSBw227vlZ4UO6un10H2rpyrKJV2VRnRbVbYOcpYamcZFiQxKM7omLYemTnptgubsMHxqDHJYLhF5in2beeqXSTYrzrkfNW9/6QR4n0sRHCn+vqzJP30tnINzivJkfJUFLGZX2k2uG4gtZIQNZRPsqFFnJu8EC/Pp5lgGPqY3UsxmvITGZtAruD6DWq+sTbAVRGszvZTMWZQO/K8fjsUyOQ8fTlCxqDzjU8yIb+x60veY1l7Gm25yjBHrUOpM26hgfvrduRsDbUKl+VXpX85CMhcP8UuHCp08y2xD0x/9LCqJNbxTjQ3DMQ1umZPgniSUqqrxaSo9RYwJD8gs16QfWXw35GCxn2u58087hDV4HwUPGsbSw2LDuYpGHE3YILuCJmVpNjicungigNWXggYaQHjQUP7Q/sspp/d7LiIeUpPnGjg035ZpJcKqT29M8W5n7TLEFhcuhj+K8xKYrcsuV38oU9uoOvI+DJKh04M1OL9yfEW+nbDGPJMRs6")
                         activity.startActivity(Intent(activity, SoundEffectActivity::class.java))
                     }
             )
@@ -194,30 +214,57 @@ fun PlayerPage(observer: PlayerObserver) {
         ) {
             Text(
                 text = if (currSong == null) {
-                    ""
+                    observer.convertTime(0)
                 } else {
                     val time = observer.playPosition / 1000
                     observer.convertTime(time.toLong())
                 },
                 fontFamily = FontFamily.Monospace
             )
+            val onlyTryPlay = currSong?.canPlayTry() == true && !currSong.canPlayWhole()
+            val tryBegin = if (onlyTryPlay) currSong?.tryBegin?.toFloat() ?: 0F else currSong?.chorusBegin?.toFloat() ?: 0F
+            val tryEnd = if (onlyTryPlay) currSong?.tryEnd?.toFloat() ?: 0F else currSong?.chorusEnd?.toFloat() ?: 0F
+            val segments = mutableListOf<Segment>().apply {
+                add(Segment(name = "tryBegin", start = tryBegin))
+                if (tryEnd > 0) {
+                    add(Segment(name = "tryEnd", start = tryEnd, color = Color.Gray))
+                }
+            }
 
-            Slider(
-                value = if (observer.seekPosition >= 0) observer.seekPosition else observer.playPosition,
-                valueRange = 0f..(OpenApiSDK.getPlayerApi().getDuration()?.toFloat() ?: 100f),
-                onValueChange = {
-                    observer.seekPosition = it
+            var position = if (observer.seekPosition >= 0) observer.seekPosition else observer.playPosition
+            val duration = OpenApiSDK.getPlayerApi().getDuration()?.toFloat()?: 100f
+            Log.i(TAG, "$position,$duration")
+            if (position > duration) {
+                position = 0F
+            }
+
+            QQMusicSlider(
+                value = position,
+                range = 0f..(OpenApiSDK.getPlayerApi().getDuration()?.toFloat() ?: 100f),
+                segments = segments,
+                onValueChange = { newValue ->
+                    observer.isSeekBarTracking = true
+                    observer.seekPosition = newValue
                 },
+                progressBegin = if (onlyTryPlay) tryBegin else 0F,
                 onValueChangeFinished = {
+                    observer.isSeekBarTracking = false
                     thread {
-                        val seekPosition = observer.seekPosition.toInt()
+                        var seekPosition = observer.seekPosition.toInt()
+                        if (onlyTryPlay && (seekPosition < (currSong?.tryBegin ?: 0) || seekPosition > (currSong?.tryEnd ?: 0))) {
+                            seekPosition = currSong?.tryBegin ?: 0
+                            AppScope.launchUI {
+                                Toast.makeText(activity, "完整播放受限，将播放试听片段", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
                         val res = OpenApiSDK.getPlayerApi().seek(seekPosition)
                         if (res.toInt() == seekPosition) {
                             QLog.i(TAG, "PlayerPage seek success res = $res, seekPosition = $seekPosition")
                         } else {
-                            observer.seekPosition = res.toFloat()
                             QLog.i(TAG, "PlayerPage seek fail res = $res, seekPosition = $seekPosition")
                         }
+                        observer.seekPosition = res.toFloat()
                     }
                 },
                 modifier = Modifier
@@ -230,6 +277,7 @@ fun PlayerPage(observer: PlayerObserver) {
                 fontFamily = FontFamily.Monospace
             )
         }
+        // 播放控制
 
         // 播放控制
         Row(
@@ -265,8 +313,7 @@ fun PlayerPage(observer: PlayerObserver) {
                         OpenApiSDK
                             .getPlayerApi()
                             .setPlayMode(
-                                modeOrder.getOrNull(currIndex + 1)
-                                    ?: PlayerEnums.Mode.LIST
+                                modeOrder.getOrNull(currIndex + 1) ?: PlayerEnums.Mode.LIST
                             )
                     }
             )

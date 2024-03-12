@@ -53,7 +53,8 @@ fun rankPage(homeViewModel: HomeViewModel){
                             .putExtra(SongListActivity.KEY_RANK_ID, rank.id))
                     }) {
                         Image(
-                            painter = rememberImagePainter(rank.topHeaderPic),
+                            // 排行榜列表用 topBannerPic, 详情页内使用 topHeaderPic
+                            painter = rememberImagePainter(rank.topBannerPic),
                             contentDescription = null,
                             modifier = Modifier
                                 .width(150.dp).height(150.dp)

@@ -31,7 +31,7 @@ class CategoryPageDetailSource(val categoryId: Int, val subCategoryId: Int):
                 var hasMore = true
                 val nextPage = params.key ?: 0
                 val shelfList = OpenApiSDK.getOpenApi().blockingGet<Area> {
-                    Global.getOpenApi()
+                    OpenApiSDK.getOpenApi()
                         .fetchCategoryPageDetailOfLongAudio(categoryId, subCategoryId, nextPage, it)
                 }.apply {
                     hasMore = this.hasMore

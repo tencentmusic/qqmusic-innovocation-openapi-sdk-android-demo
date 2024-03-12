@@ -3,6 +3,7 @@ package com.tencent.qqmusic.qplayer.ui.activity.songlist
 import android.app.Activity
 import android.content.Intent
 import android.util.Log
+import android.widget.TextView
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -17,13 +18,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -39,14 +46,20 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
+import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
+import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
+import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.core.player.MusicPlayList
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
+import com.tencent.qqmusicsdk.player.playlist.PlayListInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -59,20 +72,43 @@ import kotlinx.coroutines.launch
 private const val TAG = "SongListPage"
 
 @Composable
-fun SongListScreen(flow: Flow<PagingData<SongInfo>>, displayOnly: Boolean = false) {
+fun SongListScreen(
+    flow: Flow<PagingData<SongInfo>>,
+    displayOnly: Boolean = false,
+    album: Album? = null,
+    type: Int = SongListActivity.SONG_TYPE_SONG_LIST,
+    playListType: Int = 0,
+    playListTypeId: Long = 0
+) {
     Scaffold(
         topBar = { TopBar() },
     ) {
 
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {
-            val (folder, player) = createRefs()
+            val (albumInfo, folder, player) = createRefs()
+            val needShowHeader = album != null && type == SongListActivity.SONG_TYPE_ALBUM
+            if (needShowHeader) {
+                Column(modifier = Modifier.constrainAs(albumInfo) {
+                    top.linkTo(parent.top)
+                }) {
+                    Text(text = "歌曲总数量：${album?.songNum} ")
+                    if (album?.longAudioTag?.isNotEmpty() == true) {
+                        Text(text = "播放量：${album.listenNum}")
+                        Text(text = "专辑标签：${album.longAudioTag}")
+                    }
+                }
+            }
 
             Box(modifier = Modifier.constrainAs(folder) {
                 height = Dimension.fillToConstraints
-                top.linkTo(parent.top)
+                top.linkTo(if (needShowHeader) {
+                    albumInfo.bottom
+                } else {
+                    parent.top
+                })
                 bottom.linkTo(player.top)
             }) {
-                SongListPage(flow, displayOnly = displayOnly)
+                SongListPage(flow, displayOnly = displayOnly, playListType = playListType, playListTypeId = playListTypeId)
             }
             Box(modifier = Modifier.constrainAs(player) {
                 bottom.linkTo(parent.bottom)
@@ -86,20 +122,190 @@ fun SongListScreen(flow: Flow<PagingData<SongInfo>>, displayOnly: Boolean = fals
 
 @ExperimentalCoilApi
 @Composable
-fun SongListPage(flow: Flow<PagingData<SongInfo>>?, displayOnly: Boolean = false, observer: PlayerObserver = PlayerObserver) {
+fun SongListPage(
+    flow: Flow<PagingData<SongInfo>>?,
+    playListType: Int = 0,
+    playListTypeId: Long = 0,
+    displayOnly: Boolean = false,
+    observer: PlayerObserver = PlayerObserver
+) {
     flow ?: return
     val songs = flow.collectAsLazyPagingItems()
     Log.i(TAG, "SongListPage: songs count: ${songs.itemCount}")
+    val songListState = remember {
+        mutableStateOf(songs.snapshot().items)
+    }
     val listState = rememberLazyListState()
-    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+    Column {
+        playlistHeader(songs = songListState.value, playListType = playListType, playListTypeId = playListTypeId)
 
-        this.items(songs) { song ->
-            song ?: return@items
-            itemUI(songs = songs.snapshot().filterNotNull().toList(), song = song)
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+
+            this.items(songs) { song ->
+                song ?: return@items
+                itemUI(songs = songs.snapshot().filterNotNull().toList(), song = song)
+            }
         }
     }
 }
 
+
+@Composable
+fun playlistHeader(songs: List<SongInfo>, playListType: Int = 0, playListTypeId: Long = 0) {
+    val collectState = remember {
+        mutableStateOf(false)
+    }
+    val playlistScope = rememberCoroutineScope()
+    playlistScope.launch(Dispatchers.IO) {
+        when (playListType) {
+            MusicPlayList.PLAY_LIST_ALBUM_TYPE -> {
+                OpenApiSDK.getOpenApi().fetchAlbumDetail(albumId = "$playListTypeId") { resp->
+                    if (resp.isSuccess()) {
+                        collectState.value = resp.data?.favState == 1
+                    }
+                }
+            }
+            MusicPlayList.PLAY_LIST_FOLDER_TYPE -> {
+                OpenApiSDK.getOpenApi().fetchCollectedFolder {resp->
+                    if (resp.isSuccess()) {
+                        collectState.value = resp.data?.firstOrNull { it.id == "$playListTypeId" } != null
+                    }
+                }
+            }
+        }
+    }
+    ConstraintLayout(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+    ) {
+        val (playAllBtn,collectBtn, collectSongBtn) = createRefs()
+        Button(
+            modifier = Modifier.constrainAs(playAllBtn) {
+                top.linkTo(parent.top)
+                bottom.linkTo(parent.bottom)
+                start.linkTo(parent.start)
+            },
+            onClick = {
+                OpenApiSDK.getPlayerApi().playSongs(songs, 0)
+            }) {
+            Text(text = "播放全部(${songs.size})")
+        }
+
+        if (playListType in arrayOf(MusicPlayList.PLAY_LIST_ALBUM_TYPE, MusicPlayList.PLAY_LIST_FOLDER_TYPE)) {
+            Button(
+                modifier = Modifier.constrainAs(collectBtn) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                    start.linkTo(playAllBtn.end)
+                    end.linkTo(collectSongBtn.start)
+                },
+                onClick = {
+                    val callback: OpenApiCallback<OpenApiResponse<Boolean>> = {
+                        Log.i(TAG, "collect resp: $it")
+                        if (it.isSuccess() && it.data == true) {
+                            // nothing.
+                        } else {
+                            collectState.value = !collectState.value
+                        }
+                    }
+                    when (playListType) {
+                        MusicPlayList.PLAY_LIST_ALBUM_TYPE -> {
+                            OpenApiSDK.getOpenApi().collectAlbum(
+                                isCollect = !collectState.value,
+                                albumIdList = listOf("$playListTypeId"),
+                                callback = callback
+                            )
+                        }
+                        MusicPlayList.PLAY_LIST_FOLDER_TYPE -> {
+                            if (collectState.value) {
+                                OpenApiSDK.getOpenApi().unCollectFolder("$playListTypeId", callback)
+                            } else {
+                                OpenApiSDK.getOpenApi().collectFolder("$playListTypeId", callback)
+                            }
+                        }
+                    }
+                    collectState.value = !collectState.value
+                }
+            ) {
+                Text(text = if (collectState.value) "取消收藏" else "收藏")
+            }
+        }
+
+        Button(
+            modifier = Modifier.constrainAs(collectSongBtn) {
+                top.linkTo(parent.top)
+                bottom.linkTo(parent.bottom)
+                end.linkTo(parent.end)
+            },
+            onClick = {
+                collectSongs(songs, collectState)
+            }) {
+            Text(text = if (collectState.value) "取消收藏" else "收藏(${songs.size})首")
+        }
+    }
+}
+
+private fun collectSongs(
+    songs: List<SongInfo>,
+    collectState: MutableState<Boolean>
+) {
+    if (songs.isEmpty()) {
+        ToastUtils.showShort("没有歌曲")
+        return
+    }
+    val songList = mutableListOf<String>()
+    val longSongList = mutableListOf<Long>()
+    songs.forEach {
+        if (it.isLongAudioSong()) {
+            longSongList.add(it.songId)
+        } else {
+            it.songMid?.let { mid ->
+                songList.add(mid)
+            }
+        }
+    }
+    if (longSongList.isNotEmpty()) {
+        OpenApiSDK.getOpenApi().collectLongAudioSong(
+            !collectState.value,
+            longSongList
+        ) {
+            val msg = if (collectState.value) "取消收藏" else "收藏"
+            if (it.isSuccess()) {
+                ToastUtils.showShort("$msg 成功")
+                collectState.value = !collectState.value
+            } else {
+                ToastUtils.showShort("$msg 失败：${it.errorMsg}")
+            }
+        }
+    }
+    if (songList.isNotEmpty()) {
+        OpenApiSDK.getOpenApi().fetchPersonalFolder {
+            if (it.isSuccess()) {
+                val folderId = it.data?.firstOrNull {folder-> folder.name == "我喜欢" }?.id
+                    ?: return@fetchPersonalFolder
+                val songMids = songs.mapNotNull {song-> song?.songMid }
+                Log.i(TAG, "fav or unfav song size: ${songMids.size}")
+                if (collectState.value) {
+                    OpenApiSDK.getOpenApi().deleteSongFromFolder(
+                        folderId,
+                        midList = songMids
+                    ) {resp->
+                        Log.i(TAG, "del resp: $resp")
+                    }
+                } else {
+                    OpenApiSDK.getOpenApi().addSongToFolder(
+                        folderId,
+                        midList = songMids
+                    ) {resp->
+                        Log.i(TAG, "add resp: $resp")
+                    }
+                }
+                collectState.value = !collectState.value
+            }
+        }
+    }
+}
 
 @Composable
 fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) {
@@ -108,6 +314,9 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
     val coroutineScope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
 
+    val collectState = remember {
+        mutableStateOf(song.hot == 1)
+    }
     ConstraintLayout(
         modifier = Modifier
             .fillMaxWidth()
@@ -125,18 +334,21 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                         activity.startActivity(Intent(activity, PlayerActivity::class.java))
                     } else {
                         coroutineScope.launch(Dispatchers.Main) {
-                            val toastTxt = if (result == PlayDefine.PlayError.PLAY_ERR_CANNOT_PLAY) {
-                                "播放失败 错误码：$result， 错误信息：${song.unplayableMsg}"
-                            } else {
-                                "播放失败 错误码：$result"
-                            }
-                            Toast.makeText(activity, toastTxt, Toast.LENGTH_SHORT).show()
+                            val toastTxt =
+                                if (result == PlayDefine.PlayError.PLAY_ERR_CANNOT_PLAY) {
+                                    "播放失败 错误码：$result， 错误信息：${song.unplayableMsg}"
+                                } else {
+                                    "播放失败 错误码：$result"
+                                }
+                            Toast
+                                .makeText(activity, toastTxt, Toast.LENGTH_SHORT)
+                                .show()
                         }
                     }
                 }
             }
     ) {
-        val (cover, songInfo, next, playingIcon) = createRefs()
+        val (cover, songInfo, next, playingIcon, collect) = createRefs()
 
         Image(
             painter = rememberImagePainter(song.smallCoverUrl()),
@@ -148,6 +360,7 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                     top.linkTo(parent.top)
                     bottom.linkTo(parent.bottom)
                     start.linkTo(parent.start)
+                    end.linkTo(songInfo.start)
                 }
         )
         Column(
@@ -158,7 +371,7 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                     bottom.linkTo(parent.bottom)
                     start.linkTo(cover.end)
                 }
-        ) {
+        , horizontalAlignment = Alignment.Start) {
             val txtColor = if (song.canPlay()) {
                 Color.Black
             } else {
@@ -173,6 +386,16 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                 if (song.vip == 1) {
                     Image(
                         painter = painterResource(R.drawable.pay_icon_in_cell_old),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(end = 5.dp)
+                            .width(18.dp)
+                            .height(10.dp)
+                    )
+                }
+                if (song.longAudioVip == 1) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_long_audio_vip_new),
                         contentDescription = null,
                         modifier = Modifier
                             .padding(end = 5.dp)
@@ -203,6 +426,34 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                     }
             )
         }
+
+        Image(
+            painter = painterResource(
+                if (collectState.value)
+                    R.drawable.icon_collect
+                else
+                    R.drawable.icon_uncollect
+            ),
+            contentDescription = null,
+            modifier = Modifier
+                .constrainAs(collect) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                    if (currentSong?.songId == song.songId) {
+                        end.linkTo(playingIcon.start)
+                    } else if (displayOnly.not()) {
+                        end.linkTo(next.start)
+                    } else {
+                        end.linkTo(parent.end)
+                    }
+                }
+                .width(40.dp)
+                .height(40.dp)
+                .padding(10.dp)
+                .clickable {
+                    collectSongs(listOf(song), collectState)
+                }
+        )
 
         if (displayOnly.not()) {
             Column(modifier = Modifier

@@ -1,7 +1,10 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
+import android.app.Activity
+import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,12 +15,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPageActivity
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.convertTime
 import com.tencent.qqmusic.qplayer.ui.activity.ui.theme.QPlayerTheme
 
 private val plachImageID: Int = R.drawable.musicopensdk_icon_light
@@ -44,6 +50,7 @@ fun SongDetailPage(observer: PlayerObserver) {
 @Composable
 fun DetailPage(observer: PlayerObserver? = null) {
     val songInfo = observer?.currentSong
+    val activity = LocalContext.current as Activity
 
 
     QPlayerTheme {
@@ -76,22 +83,31 @@ fun DetailPage(observer: PlayerObserver? = null) {
                 }
             }
 
-            Row(modifier = Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "歌手 ： ")
-                Text(text = songInfo?.singerName ?: "无")
-                Image(
-                    painter = rememberImagePainter(songInfo?.singerPic150x150 ?: plachImageID,
-                        builder = {
-                            crossfade(false)
-                            placeholder(plachImageID)
-                        }),
-                    contentDescription = "",
-                    modifier = Modifier
-                        .padding(start = 10.dp)
-                        .size(60.dp)
-                        .clip(CircleShape)
-                )
+            Box(modifier = Modifier.clickable {
+                activity.startActivity(
+                    Intent(activity, SearchPageActivity::class.java)
+                        .putExtra(SearchPageActivity.searchType, SearchPageActivity.singerIntentTag)
+                        .putExtra(SearchPageActivity.singerIntentTag, songInfo?.singerId)
 
+                )
+            }) {
+                Row(modifier = Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = "歌手 ： ")
+                    Text(text = songInfo?.singerName ?: "无")
+                    Image(
+                        painter = rememberImagePainter(songInfo?.singerPic150x150 ?: plachImageID,
+                            builder = {
+                                crossfade(false)
+                                placeholder(plachImageID)
+                            }),
+                        contentDescription = "",
+                        modifier = Modifier
+                            .padding(start = 10.dp)
+                            .size(60.dp)
+                            .clip(CircleShape)
+                    )
+
+                }
             }
 
 
@@ -150,6 +166,10 @@ fun DetailPage(observer: PlayerObserver? = null) {
                     }
                     Text(text = type)
                 }
+            }
+            Column(modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)) {
+                Text(text = "试听位置 ： ${convertTime(songInfo?.tryBegin?.toLong()?.div(1000) ?: 0L)}~${convertTime(songInfo?.tryEnd?.toLong()?.div(1000) ?: 0L)}")
+                Text(text = "高潮位置 ： ${convertTime(songInfo?.chorusBegin?.toLong()?.div(1000) ?: 0L)}~${convertTime(songInfo?.chorusEnd?.toLong()?.div(1000) ?: 0L)}")
             }
             Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
         }
