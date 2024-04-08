@@ -1,6 +1,7 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.app.Activity
+import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -11,11 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Divider
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Slider
+import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.TopAppBar
@@ -39,8 +43,11 @@ import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayCallback
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
+import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyConfig
+import com.tencent.qqmusic.openapisdk.core.player.VocalPercent
 import com.tencent.qqmusic.openapisdk.model.PlaySpeedType
 import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
+import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlin.concurrent.thread
 
@@ -79,63 +86,22 @@ fun PlayControlArea() {
     var streamType by remember { mutableStateOf(TextFieldValue("2")) }
 
     val padding = 5.dp
-
     Column(
-        modifier = Modifier.padding(5.dp)
+        modifier = Modifier
+            .padding(5.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         // todo 改造成openApi接口获取
         var vipInfo by remember { mutableStateOf(Global.getLoginModuleApi().vipInfo) }
         var canTryExcellentQuality by remember { mutableStateOf(false) }
         var canTryGalaxyQuality by remember { mutableStateOf(false) }
-        Text(text = "设置音频参数", modifier = Modifier.padding(4.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            TextField(
-                value = usage,
-                label = {
-                    Text(text = "输入usage")
-                },
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                onValueChange = {
-                    usage = it
-                },
-                modifier = Modifier
-                    .weight(1f)
-                    .wrapContentHeight()
-                    .fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.padding(10.dp))
-
-            TextField(
-                value = contentType,
-                label = {
-                    Text(text = "输入type")
-                },
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
-                onValueChange = {
-                    contentType = it
-                },
-                modifier = Modifier
-                    .weight(1f)
-                    .wrapContentHeight()
-                    .fillMaxWidth()
-            )
-        }
 
         Button(
             onClick = {
-                if (UiUtils.isStrInt(usage.text) && UiUtils.isStrInt(contentType.text)) {
-                    val ret = OpenApiSDK.getPlayerApi().setAudioUsageAndContentType(usage.text.toInt(), contentType.text.toInt())
-                    Log.d(TAG, "setAudioUsageAndContentType, ret: $ret")
-                } else {
-                    UiUtils.showToast("该参数必须输入整数！")
-                }
+                activity.startActivity(Intent(activity, DownloadActivity::class.java))
             }
         ) {
-            Text("setUsageAndType")
+            Text(text = "前往下载管理页面")
         }
 
         Divider(
@@ -288,6 +254,107 @@ fun PlayControlArea() {
                 text = "2.0x",
                 fontFamily = FontFamily.Monospace
             )
+        }
+        Text(
+            text = "伴唱配置: ",
+            fontFamily = FontFamily.Monospace
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "进入伴唱，歌曲重新播放：",
+                fontFamily = FontFamily.Monospace
+            )
+            Switch(
+                checked = PlayerObserver.vocalAccompanyConfig.replay,
+                onCheckedChange = {
+                    val vocalAccompanyConfig = VocalAccompanyConfig(PlayerObserver.vocalAccompanyConfig.defaultVocalPercent, it)
+                    PlayerObserver.vocalAccompanyConfig = vocalAccompanyConfig
+                    OpenApiSDK.getVocalAccompanyApi().saveDefaultVocalAccompanyConfig(vocalAccompanyConfig)
+                })
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Slider(
+                value = PlayerObserver.vocalAccompanyConfig.defaultVocalPercent.value.toFloat(),
+                valueRange = VocalPercent.min.value.toFloat()..VocalPercent.max.value.toFloat(),
+                onValueChange = {
+                    val vocalAccompanyConfig = VocalAccompanyConfig(OpenApiSDK.getVocalAccompanyApi().convertToCloseVocalRadio(it.toInt()), PlayerObserver.vocalAccompanyConfig.replay)
+                    PlayerObserver.vocalAccompanyConfig = vocalAccompanyConfig
+                    OpenApiSDK.getVocalAccompanyApi().saveDefaultVocalAccompanyConfig(PlayerObserver.vocalAccompanyConfig)
+                },
+                modifier = Modifier
+                    .weight(1f, true)
+                    .padding(horizontal = 10.dp)
+            )
+
+            Text(
+                text = "默认比例: ${PlayerObserver.vocalAccompanyConfig.defaultVocalPercent.value}",
+                fontFamily = FontFamily.Monospace
+            )
+        }
+
+        Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+
+        Text(text = "设置音频参数", modifier = Modifier.padding(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            TextField(
+                value = usage,
+                label = {
+                    Text(text = "输入usage")
+                },
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                onValueChange = {
+                    usage = it
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .wrapContentHeight()
+                    .fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.padding(10.dp))
+
+            TextField(
+                value = contentType,
+                label = {
+                    Text(text = "输入type")
+                },
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                onValueChange = {
+                    contentType = it
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .wrapContentHeight()
+                    .fillMaxWidth()
+            )
+        }
+
+        Button(
+            onClick = {
+                if (UiUtils.isStrInt(usage.text) && UiUtils.isStrInt(contentType.text)) {
+                    val ret = OpenApiSDK.getPlayerApi().setAudioUsageAndContentType(usage.text.toInt(), contentType.text.toInt())
+                    Log.d(TAG, "setAudioUsageAndContentType, ret: $ret")
+                } else {
+                    UiUtils.showToast("该参数必须输入整数！")
+                }
+            }
+        ) {
+            Text("setUsageAndType")
         }
     }
 

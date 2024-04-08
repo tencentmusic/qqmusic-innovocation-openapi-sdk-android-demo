@@ -2,7 +2,6 @@ ext {
     MAVEN_REPOSITORIES = {
         google()
         mavenCentral()
-        maven { url 'https://mirrors.tencent.com/nexus/repository/maven-public/' }
         maven {
             url 'http://ct.y.qq.com/TVapp/nexus/repository/maven-public/'
             credentials {
@@ -11,6 +10,8 @@ ext {
             }
             allowInsecureProtocol true
         }
+        maven { url 'https://mirrors.tencent.com/nexus/repository/maven-public/' }
+
     }
 
     kotlin_version = "1.6.10"
@@ -21,7 +22,7 @@ ext {
 
     sdk_version = project.hasProperty('edge_version') && "${edge_version}" != ""
             ? "${edge_version}"
-            : "1.19.0"
+            : "2.0.0"
 
     println "apk demo sdk_version:$sdk_version"
 
@@ -37,7 +38,7 @@ ext {
     androidx_anno_version = "1.1.0"
     androidx_media_version = "1.0.0"
     google_material_version = "1.0.0"
-    common_util_version = "1.2.6"
+    common_util_version = "1.2.6-edge"
     mmkv_version = "1.2.16"
 
 

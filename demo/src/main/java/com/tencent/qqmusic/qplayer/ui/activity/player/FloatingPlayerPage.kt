@@ -1,7 +1,9 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.text.TextUtils
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -43,7 +45,9 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.internal.lyric.LyricLoadInterface
+import com.tencent.qqmusic.sharedfileaccessor.SPBridge
 import com.tencent.qqmusictvsdk.internal.lyric.LyricManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -58,6 +62,12 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
         activity.startActivity(Intent(activity, PlayerActivity::class.java))
     }
 
+    val sharedPreferences: SharedPreferences? = try {
+        SPBridge.get().getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+    } catch (e: Exception) {
+        QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
+        null
+    }
 
     ConstraintLayout(modifier = Modifier
         .fillMaxWidth()
@@ -143,6 +153,8 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
 
         }
 
+        val needFade = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
+
         Image(
             painter = painterResource(id = if (isPlaying) R.drawable.ic_state_playing else R.drawable.ic_state_paused),
             contentDescription = null,
@@ -153,7 +165,7 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
                         OpenApiSDK
                             .getPlayerApi()
                             .apply {
-                                if (isPlaying) pause() else play()
+                                if (isPlaying) pause(needFade) else play()
                                 val song = getCurrentSongInfo()
                                 if (song?.canPlay() != true) {
                                     withContext(Dispatchers.Main) {

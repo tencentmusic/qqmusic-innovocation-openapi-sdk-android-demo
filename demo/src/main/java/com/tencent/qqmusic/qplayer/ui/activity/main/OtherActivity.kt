@@ -14,6 +14,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -40,17 +41,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.google.gson.Gson
 import com.tencent.qqmusic.innovation.common.util.GsonHelper
+import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.network.NetworkTimeoutConfig
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.baselib.util.sp.SpKeyConfig
 import com.tencent.qqmusic.qplayer.report.report.LaunchReport
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.OpenApiDemoActivity
@@ -59,6 +63,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.login.WebViewActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusic.sharedfileaccessor.SPBridge
+import com.tencent.qqmusiccommon.SimpleMMKV
 import okhttp3.internal.toLongOrDefault
 
 class OtherActivity : ComponentActivity() {
@@ -242,11 +247,11 @@ fun OtherScreen() {
         val needFadeWhenPlay: MutableState<Boolean> = remember {
             mutableStateOf(sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false)
         }
-        SingleItem(title = "切歌时开启淡入淡出", item = if (needFadeWhenPlay.value) "开启" else "关闭") {
-            val next_value = sharedPreferences?.getBoolean("needFadeWhenPlay", true) ?: true
-            sharedPreferences?.edit()?.putBoolean("needFadeWhenPlay", next_value.not())?.apply()
+        SingleItem(title = "开启淡入淡出", item = if (needFadeWhenPlay.value) "开启" else "关闭") {
+            val next_value = needFadeWhenPlay.value.not()
+            sharedPreferences?.edit()?.putBoolean("needFadeWhenPlay", next_value)?.apply()
             Toast.makeText(activity, "设置成功，立即生效", Toast.LENGTH_SHORT).show()
-            needFadeWhenPlay.value = next_value.not()
+            needFadeWhenPlay.value = next_value
         }
 
         val showTimeoutDialog = remember { mutableStateOf(false) }
@@ -257,6 +262,19 @@ fun OtherScreen() {
             sharedPreferences?.let {
                 NetworkTimeoutDialog(activity, it, showTimeoutDialog)
             }
+        }
+
+        val needDowngradeExcellentQuality: MutableState<Boolean> = remember {
+            mutableStateOf(
+                SimpleMMKV.getCommonMMKV()
+                    .getBoolean(SpKeyConfig.KEY_NEED_DOWNGRADE_EXCELLENT_QUALITY, true)
+            )
+        }
+        SingleItem(title = "降级到臻品 2.0音质开关", item = if (needDowngradeExcellentQuality.value) "开启" else "关闭") {
+            val next_value = needDowngradeExcellentQuality.value.not()
+            OpenApiSDK.getPlayerApi().needDowngradeExcellentQuality(next_value)
+            Toast.makeText(activity, "设置${if(next_value) "开启" else "关闭"}成功，立即生效", Toast.LENGTH_SHORT).show()
+            needDowngradeExcellentQuality.value = next_value
         }
 
         Button(onClick = {
@@ -279,19 +297,34 @@ fun OtherScreen() {
         }, modifier = Modifier.padding(padding)) {
             Text(text = "冷启动事件数据上报")
         }
-        
-        Button(onClick = {
-            OpenApiSDK.getOpenApi().getPayUrl("demoOrderId") {
-                val default = "https://developer.y.qq.com/docs/edge_android#/overview"
-                if (it.isSuccess()) {
-                    WebViewActivity.start(activity, it.data ?: default)
-                } else {
-                    WebViewActivity.start(activity, default)
-                    UiUtils.showToast(it.errorMsg ?: "")
+        Row {
+            var text by remember { mutableStateOf(TextFieldValue("")) }
+            TextField(
+                value = text,
+                onValueChange = {
+                    text = it
+                },
+                label = {Text(text = "阻断错误码")}
+            )
+            Button(onClick = {
+                val value = try {
+                    text.text.toInt()
+                } catch (e: NumberFormatException) {
+                    ToastUtils.showLong("错误码请输入数字")
+                    return@Button
                 }
+                OpenApiSDK.getOpenApi().getPayUrl("demoOrderId",value) {
+                    val default = "https://developer.y.qq.com/docs/edge_android#/overview"
+                    if (it.isSuccess()) {
+                        WebViewActivity.start(activity, it.data ?: default)
+                    } else {
+                        WebViewActivity.start(activity, default)
+                        UiUtils.showToast(it.errorMsg ?: "")
+                    }
+                }
+            }, modifier = Modifier.padding(padding)) {
+                Text(text = "打开VIP购买页面")
             }
-        }, modifier = Modifier.padding(padding)) {
-            Text(text = "打开VIP购买页面")
         }
     }
 }

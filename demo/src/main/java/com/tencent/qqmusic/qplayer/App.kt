@@ -111,9 +111,12 @@ class App : Application() {
             }
             val start = System.currentTimeMillis()
             OpenApiSDK.init(initConfig)
-            GlobalScope.launch(Dispatchers.Default){
-                val enableLog = sharedPreferences?.getBoolean("enableLog", true) ?: true
-                OpenApiSDK.getLogApi().setLogEnable(enableLog)
+            GlobalScope.launch(Dispatchers.Default) {
+                try {
+                    val enableLog = sharedPreferences?.getBoolean("enableLog", true) ?: true
+                    OpenApiSDK.getLogApi().setLogEnable(enableLog)
+                } catch (ignore: Exception) {
+                }
             }
             Log.i(TAG, "init cost:${System.currentTimeMillis() - start}")
         }

@@ -36,37 +36,42 @@ object QualityAlert {
             "GALAXY"
         )
 
-    fun showQualityAlert(activity: Activity, setBlock: (Int)->Int, refresh: (Int)->Unit) {
+    fun showQualityAlert(activity: Activity, isDownload: Boolean, setBlock: (Int)->Int, refresh: (Int)->Unit) {
         val curSong = OpenApiSDK.getPlayerApi().getCurrentSongInfo()
         val stringArray = qualityOrderString.map {
             val quality = qualityOrder.getOrNull(qualityOrderString.indexOf(it)) ?: qualityOrder[0]
+            val accessStr = UiUtils.getFormatAccessLabel(curSong, quality, isDownload)
             when (it) {
                 "LQ" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeLQ()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
+                    it + UiUtils.getFormatSize(curSong?.getSizeLQ()?.toLong()) + accessStr
                 }
                 "STANDARD" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeStandard()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
+                    it + UiUtils.getFormatSize(curSong?.getSizeStandard()?.toLong()) + accessStr
                 }
                 "HQ" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeHQ()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
+                    it + UiUtils.getFormatSize(curSong?.getSizeHQ()?.toLong()) + accessStr
                 }
                 "SQ" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeSQ()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
+                    it + UiUtils.getFormatSize(curSong?.getSizeSQ()?.toLong()) + accessStr
                 }
                 "DOLBY" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeDolby()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
+                    it + UiUtils.getFormatSize(curSong?.getSizeDolby()?.toLong()) + accessStr
                 }
                 "HIRES" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeHiRes()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
+                    it + UiUtils.getFormatSize(curSong?.getSizeHiRes()?.toLong()) + accessStr
                 }
                 "EXCELLENT" -> {
-                    "臻品音质2.0" + UiUtils.getFormatAccessLabel(curSong, quality)
+                    if (isDownload) {
+                        "臻品音质2.0 - 不支持下载"
+                    } else {
+                        "臻品音质2.0$accessStr"
+                    }
                 }
                 "GALAXY" -> {
                     if (curSong?.isGalaxyEffectType() == true) {
-                        "臻品全景声" + UiUtils.getFormatAccessLabel(curSong, quality)
+                        "臻品全景声" + accessStr
                     } else {
-                        "臻品全景声" + UiUtils.getFormatSize(curSong?.getSizeGalaxy()?.toLong()) + UiUtils.getFormatAccessLabel(curSong, quality)
+                        "臻品全景声" + UiUtils.getFormatSize(curSong?.getSizeGalaxy()?.toLong()) + accessStr
                     }
                 }
                 else -> {
@@ -100,9 +105,11 @@ object QualityAlert {
                         else -> "切换歌曲品质失败, ret=$ret"
                     }
                     activity.runOnUiThread {
-                        Toast
-                            .makeText(activity, msg, Toast.LENGTH_SHORT)
-                            .show()
+                        if (!isDownload) {
+                            Toast
+                                .makeText(activity, msg, Toast.LENGTH_SHORT)
+                                .show()
+                        }
                     }
                 }
             }.show()

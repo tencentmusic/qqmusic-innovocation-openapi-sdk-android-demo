@@ -7,10 +7,35 @@ import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.Button
+import androidx.compose.material.OutlinedButton
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.ScrollableTabRow
+import androidx.compose.material.Tab
+import androidx.compose.material.TabRowDefaults
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,30 +46,28 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.paging.PagingData
-import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.rememberImagePainter
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
-import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
-import com.tencent.qqmusic.openapisdk.model.Singer
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.PartnerLoginActivity
+import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderPage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
-import com.tencent.qqmusic.qplayer.ui.activity.home.OrderedSingerPagingSource
+import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPage
 import com.tencent.qqmusic.qplayer.ui.activity.person.MinePageNew
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.search.singerPage
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.*
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumPage
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.BuyAlbumPage
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPage
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 private const val TAG = "MinePage"
@@ -91,7 +114,7 @@ fun MinePage() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        MineSongList(viewModel())
+        MineSongList(activity, viewModel())
     }
 }
 
@@ -230,9 +253,9 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewMo
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun MineSongList(viewModel: HomeViewModel) {
+fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
     val pages = mutableListOf(
-        "自建歌单",
+        "收藏的MV",
         "收藏歌单",
         "收藏专辑",
         "最近播放单曲",
@@ -247,7 +270,8 @@ fun MineSongList(viewModel: HomeViewModel) {
         "收藏有声播客",
 //        "已购有声书"
         "订阅歌手",
-
+        "自建歌单",
+        "已下载歌曲"
     )
 
     val pagerState = rememberPagerState()
@@ -291,12 +315,8 @@ fun MineSongList(viewModel: HomeViewModel) {
 
         when (index) {
             0 -> {
-                // 自建歌单
-                viewModel.fetchMineFolder()
-                Column(modifier = Modifier.fillMaxSize()) {
-                    NewFolder(viewModel)
-                    FolderPage(viewModel.mineFolders)
-                }
+                viewModel.fetchFavMVList()
+                MVPage(viewModel.mvFavList)
             }
 
             1 -> {
@@ -376,6 +396,22 @@ fun MineSongList(viewModel: HomeViewModel) {
                 singerPage(orderedSingerPagingSource)
             }
 
+            14 -> {
+                // 自建歌单
+                viewModel.fetchMineFolder()
+                Column(modifier = Modifier.fillMaxSize()) {
+                    NewFolder(viewModel)
+                    FolderPage(viewModel.mineFolders)
+                }
+            }
+
+            15 -> {
+                TextButton(onClick = { activity.startActivity(Intent(activity, DownloadActivity::class.java).apply {
+                    putExtra(DownloadActivity.FROM_DOWNLOAD_SONG_PAGE, true)
+                }) }) {
+                    Text(text = "前往已下载歌曲")
+                }
+            }
         }
     }
 }

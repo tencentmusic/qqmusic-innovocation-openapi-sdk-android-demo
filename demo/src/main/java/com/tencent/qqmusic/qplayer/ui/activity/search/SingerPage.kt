@@ -35,7 +35,7 @@ import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import kotlinx.coroutines.flow.Flow
 
-private val plachImageID: Int = R.drawable.musicopensdk_icon_light
+val plachImageID: Int = R.drawable.musicopensdk_icon_light
 
 @Composable
 fun singerPage(list: List<Singer>) {

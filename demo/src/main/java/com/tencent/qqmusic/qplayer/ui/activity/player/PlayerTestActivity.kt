@@ -1,7 +1,9 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -13,9 +15,12 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
+import com.tencent.qqmusic.openapisdk.hologram.EdgeMvProvider
 import com.tencent.qqmusic.openapisdk.model.PlaySpeedType
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlin.concurrent.thread
@@ -27,6 +32,16 @@ import kotlin.concurrent.thread
 class PlayerTestActivity : ComponentActivity() {
     companion object {
         private const val TAG = "@@@PlayerTestActivity"
+    }
+
+
+    private val sharedPreferences: SharedPreferences? by lazy {
+        try {
+            this.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+        } catch (e: Exception) {
+            QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
+            null
+        }
     }
 
 
@@ -46,6 +61,21 @@ class PlayerTestActivity : ComponentActivity() {
         val btnFolder = findViewById<Button>(R.id.btn_folder)
 
         val btnUseDolby = findViewById<Button>(R.id.btn_use_dolby)
+
+
+        val mvID = findViewById<EditText>(R.id.play_mv_id).apply {
+            hint = "1861944"
+        }
+
+        findViewById<Button>(R.id.mv_test_button).apply {
+            setOnClickListener {
+                val cacheSize = mvID.text.toString().ifEmpty { "1861944" }
+                startActivity(Intent(this@PlayerTestActivity, MVPlayerActivity::class.java).apply {
+                    putExtra(MVPlayerActivity.MV_ID, cacheSize)
+                })
+
+            }
+        }
 
         reInitPlayerEnv = findViewById(R.id.reinit_player_env)
         edt.setText("335918510,317178463,316688109,332183304")
@@ -110,7 +140,7 @@ class PlayerTestActivity : ComponentActivity() {
         }
 
         btnQuality.setOnClickListener {
-            QualityAlert.showQualityAlert(this, {
+            QualityAlert.showQualityAlert(this, false, {
                 OpenApiSDK.getPlayerApi().setPreferSongQuality(it)
             }, {
                 runOnUiThread {
@@ -140,6 +170,18 @@ class PlayerTestActivity : ComponentActivity() {
                     putExtra(SongListActivity.KEY_FOLDER_ID, albumIdText)
                 }
             )
+        }
+
+
+        val edtMVCahce = findViewById<EditText>(R.id.edt_mv_cache).apply {
+            hint = (sharedPreferences?.getInt("MV_CACHE", 500) ?: 500).toString()
+        }
+        val btnMVCache = findViewById<Button>(R.id.btn_mv_cache).apply {
+            setOnClickListener {
+                val cacheSize = edtMVCahce.text.toString().toIntOrNull() ?: 500
+                sharedPreferences?.edit()?.putInt("MV_CACHE", cacheSize)?.apply()
+                OpenApiSDK.getProviderByClass(EdgeMvProvider::class.java)?.setCacheSize(cacheSize)
+            }
         }
     }
 

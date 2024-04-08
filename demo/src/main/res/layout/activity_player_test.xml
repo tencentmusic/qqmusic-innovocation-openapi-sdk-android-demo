@@ -86,4 +86,46 @@
         android:layout_height="wrap_content"
         android:text="初始化播放条件" />
 
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/play_mv_id"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/mv_test_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="播放测试视频" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/edt_mv_cache"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="输入缓存大小，单位MB" />
+
+        <Button
+            android:id="@+id/btn_mv_cache"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="设置MV缓存大小，重启生效" />
+
+    </LinearLayout>
+
 </LinearLayout>

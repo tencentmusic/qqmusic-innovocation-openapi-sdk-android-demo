@@ -221,12 +221,12 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 }
                 getParamStr()
 
-                val item = arrayAdapter?.getItem(spinner.selectedItemPosition)
-                val methodNameWidthParam = methodNameWithParamList.first { it.name == item }
-                val name = methodNameWidthParam.name
-
-                val block = methodNameToBlock[name]
                 try {
+                    val item = arrayAdapter?.getItem(spinner.selectedItemPosition)
+                    val methodNameWidthParam = methodNameWithParamList.first { it.name == item }
+                    val name = methodNameWidthParam.name
+
+                    val block = methodNameToBlock[name]
                     block?.invoke(methodNameWidthParam)
                 } catch (e: Throwable) {
                     Log.i(TAG, "block invoke failed", e)
