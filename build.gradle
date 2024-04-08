@@ -11,8 +11,16 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${rootProject.ext.kotlin_version}"
         classpath 'org.jetbrains.dokka:dokka-gradle-plugin:1.5.0'
         classpath 'com.github.kezong:fat-aar:1.3.6'
+        if (isLiteSDK.toBoolean()) {
+            classpath "com.tencent.qqmusic.openapi:openapi-sdk-gradle-plugin:${rootProject.ext.sdk_version}"
+        }
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
+    }
+
+    configurations.all {
+        resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
     }
 }
 

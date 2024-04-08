@@ -3,12 +3,31 @@ package com.tencent.qqmusic.qplayer.ui.activity.search
 import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.GridCells
 import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.material.Button
+import androidx.compose.material.Tab
+import androidx.compose.material.TabRow
+import androidx.compose.material.TabRowDefaults
+import androidx.compose.material.Text
+import androidx.compose.material.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -33,7 +52,7 @@ private val tabList = listOf(
     Pair("歌曲", SearchType.SONG),
     Pair("专辑", SearchType.ALBUM),
     Pair("歌单", SearchType.FOLDER),
-//    Pair("电台", SearchType.RADIO),
+    Pair("MV", SearchType.MV),
     Pair("歌词", SearchType.LYRIC),
     Pair("歌手", SearchType.SINGER)
 )
@@ -61,7 +80,7 @@ fun SearchPage(homeViewModel: HomeViewModel) {
                 Text(text = "输入search关键字")
             }, onValueChange = {
                 searchInput = it
-                homeViewModel.smartSearchKey(searchInput) { list->
+                homeViewModel.smartSearchKey(searchInput) { list ->
                     Log.d(TAG, "SearchPage: ${list.size}")
                     smartKey.clear()
                     smartKey.addAll(list)
@@ -158,6 +177,10 @@ fun SearchResultTabs(viewModel: HomeViewModel) {
 
             SearchType.LYRIC -> {
                 LyricPage(list = data?.lyricInfoList ?: emptyList())
+            }
+
+            SearchType.MV -> {
+                MVPage(list = data?.mvList ?: emptyList())
             }
         }
     }

@@ -18,6 +18,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.QPlayerSDKAndroid">
         <activity
+            android:name=".ui.activity.mv.MVPlayerActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.activity.folder.FolderActivity"
             android:exported="true"
             android:label="@string/title_activity_folder"
@@ -61,14 +64,15 @@
             android:name=".ui.activity.main.PlayProcessReportTestActivity"
             android:process=":QQPlayerProcess" />
         <activity android:name=".ui.activity.main.OtherActivity" />
-        <activity android:name=".ui.activity.main.DebugActivity"/>
-        <activity android:name=".ui.activity.main.AboutActivity"/>
+        <activity android:name=".ui.activity.main.DebugActivity" />
+        <activity android:name=".ui.activity.main.AboutActivity" />
         <activity android:name=".ui.activity.area.AreaListActivity" />
         <activity android:name=".ui.activity.audio.LongAudioRankActivity" />
         <activity android:name=".ui.activity.audio.LongAudioCategoryActivity" />
         <activity android:name=".ui.activity.audio.LongAudioModuleContentActivity" />
         <activity android:name=".ui.activity.login.WebViewActivity" />
         <activity android:name=".ui.activity.search.SearchPageActivity" />
+        <activity android:name=".ui.activity.download.DownloadActivity"/>
     </application>
 
 </manifest>

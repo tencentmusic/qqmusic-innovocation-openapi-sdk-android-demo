@@ -6,7 +6,9 @@ import android.widget.Toast
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.qplayer.R
 import java.math.BigDecimal
 
 /**
@@ -15,10 +17,18 @@ import java.math.BigDecimal
  */
 object UiUtils {
 
-    fun getFormatAccessLabel(info: SongInfo?, quality: Int): String {
+    fun getFormatAccessLabel(info: SongInfo?, quality: Int, isDownload: Boolean = false): String {
         info ?: return ""
         val default = ""
-        val access = OpenApiSDK.getPlayerApi().getAccessByQuality(info, quality) ?: return default
+        val access = if (isDownload) {
+            OpenApiSDK.getDownloadApi().getDownloadAccessByQuality(info, quality)
+        } else {
+            OpenApiSDK.getPlayerApi().getAccessByQuality(info, quality)
+        }
+        if (access == null) {
+            return default
+        }
+
         val sb = StringBuilder()
         if (access.vip) {
             sb.append("vip").append("•")
@@ -85,4 +95,37 @@ object UiUtils {
         return (pxValue / UtilContext.getApp().resources.displayMetrics.density + 0.5f).toInt()
     }
 
+    fun getQualityIcon(quality: Int?): Int {
+        // 播放模式
+        val icQuality: Int = when (quality) {
+            PlayerEnums.Quality.HQ -> {
+                R.drawable.action_icon_quality_hq
+            }
+            PlayerEnums.Quality.SQ -> {
+                R.drawable.action_icon_quality_sq
+            }
+            PlayerEnums.Quality.STANDARD -> {
+                R.drawable.action_icon_quality_standard
+            }
+            PlayerEnums.Quality.DOLBY -> {
+                R.drawable.action_icon_dolby_quality
+            }
+            PlayerEnums.Quality.HIRES -> {
+                R.drawable.action_icon_quality_hires
+            }
+            PlayerEnums.Quality.EXCELLENT -> {
+                R.drawable.action_icon_excellent_quality
+            }
+            PlayerEnums.Quality.GALAXY -> {
+                R.drawable.action_icon_galaxy_quality
+            }
+            PlayerEnums.Quality.VOCAL_ACCOMPANY -> {
+                R.drawable.action_icon_quality_va
+            }
+            else -> {
+                R.drawable.ic_lq
+            }
+        }
+        return icQuality
+    }
 }

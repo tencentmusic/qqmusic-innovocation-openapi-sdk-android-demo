@@ -92,7 +92,7 @@ class SongListActivity : ComponentActivity() {
                 }
             }
             if (!folderId.isNullOrEmpty()) {
-                playlistHeader(songs = songList.value, playListType = MusicPlayList.PLAY_LIST_FOLDER_TYPE, playListTypeId = folderId.toLong())
+                playlistHeader(songs = songList.value, playListType = MusicPlayList.PLAY_LIST_FOLDER_TYPE, playListTypeId = folderId.toLongOrNull() ?: 0)
 
                 DisposableEffect(Unit) {
                     val job = lifecycleScope.launch(Dispatchers.IO) {

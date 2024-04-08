@@ -11,10 +11,13 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.tencent.qqmusic.edgemv.data.MediaResDetail
 import com.tencent.qqmusic.openapisdk.business_common.event.BaseBusinessEvent
 import com.tencent.qqmusic.openapisdk.business_common.event.BusinessEventHandler
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LoginEvent
+import com.tencent.qqmusic.openapisdk.business_common.utils.Utils
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.hologram.EdgeMvProvider
 import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.Area
 import com.tencent.qqmusic.openapisdk.model.AreaId
@@ -26,7 +29,6 @@ import com.tencent.qqmusic.openapisdk.model.Folder
 import com.tencent.qqmusic.openapisdk.model.HotKey
 import com.tencent.qqmusic.openapisdk.model.RankGroup
 import com.tencent.qqmusic.openapisdk.model.SearchResult
-import com.tencent.qqmusic.openapisdk.model.Singer
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +36,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
 
 //
 // Created by tylertan on 2021/11/2
@@ -67,9 +70,16 @@ class HomeViewModel : ViewModel() {
     var newAiFolder = SnapshotStateList<Folder>()
     var showNewAiNextButton = mutableStateOf(false)
 
+    var mvFavList: List<MediaResDetail> by mutableStateOf(emptyList())
+
+    private var provider = OpenApiSDK.getProviderByClass(EdgeMvProvider::class.java)
+
+
     companion object {
         private const val TAG = "HomeViewModel"
         var myFolderRequested = false
+        var mRankGroupsDisable = false
+        var mSceneCategoriesDisable = true
         var myFavRequested = false
         var myFavAlbumRequested = -1
         var myRecentRequested = false
@@ -148,12 +158,13 @@ class HomeViewModel : ViewModel() {
     }
 
     fun fetchSceneCategory() {
-        if (!sceneCategories.isEmpty()) {
+        if (mSceneCategoriesDisable) {
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
             OpenApiSDK.getOpenApi().fetchCategoryOfSongListScene {
                 sceneCategories = if (it.isSuccess()) {
+                    mSceneCategoriesDisable = true
                     it.data ?: emptyList()
                 } else {
                     emptyList()
@@ -191,11 +202,14 @@ class HomeViewModel : ViewModel() {
     }
 
     fun fetchRankGroup() {
-        if (rankGroups.isEmpty()) {
+        if (mRankGroupsDisable) {
+            return
+        }
             QLog.i(TAG, "fetchRankGroup")
             viewModelScope.launch(Dispatchers.IO) {
                 OpenApiSDK.getOpenApi().fetchAllRankGroup {
                     rankGroups = if (it.isSuccess()) {
+                        mRankGroupsDisable = true
                         it.data ?: emptyList()
                     } else {
                         QLog.e(TAG, "fetchRankGroup failed:$it")
@@ -203,7 +217,6 @@ class HomeViewModel : ViewModel() {
                     }
                 }
             }
-        }
     }
 
     fun fetchMineFolder() {
@@ -218,6 +231,19 @@ class HomeViewModel : ViewModel() {
                 }
             }
             myFolderRequested = true
+        }
+    }
+
+    private val lasFetchFavMVListTime = AtomicLong(0)
+    fun fetchFavMVList() {
+        Utils.methodControlTime(lasFetchFavMVListTime, false, 1000L) {
+            provider?.getMediaNetWorkImpl()?.apply {
+                getCollectList(0, 50) {
+                    if (it.isSuccess()) {
+                        mvFavList = it.data ?: emptyList()
+                    }
+                }
+            }
         }
     }
 
@@ -347,7 +373,6 @@ class HomeViewModel : ViewModel() {
     }
 
 
-
     fun fetchHotKeys(type: Int) {
         QLog.i(TAG, "fetchHotKeys type = $type")
         viewModelScope.launch(Dispatchers.IO) {
@@ -361,7 +386,6 @@ class HomeViewModel : ViewModel() {
             }
         }
     }
-
 
 
     fun fetchHiresSection(callback: (Area?) -> Unit) {

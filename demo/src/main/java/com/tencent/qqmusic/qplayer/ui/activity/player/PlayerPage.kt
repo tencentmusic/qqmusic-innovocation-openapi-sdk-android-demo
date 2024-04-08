@@ -1,7 +1,9 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -37,9 +39,12 @@ import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricNewActivity
+import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPageActivity
 import com.tencent.qqmusic.qplayer.ui.activity.ui.QQMusicSlider
 import com.tencent.qqmusic.qplayer.ui.activity.ui.Segment
+import com.tencent.qqmusic.sharedfileaccessor.SPBridge
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusicplayerprocess.audio.playermanager.EKeyDecryptor
 import kotlin.concurrent.thread
 
@@ -71,6 +76,13 @@ fun PlayerPage(observer: PlayerObserver) {
         mutableListOf(PlayerEnums.Mode.LIST, PlayerEnums.Mode.ONE, PlayerEnums.Mode.SHUFFLE)
     val lyricView = lyric() {
         activity.startActivity(Intent(activity, LyricNewActivity::class.java))
+    }
+
+    val sharedPreferences: SharedPreferences? = try {
+        SPBridge.get().getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+    } catch (e: Exception) {
+        QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
+        null
     }
 
     Column(
@@ -122,55 +134,47 @@ fun PlayerPage(observer: PlayerObserver) {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
 
-
-            // 播放模式
-            val icQuality: Int = when (quality) {
-                PlayerEnums.Quality.HQ -> {
-                    R.drawable.action_icon_quality_hq
-                }
-                PlayerEnums.Quality.SQ -> {
-                    R.drawable.action_icon_quality_sq
-                }
-                PlayerEnums.Quality.STANDARD -> {
-                    R.drawable.action_icon_quality_standard
-                }
-                PlayerEnums.Quality.DOLBY -> {
-                    R.drawable.action_icon_dolby_quality
-                }
-                PlayerEnums.Quality.HIRES -> {
-                    R.drawable.action_icon_quality_hires
-                }
-                PlayerEnums.Quality.EXCELLENT -> {
-                    R.drawable.action_icon_excellent_quality
-                }
-                PlayerEnums.Quality.GALAXY -> {
-                    R.drawable.action_icon_galaxy_quality
-                }
-                else -> {
-                    R.drawable.ic_lq
-                }
-            }
-
             // 播放品质
             Image(
-                painter = painterResource(id = icQuality),
+                painter = painterResource(id = UiUtils.getQualityIcon(quality)),
                 contentDescription = null,
                 modifier = Modifier
                     .size(50.dp)
                     .clickable {
-                        QualityAlert.showQualityAlert(activity, {
-                            OpenApiSDK
-                                .getPlayerApi()
-                                .setCurrentPlaySongQuality(it)
-                        }, {
-                            quality = it
-                        })
+                        QualityAlert.showQualityAlert(
+                            activity, isDownload = false,
+                            {
+                                OpenApiSDK
+                                    .getPlayerApi()
+                                    .setCurrentPlaySongQuality(it)
+                            }, {
+                                quality = it
+                            })
                     }
             )
 
-            Text(
-                text = "倍速：${observer.playSpeed}x",
-                fontFamily = FontFamily.Monospace
+            val downloadIcon = if (currSong?.isDownloaded() == true) {
+                R.drawable.icon_song_info_item_more_downloaded
+            } else {
+                R.drawable.icon_player_download_light
+            }
+            Image(painter = painterResource(id = downloadIcon),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(45.dp)
+                    .clickable(enabled = currSong != null) {
+                        if (currSong != null) {
+                            QualityAlert.showQualityAlert(
+                                activity, isDownload = true, {
+                                    OpenApiSDK
+                                        .getDownloadApi()
+                                        .downloadSong(currSong, it)
+                                    PlayDefine.PlayError.PLAY_ERR_NONE
+                                }, {
+                                    quality = it
+                                })
+                        }
+                    }
             )
 
             // 音效
@@ -203,6 +207,19 @@ fun PlayerPage(observer: PlayerObserver) {
             }, content = {
                 Text("进入播放测试页")
             })
+            Button(modifier = Modifier.padding(start = 10.dp), onClick = {
+                if ((currSong?.mvId ?: 0) > 0) {
+                    activity.startActivity(Intent(activity, MVPlayerActivity::class.java).apply {
+                        putExtra(MVPlayerActivity.MV_ID, currSong?.mvId?.toString())
+                    })
+                } else {
+                    AppScope.launchUI {
+                        Toast.makeText(activity, "该歌曲没有MV可以播放", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }) {
+                Text(text = "播放MV")
+            }
         }
         // 播放控制
         Row(
@@ -232,7 +249,7 @@ fun PlayerPage(observer: PlayerObserver) {
             }
 
             var position = if (observer.seekPosition >= 0) observer.seekPosition else observer.playPosition
-            val duration = OpenApiSDK.getPlayerApi().getDuration()?.toFloat()?: 100f
+            val duration = OpenApiSDK.getPlayerApi().getDuration()?.toFloat() ?: 100f
             Log.i(TAG, "$position,$duration")
             if (position > duration) {
                 position = 0F
@@ -292,12 +309,15 @@ fun PlayerPage(observer: PlayerObserver) {
                 PlayerEnums.Mode.LIST -> {
                     R.drawable.ic_play_mode_normal
                 }
+
                 PlayerEnums.Mode.ONE -> {
                     R.drawable.ic_play_mode_single
                 }
+
                 PlayerEnums.Mode.SHUFFLE -> {
                     R.drawable.ic_play_mode_random
                 }
+
                 else -> {
                     R.drawable.ic_play_mode_normal
                 }
@@ -335,6 +355,9 @@ fun PlayerPage(observer: PlayerObserver) {
                         }
                     }
             )
+
+            val needFade = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
+
             Image(
                 painter = painterResource(id = if (isPlaying) R.drawable.ic_state_playing else R.drawable.ic_state_paused),
                 contentDescription = null,
@@ -345,7 +368,7 @@ fun PlayerPage(observer: PlayerObserver) {
                             val ret = if (isPlaying) {
                                 OpenApiSDK
                                     .getPlayerApi()
-                                    .pause()
+                                    .pause(needFade)
                             } else {
                                 OpenApiSDK
                                     .getPlayerApi()

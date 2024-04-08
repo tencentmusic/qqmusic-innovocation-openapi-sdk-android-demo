@@ -1,9 +1,9 @@
 package com.tencent.qqmusic.qplayer.ui.activity.songlist
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.util.Log
-import android.widget.TextView
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -33,6 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -56,10 +57,11 @@ import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.core.player.MusicPlayList
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
+import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
+import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity.Companion.MV_ID
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
-import com.tencent.qqmusicsdk.player.playlist.PlayListInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -101,11 +103,13 @@ fun SongListScreen(
 
             Box(modifier = Modifier.constrainAs(folder) {
                 height = Dimension.fillToConstraints
-                top.linkTo(if (needShowHeader) {
-                    albumInfo.bottom
-                } else {
-                    parent.top
-                })
+                top.linkTo(
+                    if (needShowHeader) {
+                        albumInfo.bottom
+                    } else {
+                        parent.top
+                    }
+                )
                 bottom.linkTo(player.top)
             }) {
                 SongListPage(flow, displayOnly = displayOnly, playListType = playListType, playListTypeId = playListTypeId)
@@ -132,12 +136,9 @@ fun SongListPage(
     flow ?: return
     val songs = flow.collectAsLazyPagingItems()
     Log.i(TAG, "SongListPage: songs count: ${songs.itemCount}")
-    val songListState = remember {
-        mutableStateOf(songs.snapshot().items)
-    }
     val listState = rememberLazyListState()
     Column {
-        playlistHeader(songs = songListState.value, playListType = playListType, playListTypeId = playListTypeId)
+        playlistHeader(songs = songs.snapshot().items, playListType = playListType, playListTypeId = playListTypeId)
 
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
 
@@ -150,6 +151,7 @@ fun SongListPage(
 }
 
 
+@SuppressLint("CoroutineCreationDuringComposition")
 @Composable
 fun playlistHeader(songs: List<SongInfo>, playListType: Int = 0, playListTypeId: Long = 0) {
     val collectState = remember {
@@ -159,14 +161,15 @@ fun playlistHeader(songs: List<SongInfo>, playListType: Int = 0, playListTypeId:
     playlistScope.launch(Dispatchers.IO) {
         when (playListType) {
             MusicPlayList.PLAY_LIST_ALBUM_TYPE -> {
-                OpenApiSDK.getOpenApi().fetchAlbumDetail(albumId = "$playListTypeId") { resp->
+                OpenApiSDK.getOpenApi().fetchAlbumDetail(albumId = "$playListTypeId") { resp ->
                     if (resp.isSuccess()) {
                         collectState.value = resp.data?.favState == 1
                     }
                 }
             }
+
             MusicPlayList.PLAY_LIST_FOLDER_TYPE -> {
-                OpenApiSDK.getOpenApi().fetchCollectedFolder {resp->
+                OpenApiSDK.getOpenApi().fetchCollectedFolder { resp ->
                     if (resp.isSuccess()) {
                         collectState.value = resp.data?.firstOrNull { it.id == "$playListTypeId" } != null
                     }
@@ -179,7 +182,7 @@ fun playlistHeader(songs: List<SongInfo>, playListType: Int = 0, playListTypeId:
             .fillMaxWidth()
             .wrapContentHeight()
     ) {
-        val (playAllBtn,collectBtn, collectSongBtn) = createRefs()
+        val (playAllBtn, collectBtn, collectSongBtn) = createRefs()
         Button(
             modifier = Modifier.constrainAs(playAllBtn) {
                 top.linkTo(parent.top)
@@ -217,6 +220,7 @@ fun playlistHeader(songs: List<SongInfo>, playListType: Int = 0, playListTypeId:
                                 callback = callback
                             )
                         }
+
                         MusicPlayList.PLAY_LIST_FOLDER_TYPE -> {
                             if (collectState.value) {
                                 OpenApiSDK.getOpenApi().unCollectFolder("$playListTypeId", callback)
@@ -282,22 +286,22 @@ private fun collectSongs(
     if (songList.isNotEmpty()) {
         OpenApiSDK.getOpenApi().fetchPersonalFolder {
             if (it.isSuccess()) {
-                val folderId = it.data?.firstOrNull {folder-> folder.name == "我喜欢" }?.id
+                val folderId = it.data?.firstOrNull { folder -> folder.name == "我喜欢" }?.id
                     ?: return@fetchPersonalFolder
-                val songMids = songs.mapNotNull {song-> song?.songMid }
+                val songMids = songs.mapNotNull { song -> song?.songMid }
                 Log.i(TAG, "fav or unfav song size: ${songMids.size}")
                 if (collectState.value) {
                     OpenApiSDK.getOpenApi().deleteSongFromFolder(
                         folderId,
                         midList = songMids
-                    ) {resp->
+                    ) { resp ->
                         Log.i(TAG, "del resp: $resp")
                     }
                 } else {
                     OpenApiSDK.getOpenApi().addSongToFolder(
                         folderId,
                         midList = songMids
-                    ) {resp->
+                    ) { resp ->
                         Log.i(TAG, "add resp: $resp")
                     }
                 }
@@ -348,7 +352,7 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                 }
             }
     ) {
-        val (cover, songInfo, next, playingIcon, collect) = createRefs()
+        val (cover, songInfo, next, playingIcon, collect, mv) = createRefs()
 
         Image(
             painter = rememberImagePainter(song.smallCoverUrl()),
@@ -370,8 +374,8 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                     top.linkTo(parent.top)
                     bottom.linkTo(parent.bottom)
                     start.linkTo(cover.end)
-                }
-        , horizontalAlignment = Alignment.Start) {
+                }, horizontalAlignment = Alignment.Start
+        ) {
             val txtColor = if (song.canPlay()) {
                 Color.Black
             } else {
@@ -427,6 +431,27 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
             )
         }
 
+        if ((song.mvId ?: 0) > 0) {
+            Image(
+                painter = painterResource(R.drawable.mv_song_list_tip_icon),
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier
+                    .constrainAs(mv) {
+                        top.linkTo(parent.top)
+                        bottom.linkTo(parent.bottom)
+                        start.linkTo(songInfo.end)
+                    }
+                    .width(55.dp)
+                    .height(40.dp)
+                    .padding(10.dp)
+                    .clickable {
+                        activity.startActivity(Intent(activity, MVPlayerActivity::class.java).apply {
+                            putExtra(MV_ID, song.mvId.toString())
+                        })
+                    }
+            )
+        }
         Image(
             painter = painterResource(
                 if (collectState.value)
@@ -470,9 +495,11 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                         val result = OpenApiSDK.getPlayerApi().addToNext(songInfo = song)
                         coroutineScope.launch(Dispatchers.Main) {
                             Toast
-                                .makeText(activity,
-                                    "添加下一曲" + if (result==0) "成功!" else "失败!Code=$result",
-                                    Toast.LENGTH_SHORT)
+                                .makeText(
+                                    activity,
+                                    "添加下一曲" + if (result == 0) "成功!" else "失败!Code=$result",
+                                    Toast.LENGTH_SHORT
+                                )
                                 .show()
                         }
                     }) {
@@ -484,9 +511,11 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                         val result = OpenApiSDK.getPlayerApi().appendSongToPlaylist(listOf(song))
                         coroutineScope.launch(Dispatchers.Main) {
                             Toast
-                                .makeText(activity,
-                                    if (result==0) "添加末尾成功" else "添加末尾失败 Code=$result",
-                                    Toast.LENGTH_SHORT)
+                                .makeText(
+                                    activity,
+                                    if (result == 0) "添加末尾成功" else "添加末尾失败 Code=$result",
+                                    Toast.LENGTH_SHORT
+                                )
                                 .show()
                         }
                     }
@@ -500,9 +529,11 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                         clipboardManager.setText(AnnotatedString(song.songId.toString()))
                         coroutineScope.launch(Dispatchers.Main) {
                             Toast
-                                .makeText(activity,
+                                .makeText(
+                                    activity,
                                     "songId:${song.songId},复制成功",
-                                    Toast.LENGTH_SHORT)
+                                    Toast.LENGTH_SHORT
+                                )
                                 .show()
                         }
                     }

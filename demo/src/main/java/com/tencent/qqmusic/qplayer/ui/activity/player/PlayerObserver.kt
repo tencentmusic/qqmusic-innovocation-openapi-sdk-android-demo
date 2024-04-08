@@ -12,18 +12,24 @@ import androidx.compose.runtime.setValue
 import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.download.DownloadError
+import com.tencent.qqmusic.openapisdk.core.download.DownloadEvent
+import com.tencent.qqmusic.openapisdk.core.download.DownloadListener
+import com.tencent.qqmusic.openapisdk.core.download.DownloadTask
 import com.tencent.qqmusic.openapisdk.core.player.IMediaEventListener
+import com.tencent.qqmusic.openapisdk.core.player.OnVocalAccompanyStatusChangeListener
+import com.tencent.qqmusic.openapisdk.core.player.IProgressChangeListener
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEvent
+import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyConfig
 import com.tencent.qqmusic.openapisdk.model.SongInfo
-import com.tencent.qqmusic.qplayer.core.player.MusicPlayerHelper
 
 //
 // Created by tylertan on 2021/11/2
 // Copyright (c) 2021 Tencent. All rights reserved.
 //
 
-object PlayerObserver {
+object PlayerObserver : OnVocalAccompanyStatusChangeListener {
 
     private const val TAG = "PlayerObserver"
     private const val WHAT_BUFFERING_TIMEOUT = 1
@@ -37,27 +43,50 @@ object PlayerObserver {
     var playPosition: Float by mutableStateOf(0f)
     var seekPosition: Float by mutableStateOf(-1f)
     var playSpeed: Float by mutableStateOf(OpenApiSDK.getPlayerApi().getPlaySpeed())
+    var vocalAccompanyConfig: VocalAccompanyConfig by mutableStateOf(OpenApiSDK.getVocalAccompanyApi().currentVocalAccompanyConfig())
 
 
     var isSeekBarTracking by mutableStateOf(false)
     init {
-        MusicPlayerHelper.getInstance().registerProgressChangedInterface { curTime: Long, totalTime: Long ->
-            MLog.i("PlayerPage","curTime$curTime,(${PlayerObserver.convertTime(curTime/1000)}),${convertTime(OpenApiSDK.getPlayerApi().getDuration()!!.toLong()/1000)}")
-            if (isSeekBarTracking){
-                MLog.i("PlayerPage", "isSeekBarTracking = true")
-                return@registerProgressChangedInterface
+        OpenApiSDK.getVocalAccompanyApi().addVocalAccompanyStatusChangeListener(this)
+        OpenApiSDK.getPlayerApi().registerProgressChangedListener(object :IProgressChangeListener{
+            override fun progressChanged(curPlayTime: Long, totalTime: Long) {
+                MLog.i("PlayerPage", "curTime$curPlayTime,(${PlayerObserver.convertTime(curPlayTime / 1000)}),${convertTime(OpenApiSDK.getPlayerApi().getDuration()!!.toLong() / 1000)}")
+                if (isSeekBarTracking) {
+                    MLog.i("PlayerPage", "isSeekBarTracking = true")
+                }
+                val duration = OpenApiSDK.getPlayerApi().getDuration() ?: 0
+                playPosition = if (curPlayTime > duration) {
+                    duration.toFloat()
+                } else {
+                    if (currentSong == null) 0f else curPlayTime.toFloat()
+                }
+                Log.i(TAG, "$playPosition")
+                if (seekPosition in 0.0..playPosition.toDouble()) {
+                    seekPosition = -1f
+                }
             }
-            val duration = OpenApiSDK.getPlayerApi().getDuration() ?: 0
-            playPosition = if (curTime > duration) {
-                duration.toFloat()
-            } else {
-                if (currentSong == null) 0f else curTime.toFloat()
+        })
+
+        OpenApiSDK.getDownloadApi().registerDownloadListener(object : DownloadListener {
+            override fun onEvent(event: DownloadEvent, task: DownloadTask?) {
+                task?.getSongInfo()?.let {
+                    if (it.songId == currentSong?.songId) {
+                        if (event == DownloadEvent.DOWNLOAD_TASK_REMOVED || event == DownloadEvent.DOWNLOAD_SUCCESS) {
+                            currentSong?.filePath = it.filePath
+                        }
+                    }
+                }
             }
-            Log.i(TAG,"$playPosition")
-            if (seekPosition in 0.0..playPosition.toDouble()) {
-                seekPosition = -1f
+
+            override fun onCreateTaskError(song: SongInfo, err: DownloadError) {
+
             }
-        }
+
+            override fun onDownloadError(task: DownloadTask, err: DownloadError) {
+
+            }
+        })
     }
 
     fun convertTime(num: Long): String {
@@ -175,6 +204,8 @@ object PlayerObserver {
                                     "完整播放受限，将播放试听片段",
                                     Toast.LENGTH_SHORT
                                 ).show()
+                            } else {
+
                             }
                         }
 
@@ -188,10 +219,18 @@ object PlayerObserver {
 
                         PlayDefine.PlayState.MEDIAPLAYER_STATE_PREPARED -> {
                             setPlayState("已准备")
-                            if (mCurrentQuality == -1) {
-                                mCurrentQuality = OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()
+                            OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()?.let {
+                                mCurrentQuality = it
                                 Log.d(TAG, "play mCurrentQuality: $mCurrentQuality")
+                            }
 
+                            val isPlayingDownloadSong = OpenApiSDK.getPlayerApi().isPlayingDownloadLocalFile()
+                            if (isPlayingDownloadSong) {
+                                Toast.makeText(
+                                    UtilContext.getApp(),
+                                    "正在为您播放下载歌曲，本次播放不消耗流量",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
                     }
@@ -225,6 +264,10 @@ object PlayerObserver {
 
     fun unregisterSongEvent() {
         OpenApiSDK.getPlayerApi().unregisterEventListener(event)
+    }
+
+    override fun onVocalAccompanyStatusChange(vocalScale: Int, enable: Boolean) {
+        mCurrentQuality = OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()
     }
 
 }

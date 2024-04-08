@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
+import com.tencent.qqmusic.qplayer.utils.DownloadTaskManager
 import kotlinx.coroutines.launch
 
 class PlayerActivity : ComponentActivity() {
@@ -27,6 +28,7 @@ class PlayerActivity : ComponentActivity() {
     @OptIn(ExperimentalPagerApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        DownloadTaskManager.init()
         setContent {
             MainPage()
         }
