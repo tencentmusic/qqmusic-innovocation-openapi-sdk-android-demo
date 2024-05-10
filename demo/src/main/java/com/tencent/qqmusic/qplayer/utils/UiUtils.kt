@@ -122,6 +122,9 @@ object UiUtils {
             PlayerEnums.Quality.VOCAL_ACCOMPANY -> {
                 R.drawable.action_icon_quality_va
             }
+            PlayerEnums.Quality.WANOS -> {
+                R.drawable.acion_icon_quality_wanos
+            }
             else -> {
                 R.drawable.ic_lq
             }

@@ -8,12 +8,17 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.openapisdk.hologram.EdgeMvProvider
 import com.tencent.qqmusic.openapisdk.model.PlaySpeedType
@@ -183,6 +188,8 @@ class PlayerTestActivity : ComponentActivity() {
                 OpenApiSDK.getProviderByClass(EdgeMvProvider::class.java)?.setCacheSize(cacheSize)
             }
         }
+        seekToPlayView()
+        playControllerView()
     }
 
     private fun refresh() {
@@ -256,5 +263,110 @@ class PlayerTestActivity : ComponentActivity() {
             setSoundEffectType(null)
             Toast.makeText(this@PlayerTestActivity, "恢复完成", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    @SuppressLint("CutPasteId")
+    private fun seekToPlayView(){
+        var actionStateIndex:Int = sharedPreferences?.getInt("actionStateIndex", 0) ?: 0
+        val seekTimerSpinner: Spinner = findViewById(R.id.spinner_seek_timer)
+        // 来源PlayerManagerImpl().needExportPlayState
+        val myState = mapOf(
+            "初始状态 0" to PlayDefine.PlayState.MEDIAPLAYER_STATE_IDLE,
+            "已准备 2" to PlayDefine.PlayState.MEDIAPLAYER_STATE_PREPARED,
+            "正在播放 4" to PlayDefine.PlayState.MEDIAPLAYER_STATE_STARTED,
+            "已暂停 5" to PlayDefine.PlayState.MEDIAPLAYER_STATE_PAUSED,
+            "已停止 6" to PlayDefine.PlayState.MEDIAPLAYER_STATE_STOPPED,
+            "播放正常结束，对应播放器的onCompletion  7" to PlayDefine.PlayState.MEDIAPLAYER_STATE_PLAYBACKCOMPLETED,
+            "正在缓冲 101" to PlayDefine.PlayState.MEDIAPLAYER_STATE_BUFFERING,
+            "缓冲失败 701" to PlayDefine.PlayState.MEDIAPLAYER_STATE_BUFFER_FAILED
+            )
+        val seekTimerSpinnerOptions = myState.keys.toList()
+
+        // 创建一个 ArrayAdapter 使用默认 spinner 布局和选项数组
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, seekTimerSpinnerOptions)
+
+        // 指定下拉菜单的布局样式 - 简单的列表视图
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        // 应用适配器到 spinner
+        seekTimerSpinner.adapter = adapter
+
+        seekTimerSpinner.setSelection(actionStateIndex)
+
+        // 设置选项选择事件监听器
+        seekTimerSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
+                // 选中后的动作
+                actionStateIndex = position
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {
+                // 可选的回调，没有选项被选中时的动作
+            }
+        }
+        findViewById<EditText>(R.id.edt_params1).apply {
+            hint = (sharedPreferences?.getString("params1", "") ?: "").toString()
+        }
+
+        findViewById<EditText>(R.id.edt_params2).apply {
+            hint = (sharedPreferences?.getString("params2", "") ?: "").toString()
+        }
+
+        var playerFuncIndex:Int = sharedPreferences?.getInt("playerFuncIndex", 0) ?: 0
+        val playerFuncSpinner: Spinner = findViewById(R.id.spinner_player_func)
+        val funcMap = mutableMapOf<String,()->Any?>()
+        val params1 = findViewById<EditText>(R.id.edt_params1).text.toString()
+        funcMap["seekToPlay"] = {
+            OpenApiSDK.getPlayerApi().seekToPlay(params1.toLongOrNull() ?: 60000L)
+        }
+        funcMap["seek"] = { OpenApiSDK.getPlayerApi().seek(params1.toIntOrNull() ?: 60000) }
+        funcMap["playPos"] = { OpenApiSDK.getPlayerApi().playPos(params1.toIntOrNull() ?: 1) }
+        val playerFuncSpinnerOptions = funcMap.keys.toList()
+        // 创建一个 ArrayAdapter 使用默认 spinner 布局和选项数组
+        val adapter2 = ArrayAdapter(this, android.R.layout.simple_spinner_item, playerFuncSpinnerOptions)
+
+        // 指定下拉菜单的布局样式 - 简单的列表视图
+        adapter2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        // 应用适配器到 spinner
+        playerFuncSpinner.adapter = adapter2
+
+        playerFuncSpinner.setSelection(playerFuncIndex)
+
+        // 设置选项选择事件监听器
+        playerFuncSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
+                // 选中后的动作
+                playerFuncIndex = position
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {
+                // 可选的回调，没有选项被选中时的动作
+            }
+        }
+
+        findViewById<Button>(R.id.btn_setToRun).setOnClickListener {
+            sharedPreferences?.edit()?.putString("params1", findViewById<EditText>(R.id.edt_params1).text.toString())?.apply()
+            sharedPreferences?.edit()?.putString("params2", findViewById<EditText>(R.id.edt_params2).text.toString())?.apply()
+
+            sharedPreferences?.edit()?.putInt("actionStateIndex", actionStateIndex)?.apply()
+            sharedPreferences?.edit()?.putInt("playerFuncIndex", playerFuncIndex)?.apply()
+            funcMap[playerFuncSpinnerOptions[playerFuncIndex]]?.let { func ->
+                PlayerObserver.doSomeThingOnEventStateChange(
+                    func = { func() },
+                    dstState = myState[seekTimerSpinnerOptions[actionStateIndex]]
+                )
+            }
+
+        }
+    }
+
+    private fun playControllerView(){
+        findViewById<Button>(R.id.stopPlay).setOnClickListener {
+            AppScope.launchIO {
+                OpenApiSDK.getPlayerApi().stop()
+            }
+        }
+
     }
 }

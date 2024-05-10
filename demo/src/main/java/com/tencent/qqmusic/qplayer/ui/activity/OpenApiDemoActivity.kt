@@ -18,11 +18,15 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApi
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
+import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.model.SearchType
+import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.model.VipInfo
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.baselib.util.GsonHelper
 import com.tencent.qqmusic.qplayer.report.report.ClickExpoReport
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
@@ -528,7 +532,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
             openApi.deleteFolder(paramStr1!!.split(",")) { callback ->
-                createdFolderDeleted = callback.data!!
+                createdFolderDeleted = callback.data == true
                 commonCallback.invoke(callback)
             }
         }
@@ -859,11 +863,61 @@ class OpenApiDemoActivity : AppCompatActivity() {
             val kvStrList = paramStr2?.split(",") ?: emptyList()
             for (kvStr in kvStrList) {
                 val kv = kvStr.split(":")
-                slotsMap[kv.first()] = kv[1]
+                if (kv.size > 1) {
+                    slotsMap[kv.first()] = kv[1]
+                }
             }
 
             openApi.musicSkill(
-                paramStr1!!, slotsMap, paramStr3 ?: "", paramStr4?.toLong(), paramStr5?.toInt() ?: 20, callback = commonCallback
+                paramStr1 ?: "", slotsMap, paramStr3 ?: "", paramStr4?.toLong(), paramStr5?.toInt() ?: 20, callback = object: OpenApiCallback<OpenApiResponse<String>> {
+                    override fun invoke(data: OpenApiResponse<String>) {
+                        when (paramStr1) {
+                            null, "SearchSong" -> {
+                                if (data.isSuccess()) {
+                                    val jsonObj = GsonHelper.safeToJsonObj(data.data)
+                                    val speakCommand = jsonObj?.getAsJsonObject("speak_command")
+                                    val speakText = speakCommand?.get("text")?.asString
+                                    if (speakText != null) {
+                                        Toast.makeText(this@OpenApiDemoActivity, speakText, Toast.LENGTH_SHORT).show()
+                                    }
+                                    val playCommand = jsonObj?.getAsJsonObject("play_command")
+                                    val playList = playCommand?.getAsJsonArray("play_list")
+                                    val songIds = playList?.mapNotNull {
+                                        it.asJsonObject?.get("song_id")?.asLong
+                                    } ?: emptyList()
+                                    val playListOperType = playCommand?.get("play_type")?.asInt ?: 0 // 默认插入
+                                    val suggestPlayListSize = playCommand?.get("suggest_cnt")?.asInt ?: songIds.size
+                                    lifecycleScope.launch(Dispatchers.IO) {
+                                        OpenApiSDK.getOpenApi().fetchSongInfoBatch(songIds.take(suggestPlayListSize), callback = object: OpenApiCallback<OpenApiResponse<List<SongInfo>>> {
+                                            override fun invoke(data: OpenApiResponse<List<SongInfo>>) {
+                                                if (!data.isSuccess() || data.data == null) {
+                                                    Toast.makeText(this@OpenApiDemoActivity, "歌曲信息拉取失败", Toast.LENGTH_SHORT).show()
+                                                    return
+                                                }
+                                                lifecycleScope.launch(Dispatchers.IO) {
+                                                    when (playListOperType) {
+                                                        0 -> {
+                                                            val pos = OpenApiSDK.getPlayerApi().getCurPlayPos()
+                                                            val ret = OpenApiSDK.getPlayerApi().appendSongToPlaylist(data.data!!, pos + 1)
+                                                            if (ret == PlayDefine.PlayError.PLAY_ERR_NONE) {
+                                                                delay(200L)
+                                                                OpenApiSDK.getPlayerApi().next()
+                                                            }
+                                                        }
+                                                        1 -> {
+                                                            OpenApiSDK.getPlayerApi().playSongs(data.data!!, 0)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        })
+                                    }
+                                }
+                            }
+                        }
+                        commonCallback(data)
+                    }
+                }
             )
         }
         methodNameToBlock["reportRecentPlay"] = {
@@ -1057,6 +1111,16 @@ class OpenApiDemoActivity : AppCompatActivity() {
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "deleteFolder", listOf("歌单id"), listOf("8202113137")
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "deleteFolder(批量,分割)", listOf("歌单id"), listOf("8202113137,3805603854")
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "unCollectFolder(批量,分割)", listOf("歌单id"), listOf("8202113137,3805603854")
             )
         )
         methodNameWithParamList.add(
@@ -1329,7 +1393,8 @@ class OpenApiDemoActivity : AppCompatActivity() {
             MethodNameWidthParam(
                 "musicSkill",
                 listOf("意图", "槽位值(kv以冒号分隔，多个槽位值逗号分隔)", "原始语音", "当前在播歌曲id(可不传)", "返回数量（可不传）"),
-                listOf("点歌播放", "歌手名:周杰伦,歌曲语言:中文", "播放感伤的歌曲", null, null)
+                // listOf("点歌播放", "歌手名:周杰伦,歌曲语言:中文", "播放感伤的歌曲", null, null)
+                listOf(null, "", "", null, null)
             )
         )
         methodNameWithParamList.add(
@@ -1359,7 +1424,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "collectAlbum", listOf("收藏(0：取消收藏，1：收藏)", "专辑id列表"), listOf("1", null)
+                "collectAlbum", listOf("收藏(0：取消收藏，1：收藏)", "专辑id列表"), listOf("8218", null)
             )
         )
 
@@ -1371,7 +1436,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
 
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "collectSinger", listOf("订阅/取消订阅歌手", "歌手ID列表"), listOf("true", null)
+                "collectSinger", listOf("订阅/取消订阅歌手", "歌手ID列表"), listOf("true", "4558")
             )
         )
 

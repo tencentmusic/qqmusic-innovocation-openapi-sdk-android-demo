@@ -55,6 +55,7 @@ import com.tencent.qqmusic.openapisdk.core.network.NetworkTimeoutConfig
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.baselib.util.sp.SpKeyConfig
+import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.report.report.LaunchReport
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.OpenApiDemoActivity
@@ -62,7 +63,6 @@ import com.tencent.qqmusic.qplayer.ui.activity.SongCacheDemoActivity
 import com.tencent.qqmusic.qplayer.ui.activity.login.WebViewActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
-import com.tencent.qqmusic.sharedfileaccessor.SPBridge
 import com.tencent.qqmusiccommon.SimpleMMKV
 import okhttp3.internal.toLongOrDefault
 
@@ -81,7 +81,7 @@ class OtherActivity : ComponentActivity() {
 fun OtherScreen() {
     val activity = LocalContext.current as Activity
     val sharedPreferences: SharedPreferences? = try {
-        SPBridge.get().getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
     } catch (e: Exception) {
         QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
         null

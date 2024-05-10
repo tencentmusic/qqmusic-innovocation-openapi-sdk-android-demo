@@ -12,17 +12,21 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.tencent.qqmusic.edgemv.data.MediaResDetail
+import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.business_common.event.BaseBusinessEvent
 import com.tencent.qqmusic.openapisdk.business_common.event.BusinessEventHandler
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LoginEvent
 import com.tencent.qqmusic.openapisdk.business_common.utils.Utils
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
+import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.hologram.EdgeMvProvider
 import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.Area
 import com.tencent.qqmusic.openapisdk.model.AreaId
 import com.tencent.qqmusic.openapisdk.model.AreaInfo
 import com.tencent.qqmusic.openapisdk.model.AreaShelf
+import com.tencent.qqmusic.openapisdk.model.AreaShelfType
 import com.tencent.qqmusic.openapisdk.model.BuyType
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.Folder
@@ -30,6 +34,7 @@ import com.tencent.qqmusic.openapisdk.model.HotKey
 import com.tencent.qqmusic.openapisdk.model.RankGroup
 import com.tencent.qqmusic.openapisdk.model.SearchResult
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.openapisdk.model.SuperQualityType
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -72,6 +77,8 @@ class HomeViewModel : ViewModel() {
 
     var mvFavList: List<MediaResDetail> by mutableStateOf(emptyList())
 
+    var showDialog by mutableStateOf(true)
+
     private var provider = OpenApiSDK.getProviderByClass(EdgeMvProvider::class.java)
 
 
@@ -111,6 +118,7 @@ class HomeViewModel : ViewModel() {
                             fetchRecentFolders()
                             fetchRankGroup()
                             fetchNewAlbumsByArea()
+                            getFreeLimitedTimeProfitInfo()
                         }
                     }
                 }
@@ -429,6 +437,35 @@ class HomeViewModel : ViewModel() {
                 }
             })
         }
+    }
+
+    fun fetchWanosSection(callback: (Area?) -> Unit) {
+        QLog.i(TAG, "fetch Wanos")
+        viewModelScope.launch(Dispatchers.IO) {
+            OpenApiSDK.getOpenApi().fetchAreaSectionByShelfTypes(AreaId.Wanos, arrayListOf(AreaShelfType.AreaShelfType_Song), callback = {
+                if (it.isSuccess()) {
+                    QLog.i(TAG, "fetch galaxy success")
+                    callback.invoke(it.data)
+                } else {
+                    callback.invoke(null)
+                }
+            })
+        }
+    }
+
+    fun getFreeLimitedTimeProfitInfo() {
+        OpenApiSDK.getOpenApi().getFreeLimitedTimeProfitInfo(SuperQualityType.QUALITY_TYPE_WANOS) {
+            MLog.i(TAG, "getFreeLimitedTimeProfitInfo ${it.data}")
+            showDialog = if (it.isSuccess()) {
+                it.data?.status == 0 && it.data?.used == 0 && it.data?.canTry == true
+            } else {
+                false
+            }
+        }
+    }
+
+    fun openFreeLimitedTimeAuth(callback: OpenApiCallback<OpenApiResponse<Boolean>>? = null) {
+        OpenApiSDK.getOpenApi().openFreeLimitedTimeAuth(SuperQualityType.QUALITY_TYPE_WANOS, callback = callback)
     }
 
     fun fetchShelfContent(

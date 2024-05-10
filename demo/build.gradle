@@ -35,12 +35,15 @@ android {
     }
 
     buildTypes {
-
+        debug {
+            buildConfigField("boolean", "IS_DEBUG", "true")
+        }
         release {
             multiDexEnabled true
             debuggable true
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField("boolean", "IS_DEBUG", "false")
         }
     }
     compileOptions {
@@ -94,26 +97,32 @@ dependencies {
     if (!isLiteSDK.toBoolean()) {
         implementation "com.tencent.qqmusic.openapi:openapi-sdk:$sdk_version"
     }
+    implementation("com.tencent.qqmusic.modular:framework-common:0.7.7") {
+        exclude group: 'com.tencent.qqmusic', module: 'logproxy'
+        exclude group: 'com.tencent.qqmusic.modular', module: 'framework-log-proxy'
+    }
     implementation 'com.tencent.mm.opensdk:wechat-sdk-android-without-mta:6.8.0'
 
     implementation 'com.google.android.material:material:1.4.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.3.1'
-    implementation 'androidx.navigation:navigation-runtime-ktx:2.3.5'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.5.0'
+    implementation 'androidx.navigation:navigation-runtime-ktx:2.5.0'
     implementation('com.github.bumptech.glide:glide:4.8.0')
-
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0"
+    implementation 'androidx.activity:activity-ktx:1.5.2'
     // compose
     implementation "androidx.compose.ui:ui:1.0.4"
     implementation "androidx.compose.material:material:1.0.5"
     implementation "androidx.compose.ui:ui-tooling:1.0.4"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
     implementation "androidx.constraintlayout:constraintlayout-compose:1.0.0-beta02"
-    implementation "androidx.navigation:navigation-compose:2.4.0-alpha10"
+    implementation "androidx.navigation:navigation-compose:2.5.0"
     implementation "androidx.activity:activity-compose:1.3.1"
     implementation "androidx.compose.foundation:foundation:1.1.0-beta01"
     implementation "com.google.accompanist:accompanist-flowlayout:0.21.0-beta"
     implementation "com.google.accompanist:accompanist-pager:0.21.3-beta"
     implementation "com.google.accompanist:accompanist-pager-indicators:0.21.3-beta"
+    implementation "androidx.compose.material:material-icons-core:1.0.5"
     // Paging 3.0
     implementation 'androidx.paging:paging-compose:1.0.0-alpha10'
     implementation "io.coil-kt:coil-compose:1.3.1"

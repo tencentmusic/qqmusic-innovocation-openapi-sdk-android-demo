@@ -1,131 +1,211 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#FFFFFF"
     android:orientation="vertical">
 
-    <FrameLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="15dp">
+        android:orientation="vertical">
 
-        <EditText
-            android:id="@+id/edt_song"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="输入songId或者Mid，多个逗号分割" />
+            android:layout_marginTop="15dp">
+
+            <EditText
+                android:id="@+id/edt_song"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="输入songId或者Mid，多个逗号分割" />
+
+            <Button
+                android:id="@+id/btn_play"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="播放" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <Button
+                android:id="@+id/btn_change_quality"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="切换" />
+
+            <TextView
+                android:id="@+id/text_prefre_quality"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp" />
+
+        </LinearLayout>
 
         <Button
-            android:id="@+id/btn_play"
+            android:id="@+id/btn_use_dolby"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:text="播放" />
-    </FrameLayout>
-
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+            android:text="填入杜比歌曲" />
 
         <Button
-            android:id="@+id/btn_change_quality"
+            android:id="@+id/btn_use_hires"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="切换" />
+            android:text="填入Hires歌曲" />
 
-        <TextView
-            android:id="@+id/text_prefre_quality"
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/edt_folder"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="输入歌单Id" />
+
+            <Button
+                android:id="@+id/btn_folder"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="搜索歌单" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btn_play_list_update"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="15dp" />
+            android:text="更新播放列表" />
+
+        <Button
+            android:id="@+id/reinit_player_env"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="初始化播放条件" />
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/play_mv_id"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="输入mv_id" />
+
+            <Button
+                android:id="@+id/mv_test_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="播放测试视频" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/edt_mv_cache"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="输入缓存大小，单位MB" />
+
+            <Button
+                android:id="@+id/btn_mv_cache"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="设置MV缓存大小，重启生效" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/stopPlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="停止播放" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#84FFFF"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="选择下列方法在对应的播放状态下定时调用" />
+
+                <Spinner
+                    android:id="@+id/spinner_seek_timer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <Spinner
+                    android:id="@+id/spinner_player_func"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    android:id="@+id/params1textView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="填写方法param1:" />
+
+                <EditText
+                    android:id="@+id/edt_params1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="输入方法入参1"
+                    android:textColor="@color/gray" />
+
+                <TextView
+                    android:id="@+id/params2textView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="填写方法param2:" />
+
+                <EditText
+                    android:id="@+id/edt_params2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="输入方法入参2"
+                    android:textColor="@color/gray" />
+
+                <Button
+                    android:id="@+id/btn_setToRun"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="设置定时执行" />
+
+
+            </LinearLayout>
+
+        </FrameLayout>
+
 
     </LinearLayout>
-
-    <Button
-        android:id="@+id/btn_use_dolby"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="填入杜比歌曲" />
-
-    <Button
-        android:id="@+id/btn_use_hires"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="填入Hires歌曲" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="15dp"
-        android:orientation="horizontal">
-
-        <EditText
-            android:id="@+id/edt_folder"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="输入歌单Id" />
-
-        <Button
-            android:id="@+id/btn_folder"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="搜索歌单" />
-
-    </LinearLayout>
-
-    <Button
-        android:id="@+id/btn_play_list_update"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="更新播放列表" />
-
-    <Button
-        android:id="@+id/reinit_player_env"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="初始化播放条件" />
-
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="15dp"
-        android:orientation="horizontal">
-
-        <EditText
-            android:id="@+id/play_mv_id"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-        <Button
-            android:id="@+id/mv_test_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="播放测试视频" />
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="15dp"
-        android:orientation="horizontal">
-
-        <EditText
-            android:id="@+id/edt_mv_cache"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="输入缓存大小，单位MB" />
-
-        <Button
-            android:id="@+id/btn_mv_cache"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="设置MV缓存大小，重启生效" />
-
-    </LinearLayout>
-
-</LinearLayout>
+</ScrollView>

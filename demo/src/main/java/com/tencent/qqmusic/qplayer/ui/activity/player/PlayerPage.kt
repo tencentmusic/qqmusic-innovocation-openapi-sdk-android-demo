@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
@@ -28,6 +30,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -38,14 +41,14 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
+import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiAccompanyHelper
 import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricNewActivity
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPageActivity
 import com.tencent.qqmusic.qplayer.ui.activity.ui.QQMusicSlider
 import com.tencent.qqmusic.qplayer.ui.activity.ui.Segment
-import com.tencent.qqmusic.sharedfileaccessor.SPBridge
 import com.tencent.qqmusic.qplayer.utils.UiUtils
-import com.tencent.qqmusicplayerprocess.audio.playermanager.EKeyDecryptor
 import kotlin.concurrent.thread
 
 
@@ -79,7 +82,7 @@ fun PlayerPage(observer: PlayerObserver) {
     }
 
     val sharedPreferences: SharedPreferences? = try {
-        SPBridge.get().getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
     } catch (e: Exception) {
         QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
         null
@@ -88,7 +91,9 @@ fun PlayerPage(observer: PlayerObserver) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(),
+            .fillMaxHeight()
+            .verticalScroll(state = rememberScrollState())
+        ,
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -153,7 +158,7 @@ fun PlayerPage(observer: PlayerObserver) {
                     }
             )
 
-            val downloadIcon = if (currSong?.isDownloaded() == true) {
+            val downloadIcon = if (currSong != null && OpenApiSDK.getDownloadApi().isSongDownloaded(currSong)) {
                 R.drawable.icon_song_info_item_more_downloaded
             } else {
                 R.drawable.icon_player_download_light
@@ -208,9 +213,9 @@ fun PlayerPage(observer: PlayerObserver) {
                 Text("进入播放测试页")
             })
             Button(modifier = Modifier.padding(start = 10.dp), onClick = {
-                if ((currSong?.mvId ?: 0) > 0) {
+                if (currSong?.mvVid?.isNotEmpty() == true) {
                     activity.startActivity(Intent(activity, MVPlayerActivity::class.java).apply {
-                        putExtra(MVPlayerActivity.MV_ID, currSong?.mvId?.toString())
+                        putExtra(MVPlayerActivity.MV_ID, currSong?.mvVid)
                     })
                 } else {
                     AppScope.launchUI {
@@ -384,6 +389,13 @@ fun PlayerPage(observer: PlayerObserver) {
                                 } else {
                                     "暂停或开始失败(ret=$ret)"
                                 }
+                            } else {
+                                val action = if (isPlaying) {
+                                    AiAccompanyHelper.TYPE_PAUSE
+                                } else {
+                                    AiAccompanyHelper.TYPE_RESUME
+                                }
+                                AiAccompanyHelper.handlePlayActionAndPlayVoice(action)
                             }
                         }
                     }
@@ -420,5 +432,14 @@ fun PlayerPage(observer: PlayerObserver) {
 
         Text(text = playStateText, modifier = Modifier.padding(top = 10.dp))
 
+    }
+}
+
+@Preview
+@Composable
+fun PreviewPlayerScreen() {
+    Scaffold {
+        val observer = PlayerObserver
+        PlayerPage(observer)
     }
 }

@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,7 +30,7 @@ import com.tencent.qqmusic.edgemv.data.MediaResDetail
 import com.tencent.qqmusic.qplayer.ui.activity.search.plachImageID
 
 @Composable
-fun MVPage(list: List<MediaResDetail>) {
+fun MVResDetailPage(list: List<MediaResDetail>) {
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
         val (folder) = createRefs()
         Box(modifier = Modifier.constrainAs(folder) {
@@ -41,7 +41,7 @@ fun MVPage(list: List<MediaResDetail>) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 this.items(list.size) { index ->
                     val mvInfo = list.elementAtOrNull(index) ?: return@items
-                    MVSearchItem(data = mvInfo)
+                    MVResDetaiItem(data = mvInfo)
                 }
             }
         }
@@ -51,19 +51,19 @@ fun MVPage(list: List<MediaResDetail>) {
 
 @OptIn(ExperimentalCoilApi::class)
 @Composable
-fun MVSearchItem(data: MediaResDetail) {
+fun MVResDetaiItem(data: MediaResDetail) {
     val activity = LocalContext.current as Activity
     Box(modifier = Modifier.clickable {
         activity.startActivity(
             Intent(activity, MVPlayerActivity::class.java).apply {
-                putExtra(MVPlayerActivity.MV_ID, data.id.toString())
+                putExtra(MVPlayerActivity.MV_RES, data)
             })
     }) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(5.dp)
-                .height(80.dp)
+                .height(120.dp)
         ) {
             Image(
                 painter = rememberImagePainter(
@@ -74,9 +74,9 @@ fun MVSearchItem(data: MediaResDetail) {
                     }),
                 contentDescription = "",
                 modifier = Modifier
-                    .padding(start = 10.dp)
-                    .size(75.dp)
-                    .clip(CircleShape)
+                    .padding(start = 5.dp, end = 5.dp)
+                    .size(110.dp)
+                    .clip(RoundedCornerShape(40))
             )
             Column(
                 modifier = Modifier.fillMaxSize(),

@@ -7,7 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import android.webkit.*
 import com.tencent.qqmusic.qplayer.R
-import com.tencent.qqmusicsdk.sdklog.SDKLog
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
 
 // 
 // Created by clydeazhang on 2022/1/4 11:30 上午.
@@ -32,7 +32,7 @@ class WebViewActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_web)
         val url = intent.getStringExtra("url") ?: "null"
-        SDKLog.i(TAG, "load url:$url")
+        QLog.i(TAG, "load url:$url")
         webView = findViewById<WebView>(R.id.web)
         webView?.loadUrl(url)
         webView?.settings?.apply {

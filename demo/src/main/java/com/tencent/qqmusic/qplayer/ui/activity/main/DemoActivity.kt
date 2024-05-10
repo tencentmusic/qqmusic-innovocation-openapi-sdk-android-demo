@@ -63,13 +63,13 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayerModuleFunctionConfigPara
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.core.player.proxy.QQMusicServiceProxyHelper
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.home.VIPSuccessDialog
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import com.tencent.qqmusic.qplayer.utils.PrivacyManager
-import com.tencent.qqmusicplayerprocess.service.NotificationParams
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -195,7 +195,7 @@ class DemoActivity : ComponentActivity() {
 
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN -> {
                         builder = Notification.Builder(UtilContext.getApp())
-                        builder.setContentTitle(NotificationParams.SNotificationTitle)
+                        builder.setContentTitle(QQMusicServiceProxyHelper.notificationTitle())
                         builder.setSmallIcon(R.drawable.icon_notification)
                         builder.setOngoing(false)
                         notification = builder.build()

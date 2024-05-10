@@ -39,7 +39,7 @@ fun AppSetting() {
         }
 
         SingleItem(title = "Debug调试页面", item = "") {
-            if (!BuildConfig.DEBUG) {
+            if (!BuildConfig.IS_DEBUG) {
                 UiUtils.showToast("请使用Release包")
                 return@SingleItem
             }
