@@ -20,9 +20,16 @@ import com.tencent.qqmusic.openapisdk.core.player.IMediaEventListener
 import com.tencent.qqmusic.openapisdk.core.player.OnVocalAccompanyStatusChangeListener
 import com.tencent.qqmusic.openapisdk.core.player.IProgressChangeListener
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
+import com.tencent.qqmusic.openapisdk.core.player.PlayerApi
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEvent
 import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyConfig
+import com.tencent.qqmusic.openapisdk.core.player.ai.AIListenError
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.openapisdk.model.aiaccompany.VoicePrompts
+import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiAccompanyHelper
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 //
 // Created by tylertan on 2021/11/2
@@ -45,13 +52,19 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
     var playSpeed: Float by mutableStateOf(OpenApiSDK.getPlayerApi().getPlaySpeed())
     var vocalAccompanyConfig: VocalAccompanyConfig by mutableStateOf(OpenApiSDK.getVocalAccompanyApi().currentVocalAccompanyConfig())
 
-
     var isSeekBarTracking by mutableStateOf(false)
+
+    private var doSomething:Pair<Int,()->Any?>? = null
+
+
     init {
         OpenApiSDK.getVocalAccompanyApi().addVocalAccompanyStatusChangeListener(this)
         OpenApiSDK.getPlayerApi().registerProgressChangedListener(object :IProgressChangeListener{
-            override fun progressChanged(curPlayTime: Long, totalTime: Long) {
-                MLog.i("PlayerPage", "curTime$curPlayTime,(${PlayerObserver.convertTime(curPlayTime / 1000)}),${convertTime(OpenApiSDK.getPlayerApi().getDuration()!!.toLong() / 1000)}")
+            override fun progressChanged(curPlayTime: Long,
+                                         totalTime: Long,
+                                         bufferLength: Long,
+                                         totalLength: Long) {
+                MLog.i("PlayerPage", "curTime$curPlayTime,(${PlayerObserver.convertTime(curPlayTime / 1000)}),${convertTime(OpenApiSDK.getPlayerApi().getDuration()!!.toLong() / 1000)}, bufferLength = $bufferLength, totalLength = $totalLength")
                 if (isSeekBarTracking) {
                     MLog.i("PlayerPage", "isSeekBarTracking = true")
                 }
@@ -139,6 +152,8 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                             playPosition = -1F
                         }
                         currentSong = curr
+                        AiAccompanyHelper.handleSongChangeAndPlayTransitionIntro(curr)
+                        AiAccompanyHelper.handleSongChangeAndPlayVoice(curr)
                         val currentPlaySongQuality =
                             OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()
                         Log.d(TAG, "play song changed: $curr")
@@ -149,6 +164,11 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                         }
                         seekPosition = -1F
                         playSpeed = OpenApiSDK.getPlayerApi().getPlaySpeed()
+                    }
+                    if(AiAccompanyHelper.isListenTogetherOpen){
+                        if (OpenApiSDK.getPlayerApi().getPlayList().size-OpenApiSDK.getPlayerApi().getCurPlayPos()<=3){
+                            AiAccompanyHelper.fetchRec2AppendSongList()
+                        }
                     }
                 }
                 PlayerEvent.Event.API_EVENT_SONG_PLAY_ERROR -> {
@@ -179,12 +199,18 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                         val list = OpenApiSDK.getPlayerApi().getPlayList()
                         list.contains(currentSong)
                     }
+                    val currentPlaySongQuality = OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()
+                    Log.d(TAG, "init currentPlaySongQuality: $currentPlaySongQuality")
+                    if (currentPlaySongQuality != mCurrentQuality) {
+                        mCurrentQuality = currentPlaySongQuality
+                    }
                 }
                 PlayerEvent.Event.API_EVENT_PLAY_STATE_CHANGED -> {
                     val state = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_PLAY_STATE)
                     Log.i(TAG, "onEvent: current state $state")
                     currentState = state
                     handler.removeMessages(WHAT_BUFFERING_TIMEOUT)
+                    doSomeThingOnEventStateChange(state)
                     when (state) {
                         PlayDefine.PlayState.MEDIAPLAYER_STATE_BUFFERING -> {
                             handler.sendEmptyMessageDelayed(WHAT_BUFFERING_TIMEOUT, 20000)
@@ -269,5 +295,20 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
     override fun onVocalAccompanyStatusChange(vocalScale: Int, enable: Boolean) {
         mCurrentQuality = OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()
     }
+
+    fun doSomeThingOnEventStateChange(func: ()-> Any?, dstState:Int?=null){
+        dstState ?: return
+        doSomething = Pair(dstState, func)
+    }
+
+    private fun doSomeThingOnEventStateChange(curState:Int){
+        doSomething?.let { (dstState,func)->
+               if(dstState==curState){
+                   func()
+                   doSomething = null
+               }
+        }
+    }
+
 
 }

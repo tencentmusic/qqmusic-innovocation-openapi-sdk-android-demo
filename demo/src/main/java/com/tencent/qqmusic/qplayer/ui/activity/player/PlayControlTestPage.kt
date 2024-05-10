@@ -46,7 +46,9 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyConfig
 import com.tencent.qqmusic.openapisdk.core.player.VocalPercent
 import com.tencent.qqmusic.openapisdk.model.PlaySpeedType
+import com.tencent.qqmusic.openapisdk.model.ProfitInfo
 import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
+import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiListenTogetherActivity
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlin.concurrent.thread
@@ -95,6 +97,7 @@ fun PlayControlArea() {
         var vipInfo by remember { mutableStateOf(Global.getLoginModuleApi().vipInfo) }
         var canTryExcellentQuality by remember { mutableStateOf(false) }
         var canTryGalaxyQuality by remember { mutableStateOf(false) }
+        var canTryDolbyQuality by remember { mutableStateOf(false) }
 
         Button(
             onClick = {
@@ -102,6 +105,21 @@ fun PlayControlArea() {
             }
         ) {
             Text(text = "前往下载管理页面")
+        }
+
+        Divider(
+            modifier = Modifier
+                .padding(top = 9.dp)
+                .fillMaxWidth()
+                .height(3.dp)
+        )
+
+        Button(
+            onClick = {
+                activity.startActivity(Intent(activity, AiListenTogetherActivity::class.java))
+            }
+        ) {
+            Text(text = "前往AI伴听页面")
         }
 
         Divider(
@@ -142,7 +160,7 @@ fun PlayControlArea() {
         }
         Button(
             onClick = {
-                OpenApiSDK.getPlayerApi().tryToOpenExcellentQuality(object : PlayCallback {
+                OpenApiSDK.getPlayerApi().tryToOpenExcellentQuality(OpenApiSDK.getPlayerApi().getCurrentSongInfo(), object : PlayCallback {
                     override fun onSuccess() {
                         Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
                     }
@@ -176,7 +194,7 @@ fun PlayControlArea() {
         }
         Button(
             onClick = {
-                OpenApiSDK.getPlayerApi().tryToOpenGalaxyQuality(object : PlayCallback {
+                OpenApiSDK.getPlayerApi().tryToOpenGalaxyQuality(OpenApiSDK.getPlayerApi().getCurrentSongInfo(), object : PlayCallback {
                     override fun onSuccess() {
                         Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
                     }
@@ -188,6 +206,40 @@ fun PlayControlArea() {
             }
         ) {
             Text(text = "试听臻品全景声")
+        }
+
+        Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+
+        Text(
+            text = "能否试听杜比全景声：$canTryDolbyQuality, 是否试听过：${vipInfo?.isProfitTriedByType(ProfitInfo.QUALITY_TYPE_DOLBY)}," +
+                    "试听剩余时间：${vipInfo?.getProfitInfoByType(ProfitInfo.QUALITY_TYPE_DOLBY)?.remainTime}"
+        )
+
+        Button(
+            onClick = {
+                OpenApiSDK.getOpenApi().canTryPlayDolbyQuality() {
+                    canTryDolbyQuality = it.data ?: true
+                    vipInfo = Global.getLoginModuleApi().vipInfo
+                }
+
+            }
+        ) {
+            Text(text = "查看杜比全景声试听状态")
+        }
+        Button(
+            onClick = {
+                OpenApiSDK.getPlayerApi().tryToOpenDolbyQuality(OpenApiSDK.getPlayerApi().getCurrentSongInfo(), object : PlayCallback {
+                    override fun onSuccess() {
+                        Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
+                    }
+
+                    override fun onFailure(errCode: Int, msg: String?) {
+                        Toast.makeText(UtilContext.getApp(), "试听失败！$errCode, msg: $msg", Toast.LENGTH_SHORT).show()
+                    }
+                })
+            }
+        ) {
+            Text(text = "试听杜比全景声")
         }
 
         Button(

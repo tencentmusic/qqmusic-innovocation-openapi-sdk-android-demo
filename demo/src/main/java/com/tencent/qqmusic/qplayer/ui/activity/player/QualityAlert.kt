@@ -1,13 +1,12 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.app.Activity
-import android.util.Log
 import android.widget.Toast
-import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.qplayer.utils.UiUtils
+import com.tencent.qqmusic.qplayer.utils.hasWanos
 import kotlin.concurrent.thread
 
 object QualityAlert {
@@ -24,7 +23,7 @@ object QualityAlert {
             PlayerEnums.Quality.GALAXY
         )
 
-    val qualityOrderString =
+    var qualityOrderString =
         arrayOf(
             "LQ",
             "STANDARD",
@@ -33,14 +32,20 @@ object QualityAlert {
             "DOLBY",
             "HIRES",
             "EXCELLENT",
-            "GALAXY"
+            "GALAXY",
         )
 
     fun showQualityAlert(activity: Activity, isDownload: Boolean, setBlock: (Int)->Int, refresh: (Int)->Unit) {
         val curSong = OpenApiSDK.getPlayerApi().getCurrentSongInfo()
+        if (curSong?.hasWanos() == true) {
+            qualityOrderString = arrayOf("WANOS")
+        }
         val stringArray = qualityOrderString.map {
             val quality = qualityOrder.getOrNull(qualityOrderString.indexOf(it)) ?: qualityOrder[0]
             val accessStr = UiUtils.getFormatAccessLabel(curSong, quality, isDownload)
+            val tryPlayQualityLabel = if (OpenApiSDK.getPlayerApi().canTryOpenQuality(curSong, quality)) {
+                "-可试听"
+            } else ""
             when (it) {
                 "LQ" -> {
                     it + UiUtils.getFormatSize(curSong?.getSizeLQ()?.toLong()) + accessStr
@@ -55,7 +60,7 @@ object QualityAlert {
                     it + UiUtils.getFormatSize(curSong?.getSizeSQ()?.toLong()) + accessStr
                 }
                 "DOLBY" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeDolby()?.toLong()) + accessStr
+                    it + UiUtils.getFormatSize(curSong?.getSizeDolby()?.toLong()) + accessStr + tryPlayQualityLabel
                 }
                 "HIRES" -> {
                     it + UiUtils.getFormatSize(curSong?.getSizeHiRes()?.toLong()) + accessStr
@@ -64,14 +69,21 @@ object QualityAlert {
                     if (isDownload) {
                         "臻品音质2.0 - 不支持下载"
                     } else {
-                        "臻品音质2.0$accessStr"
+                        "臻品音质2.0-(hasQuality:${if (curSong?.hasQualityGalaxy() == true) "true" else "false"})$accessStr" + tryPlayQualityLabel
                     }
                 }
                 "GALAXY" -> {
                     if (curSong?.isGalaxyEffectType() == true) {
-                        "臻品全景声" + accessStr
+                        "臻品全景声-(hasQuality:${if (curSong.hasQualityExcellent()) "true" else "false"})" +  accessStr + tryPlayQualityLabel
                     } else {
-                        "臻品全景声" + UiUtils.getFormatSize(curSong?.getSizeGalaxy()?.toLong()) + accessStr
+                        "臻品全景声" + UiUtils.getFormatSize(curSong?.getSizeGalaxy()?.toLong()) + accessStr + tryPlayQualityLabel
+                    }
+                }
+                "WANOS" -> {
+                    if (isDownload) {
+                        "WANOS - 不支持下载"
+                    } else {
+                        "WANOS $accessStr"
                     }
                 }
                 else -> {

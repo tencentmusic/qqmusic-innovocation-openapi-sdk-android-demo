@@ -47,7 +47,7 @@ import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.internal.lyric.LyricLoadInterface
-import com.tencent.qqmusic.sharedfileaccessor.SPBridge
+import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusictvsdk.internal.lyric.LyricManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -63,7 +63,7 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
     }
 
     val sharedPreferences: SharedPreferences? = try {
-        SPBridge.get().getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
     } catch (e: Exception) {
         QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
         null

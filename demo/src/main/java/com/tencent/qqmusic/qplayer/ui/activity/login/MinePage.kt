@@ -59,7 +59,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.PartnerLoginActivity
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderPage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
-import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPage
+import com.tencent.qqmusic.qplayer.ui.activity.mv.MVResDetailPage
 import com.tencent.qqmusic.qplayer.ui.activity.person.MinePageNew
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.search.singerPage
@@ -316,7 +316,7 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
         when (index) {
             0 -> {
                 viewModel.fetchFavMVList()
-                MVPage(viewModel.mvFavList)
+                MVResDetailPage(viewModel.mvFavList)
             }
 
             1 -> {

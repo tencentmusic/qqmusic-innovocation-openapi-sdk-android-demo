@@ -73,6 +73,7 @@
         <activity android:name=".ui.activity.login.WebViewActivity" />
         <activity android:name=".ui.activity.search.SearchPageActivity" />
         <activity android:name=".ui.activity.download.DownloadActivity"/>
+        <activity android:name=".ui.activity.aiaccompany.AiListenTogetherActivity"/>
     </application>
 
 </manifest>

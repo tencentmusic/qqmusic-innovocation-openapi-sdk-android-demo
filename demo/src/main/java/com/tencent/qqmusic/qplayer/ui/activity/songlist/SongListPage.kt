@@ -55,13 +55,14 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
-import com.tencent.qqmusic.qplayer.core.player.MusicPlayList
+import com.tencent.qqmusic.qplayer.core.player.playlist.MusicPlayList
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity.Companion.MV_ID
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
+import com.tencent.qqmusic.qplayer.utils.hasWanos
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -160,8 +161,8 @@ fun playlistHeader(songs: List<SongInfo>, playListType: Int = 0, playListTypeId:
     val playlistScope = rememberCoroutineScope()
     playlistScope.launch(Dispatchers.IO) {
         when (playListType) {
-            MusicPlayList.PLAY_LIST_ALBUM_TYPE -> {
-                OpenApiSDK.getOpenApi().fetchAlbumDetail(albumId = "$playListTypeId") { resp ->
+            MusicPlayList.Companion.PLAY_LIST_ALBUM_TYPE -> {
+                OpenApiSDK.getOpenApi().fetchAlbumDetail(albumId = "$playListTypeId") { resp->
                     if (resp.isSuccess()) {
                         collectState.value = resp.data?.favState == 1
                     }
@@ -210,6 +211,7 @@ fun playlistHeader(songs: List<SongInfo>, playListType: Int = 0, playListTypeId:
                             // nothing.
                         } else {
                             collectState.value = !collectState.value
+                            ToastUtils.showShort("收藏失败,code=${it.ret},msg=${it.errorMsg}")
                         }
                     }
                     when (playListType) {
@@ -295,17 +297,26 @@ private fun collectSongs(
                         folderId,
                         midList = songMids
                     ) { resp ->
-                        Log.i(TAG, "del resp: $resp")
+                        if(resp.isSuccess()){
+                            collectState.value = !collectState.value
+                        }else{
+                            ToastUtils.showShort("code=${resp.ret},msg=${resp.errorMsg}")
+                            Log.e(TAG, "del resp: $resp")
+                        }
                     }
                 } else {
                     OpenApiSDK.getOpenApi().addSongToFolder(
                         folderId,
                         midList = songMids
                     ) { resp ->
-                        Log.i(TAG, "add resp: $resp")
+                        if(resp.isSuccess()){
+                            collectState.value = !collectState.value
+                        }else{
+                            ToastUtils.showShort("code=${resp.ret},msg=${resp.errorMsg}")
+                            Log.e(TAG, "add resp: $resp")
+                        }
                     }
                 }
-                collectState.value = !collectState.value
             }
         }
     }
@@ -413,6 +424,13 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                             .width(18.dp)
                             .height(10.dp)
                     )
+
+                } else if (song.hasWanos()) {
+                    Image(
+                        painter = painterResource(R.drawable.acion_icon_quality_wanos), contentDescription = null, modifier = Modifier
+                            .width(18.dp)
+                            .height(10.dp)
+                    )
                 }
             }
         }
@@ -431,7 +449,7 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
             )
         }
 
-        if ((song.mvId ?: 0) > 0) {
+        if (song.mvVid?.isNotEmpty() == true) {
             Image(
                 painter = painterResource(R.drawable.mv_song_list_tip_icon),
                 contentDescription = null,
@@ -446,9 +464,13 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                     .height(40.dp)
                     .padding(10.dp)
                     .clickable {
-                        activity.startActivity(Intent(activity, MVPlayerActivity::class.java).apply {
-                            putExtra(MV_ID, song.mvId.toString())
-                        })
+                        activity.startActivity(
+                            Intent(
+                                activity,
+                                MVPlayerActivity::class.java
+                            ).apply {
+                                putExtra(MV_ID, song.mvVid.toString())
+                            })
                     }
             )
         }

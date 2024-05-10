@@ -7,14 +7,14 @@
     android:layout_height="match_parent"
     tools:context=".ui.activity.mv.MVPlayerActivity">
 
-
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/view_pager"
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/mv_list_compose_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

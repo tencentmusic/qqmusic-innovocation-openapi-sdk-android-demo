@@ -40,6 +40,7 @@ fun areaScreen(homeViewModel: HomeViewModel) {
         "Hires专区",
         "Dolby专区",
         "臻品全景声专区",
+        "Wanos专区",
         "免登录专区",
         "场景歌单",
         "新碟"
@@ -88,16 +89,18 @@ fun areaScreen(homeViewModel: HomeViewModel) {
         2 -> {
             AreaSectionDetailPage(AreaId.AreaGalaxy, homeViewModel)
         }
-
         3 -> {
+            AreaSectionDetailPage(AreaId.Wanos, homeViewModel)
+        }
+        4 -> {
             SongListPage(Pager(PagingConfig(pageSize = 20)) {
                 FreeSongPagingSource()
             }.flow)
         }
-        4 -> {
+        5 -> {
             categoryFoldersPage(homeViewModel = homeViewModel, true)
         }
-        5 -> {
+        6 -> {
             NewAlbumPage(homeViewModel)
         }
     }

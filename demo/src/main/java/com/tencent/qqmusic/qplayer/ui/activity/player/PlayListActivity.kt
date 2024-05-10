@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Button
 import androidx.compose.material.Checkbox
 import androidx.compose.material.Divider
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -127,7 +128,13 @@ class PlayListActivity : ComponentActivity() {
                     end.linkTo(parent.end)
                     bottom.linkTo(listContent.top)
                 }) {
+                Text(
+                    text = "共${songList.size}首"
+                )
                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                    Text(modifier = Modifier.align(Alignment.CenterVertically).padding(end = 40.dp),
+                        text = "${OpenApiSDK.getPlayerApi().getPlayList().size}首歌")
+
                     if (!editFlag.value) {
                         Button(onClick = {
                             editFlag.value = true

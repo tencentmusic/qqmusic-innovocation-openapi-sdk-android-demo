@@ -7,7 +7,7 @@ buildscript {
     repositories rootProject.ext.MAVEN_REPOSITORIES
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.1.3'
+        classpath 'com.android.tools.build:gradle:7.4.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${rootProject.ext.kotlin_version}"
         classpath 'org.jetbrains.dokka:dokka-gradle-plugin:1.5.0'
         classpath 'com.github.kezong:fat-aar:1.3.6'

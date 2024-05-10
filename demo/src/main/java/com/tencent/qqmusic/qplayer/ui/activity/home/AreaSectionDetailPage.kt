@@ -1,7 +1,10 @@
 package com.tencent.qqmusic.qplayer.ui.activity.main
 
 import android.app.Activity
+import android.app.Dialog
 import android.content.Intent
+import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -61,8 +64,53 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                 areaShelves = it.shelves
             }
         })
+    }else if (areaId == AreaId.Wanos){
+        viewModel.fetchWanosSection(callback = {
+            if (it != null) {
+                areaAreaTitle = it.title
+                areaAreaDesc = it.desc
+                areaAreaCover = it.cover
+                areaShelves = it.shelves
+            }
+        })
     }
 
+    if (viewModel.showDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                viewModel.showDialog = false
+            },
+            title = {
+                Text(text = "恭喜你！")
+            },
+            text = {
+                Text(
+                    "棒！获取WANOS试听权益！"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.openFreeLimitedTimeAuth() {
+                            viewModel.showDialog = !it.isSuccess()
+                            Toast.makeText(activity, "WANOS试听权益领取成功！", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) {
+                    Text("我要领取")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.showDialog = false
+                    }
+                ) {
+                    Text("Dismiss")
+                }
+            }
+        )
+    }
 
     LazyColumn {
         items(areaShelves.count()) { it ->
@@ -95,9 +143,11 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                         else -> ""},
                     color =  Color.Gray,
                     fontSize = 18.sp,
-                    modifier = Modifier.wrapContentWidth().clickable {
-                        AreaListActivity.start(activity, areaId, shelf.shelfType, shelf.shelfId, shelf.shelfTitle)
-                    }
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .clickable {
+                            AreaListActivity.start(activity, areaId, shelf.shelfType, shelf.shelfId, shelf.shelfTitle)
+                        }
                 )
 
             }
@@ -114,8 +164,12 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                                     .wrapContentWidth()
                                     .padding(16.dp)
                                     .clickable {
-                                        activity.startActivity(Intent(activity, SongListActivity::class.java)
-                                            .putExtra(SongListActivity.KEY_SONG, songId))
+                                        activity.startActivity(
+                                            Intent(
+                                                activity,
+                                                SongListActivity::class.java
+                                            ).putExtra(SongListActivity.KEY_SONG, songId)
+                                        )
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -133,8 +187,12 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                                     .wrapContentWidth()
                                     .padding(16.dp)
                                     .clickable {
-                                        activity.startActivity(Intent(activity, FolderActivity::class.java)
-                                            .putExtra(FolderActivity.KEY_FOLDER_ID, folderId))
+                                        activity.startActivity(
+                                            Intent(
+                                                activity,
+                                                FolderActivity::class.java
+                                            ).putExtra(FolderActivity.KEY_FOLDER_ID, folderId)
+                                        )
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -152,8 +210,12 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                                     .wrapContentWidth()
                                     .padding(16.dp)
                                     .clickable {
-                                        activity.startActivity(Intent(activity, AlbumActivity::class.java)
-                                            .putExtra(AlbumActivity.KEY_ALBUM_ID, albumId))
+                                        activity.startActivity(
+                                            Intent(
+                                                activity,
+                                                AlbumActivity::class.java
+                                            ).putExtra(AlbumActivity.KEY_ALBUM_ID, albumId)
+                                        )
                                     },
                                 contentAlignment = Alignment.Center
                             ) {

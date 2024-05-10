@@ -43,7 +43,7 @@ fun MVPage(list: List<SearchMVInfo>) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 this.items(list.size) { index ->
                     val mvInfo = list.elementAtOrNull(index) ?: return@items
-                    MVSearchItem(data = mvInfo, list)
+                    MVSearchItem(data = mvInfo)
                 }
             }
         }
@@ -52,12 +52,12 @@ fun MVPage(list: List<SearchMVInfo>) {
 }
 
 @Composable
-fun MVSearchItem(data: SearchMVInfo, list: List<SearchMVInfo>) {
+fun MVSearchItem(data: SearchMVInfo) {
     val activity = LocalContext.current as Activity
     Box(modifier = Modifier.clickable {
         activity.startActivity(
             Intent(activity, MVPlayerActivity::class.java).apply {
-                putExtra(MVPlayerActivity.MV_ID, data.mvId.toString())
+                putExtra(MVPlayerActivity.MV_ID, data.mvVid)
             })
     }) {
         Row(

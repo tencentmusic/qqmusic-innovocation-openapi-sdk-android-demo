@@ -4,9 +4,17 @@ import android.app.Activity
 import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.*
+import androidx.compose.material.ScrollableTabRow
+import androidx.compose.material.Tab
+import androidx.compose.material.TabRowDefaults
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -21,6 +29,7 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderActivity
+import com.tencent.qqmusic.qplayer.ui.activity.mv.MVFunctionPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -47,8 +56,8 @@ fun HomePage(homeViewModel: HomeViewModel) {
 @Composable
 fun homePageTabs(homeViewModel: HomeViewModel) {
     val pages = mutableListOf(
-        "分类歌单", "AI歌单", "排行榜",
-        "专区", "长音频"
+        "分类歌单", "视频", "排行榜",
+        "专区", "长音频", "AI歌单",
     )
 
     val pagerState = rememberPagerState()
@@ -89,8 +98,7 @@ fun homePageTabs(homeViewModel: HomeViewModel) {
             }
 
             1 -> {
-                aiIndex.value = Base
-                AIFolder(homeViewModel = homeViewModel)
+                MVFunctionPage()
             }
 
             2 -> {
@@ -103,6 +111,11 @@ fun homePageTabs(homeViewModel: HomeViewModel) {
 
             4 -> {
                 LongAudioPage(homeViewModel = homeViewModel)
+            }
+
+            5 -> {
+                aiIndex.value = Base
+                AIFolder(homeViewModel = homeViewModel)
             }
         }
     }

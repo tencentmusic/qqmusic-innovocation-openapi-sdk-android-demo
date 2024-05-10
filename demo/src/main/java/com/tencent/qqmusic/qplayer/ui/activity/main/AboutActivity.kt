@@ -29,6 +29,7 @@ import com.tencent.qqmusic.openapisdk.business_common.cgi.CgiConfig
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.BuildConfig
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.baselib.util.deviceid.DeviceInfoManager
 
 class AboutActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +53,7 @@ fun AboutScreen() {
         CopyableText(title = "包名", content = "com.tencent.qqmusicrecognition")
         CopyableText(title = "SDK版本号",content = BuildConfig.VERSION_NAME)
         CopyableText(title = "uin",content = CgiConfig.uin())
+        CopyableText(title = "qime36",content = DeviceInfoManager.q36)
         CopyableText(title = "协议",content = if (OpenApiSDK.isNewProtocol) "新协议" else "旧协议")
         Button(onClick = {
             OpenApiSDK.getLogApi().uploadLog(activity) { code, tips, uuid ->
