@@ -97,10 +97,6 @@ dependencies {
     if (!isLiteSDK.toBoolean()) {
         implementation "com.tencent.qqmusic.openapi:openapi-sdk:$sdk_version"
     }
-    implementation("com.tencent.qqmusic.modular:framework-common:0.7.7") {
-        exclude group: 'com.tencent.qqmusic', module: 'logproxy'
-        exclude group: 'com.tencent.qqmusic.modular', module: 'framework-log-proxy'
-    }
     implementation 'com.tencent.mm.opensdk:wechat-sdk-android-without-mta:6.8.0'
 
     implementation 'com.google.android.material:material:1.4.0'
