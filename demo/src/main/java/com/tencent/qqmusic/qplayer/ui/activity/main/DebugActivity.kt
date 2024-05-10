@@ -44,10 +44,9 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.OpenApiDemoActivity
-import com.tencent.qqmusic.sharedfileaccessor.SPBridge
-import com.tme.fireeye.crash.export.eup.CrashReport
 
 class DebugActivity : ComponentActivity() {
 
@@ -67,7 +66,7 @@ fun DebugScreen() {
     val strict = "严格模式"
     val no_strict = "无检查模式"
     val sharedPreferences: SharedPreferences? = try {
-        SPBridge.get().getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
     } catch (e: Exception) {
         QLog.e("DebugScreen", "getSharedPreferences error e = ${e.message}")
         null
@@ -201,28 +200,6 @@ fun DebugScreen() {
             }
         }, modifier = Modifier.padding(padding)) {
             Text(text = "播放进程立刻Crash！！")
-        }
-
-        Row(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Button(onClick = {
-                CrashReport.testJavaCrash()
-            }, modifier = Modifier.padding(padding)) {
-                Text(text = "立即Crash！")
-            }
-            Button(onClick = {
-                CrashReport.testNativeCrash()
-            }, modifier = Modifier.padding(padding)) {
-                Text(text = "Native")
-            }
-            Button(onClick = {
-                CrashReport.testANRCrash()
-            }, modifier = Modifier.padding(padding)) {
-                Text(text = "ANR")
-            }
         }
 
 
