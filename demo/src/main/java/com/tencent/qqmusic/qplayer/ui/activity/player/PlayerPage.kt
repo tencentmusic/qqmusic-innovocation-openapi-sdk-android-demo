@@ -22,6 +22,8 @@ import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.rememberImagePainter
+import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
@@ -70,11 +73,14 @@ fun PlayerScreen(observer: PlayerObserver) {
 fun PlayerPage(observer: PlayerObserver) {
     val activity = LocalContext.current as Activity
     val currSong = observer.currentSong
+    var curSongInfoChanged = observer.curSongInfoChanged
     val currState = observer.currentState
     val currMode = observer.currentMode
     val playStateText = observer.playStateText
     var quality = observer.mCurrentQuality
-
+    val collectState = remember {
+        mutableStateOf(currSong?.hot == 1)
+    }
     val modeOrder =
         mutableListOf(PlayerEnums.Mode.LIST, PlayerEnums.Mode.ONE, PlayerEnums.Mode.SHUFFLE)
     val lyricView = lyric() {
@@ -146,15 +152,13 @@ fun PlayerPage(observer: PlayerObserver) {
                 modifier = Modifier
                     .size(50.dp)
                     .clickable {
-                        QualityAlert.showQualityAlert(
-                            activity, isDownload = false,
-                            {
-                                OpenApiSDK
-                                    .getPlayerApi()
-                                    .setCurrentPlaySongQuality(it)
-                            }, {
-                                quality = it
-                            })
+                        QualityAlert.showQualityAlert(activity, isDownload = false, {
+                            OpenApiSDK
+                                .getPlayerApi()
+                                .setCurrentPlaySongQuality(it)
+                        }, {
+                            quality = it
+                        })
                     }
             )
 
@@ -169,6 +173,7 @@ fun PlayerPage(observer: PlayerObserver) {
                     .size(45.dp)
                     .clickable(enabled = currSong != null) {
                         if (currSong != null) {
+                            Log.i(TAG, "currSong ${currSong.extraInfo?.trace}")
                             QualityAlert.showQualityAlert(
                                 activity, isDownload = true, {
                                     OpenApiSDK
@@ -178,6 +183,60 @@ fun PlayerPage(observer: PlayerObserver) {
                                 }, {
                                     quality = it
                                 })
+                        }
+                    }
+            )
+
+            Image(painter = painterResource(if (collectState.value)
+                R.drawable.icon_collect
+            else
+                R.drawable.icon_uncollect),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(45.dp)
+                    .clickable(enabled = currSong != null) {
+                        if (currSong != null) {
+                            Log.i(TAG, "currSong ${currSong.extraInfo?.trace}")
+                            OpenApiSDK
+                                .getOpenApi()
+                                .fetchPersonalFolder {
+                                    if (it.isSuccess()) {
+                                        val folderId = it.data?.firstOrNull { folder -> folder.name == "我喜欢" }?.id
+                                            ?: return@fetchPersonalFolder
+                                        if (collectState.value) {
+                                            OpenApiSDK
+                                                .getOpenApi()
+                                                .deleteSongFromFolder(
+                                                    folderId,
+                                                    midList = listOf(currSong.songMid!!)
+                                                ) { resp ->
+                                                    if (resp.isSuccess()) {
+                                                        collectState.value = !collectState.value
+                                                    } else {
+                                                        ToastUtils.showShort("code=${resp.ret},msg=${resp.errorMsg}")
+                                                        Log.e(
+                                                            TAG,
+                                                            "del resp: $resp"
+                                                        )
+                                                    }
+                                                }
+                                        } else {
+                                            OpenApiSDK
+                                                .getOpenApi()
+                                                .addSongToFolder(
+                                                    folderId,
+                                                    songList = listOf(currSong)
+                                                ) { resp ->
+                                                    if (resp.isSuccess()) {
+                                                        collectState.value = !collectState.value
+                                                    } else {
+                                                        ToastUtils.showShort("code=${resp.ret},msg=${resp.errorMsg}")
+                                                        Log.e(TAG, "add resp: $resp")
+                                                    }
+                                                }
+                                        }
+                                    }
+                                }
                         }
                     }
             )

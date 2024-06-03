@@ -264,17 +264,15 @@ fun OtherScreen() {
             }
         }
 
-        val needDowngradeExcellentQuality: MutableState<Boolean> = remember {
-            mutableStateOf(
-                SimpleMMKV.getCommonMMKV()
-                    .getBoolean(SpKeyConfig.KEY_NEED_DOWNGRADE_EXCELLENT_QUALITY, true)
-            )
+        val enableMediaButton: MutableState<Boolean> = remember {
+            mutableStateOf(sharedPreferences?.getBoolean("enableMediaButton", true) ?: true)
         }
-        SingleItem(title = "降级到臻品 2.0音质开关", item = if (needDowngradeExcellentQuality.value) "开启" else "关闭") {
-            val next_value = needDowngradeExcellentQuality.value.not()
-            OpenApiSDK.getPlayerApi().needDowngradeExcellentQuality(next_value)
-            Toast.makeText(activity, "设置${if(next_value) "开启" else "关闭"}成功，立即生效", Toast.LENGTH_SHORT).show()
-            needDowngradeExcellentQuality.value = next_value
+        SingleItem(title = "是否处理MediaButton事件", item = if (enableMediaButton.value) "开启" else "关闭") {
+            val nextValue = enableMediaButton.value.not()
+            sharedPreferences?.edit()?.putBoolean("enableMediaButton", nextValue)?.apply()
+            enableMediaButton.value = nextValue
+            OpenApiSDK.getPlayerApi().setEnableMediaButton(enableMediaButton.value)
+            Toast.makeText(activity, "设置成功，立即生效", Toast.LENGTH_SHORT).show()
         }
 
         Button(onClick = {

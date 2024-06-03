@@ -60,6 +60,8 @@ import com.tencent.qqmusic.openapisdk.business_common.event.event.TransactionPus
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.ISDKSpecialNeedInterface
 import com.tencent.qqmusic.openapisdk.core.player.PlayerModuleFunctionConfigParam
+import com.tencent.qqmusic.openapisdk.hologram.HologramManager
+import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
@@ -223,9 +225,6 @@ class DemoActivity : ComponentActivity() {
             }
         })
 
-
-        OpenApiSDK.getPlayerApi().setEnableBluetoothListener(false)
-
         PlayerObserver.registerSongEvent()
     }
 
@@ -305,6 +304,10 @@ fun BottomNavigationBar(navController: NavController) {
                 alwaysShowLabel = true,
                 selected = currentRoute == item.route,
                 onClick = {
+                    HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                        IFireEyeXpmService.XpmEvent.PAGE_SCROLL,
+                        item.title
+                    )
                     navController.navigate(item.route) {
                         // Pop up to the start destination of the graph to
                         // avoid building up a large stack of destinations

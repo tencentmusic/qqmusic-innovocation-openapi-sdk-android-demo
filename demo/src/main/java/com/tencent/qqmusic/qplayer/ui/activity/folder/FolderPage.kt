@@ -8,9 +8,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -19,6 +23,8 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
+import com.tencent.qqmusic.openapisdk.hologram.HologramManager
+import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.openapisdk.model.Folder
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
@@ -58,7 +64,20 @@ fun FolderScreen(folders: List<Folder>) {
 fun FolderPage(folders: List<Folder>) {
     val activity = LocalContext.current as Activity
 
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    val scrollState = rememberLazyListState()
+    if (scrollState.isScrollInProgress){
+        DisposableEffect(key1 = Unit) {
+            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                IFireEyeXpmService.XpmEvent.LIST_SCROLL, "FolderPage", 1
+            )
+            onDispose {
+                HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                    IFireEyeXpmService.XpmEvent.LIST_SCROLL, "FolderPage", 0
+                )
+            }
+        }
+    }
+    LazyColumn(state = scrollState, modifier = Modifier.fillMaxSize()) {
         items(folders.size) { index ->
             val folder = folders.getOrNull(index) ?: return@items
             val folderDeleted = folder.deleteStatus == 1
@@ -68,8 +87,13 @@ fun FolderPage(folders: List<Folder>) {
                     .padding(8.dp)
                     .clickable {
                         if (folderDeleted) {
-                            Toast.makeText(activity, "原歌单已删除，无法请求详情", Toast.LENGTH_SHORT).show()
+                            Toast
+                                .makeText(activity, "原歌单已删除，无法请求详情", Toast.LENGTH_SHORT)
+                                .show()
                         } else {
+                            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                                IFireEyeXpmService.XpmEvent.CLICK, "FolderPage_SongListActivity"
+                            )
                             activity.startActivity(
                                 Intent(activity, SongListActivity::class.java)
                                     .putExtra(SongListActivity.KEY_FOLDER_ID, folder.id)

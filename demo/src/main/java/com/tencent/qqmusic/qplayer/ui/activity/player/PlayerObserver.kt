@@ -45,6 +45,7 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
     var currentState: Int? by mutableStateOf<Int?>(null)
     var currentMode: Int by mutableStateOf(OpenApiSDK.getPlayerApi().getPlayMode())
     var mCurrentQuality: Int? by mutableStateOf<Int?>(null)
+    var curSongInfoChanged: Int by mutableStateOf(0)
 
     var playStateText: String by mutableStateOf<String>("播放状态: Idle")
     var playPosition: Float by mutableStateOf(0f)
@@ -156,7 +157,7 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                         AiAccompanyHelper.handleSongChangeAndPlayVoice(curr)
                         val currentPlaySongQuality =
                             OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()
-                        Log.d(TAG, "play song changed: $curr")
+                        Log.d(TAG, "play song changed: $curr, filePath: ${curr?.filePath}")
                         Log.d(TAG, "play currentPlaySongQuality: $currentPlaySongQuality")
 
                         if (currentPlaySongQuality != null) {
@@ -309,6 +310,4 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                }
         }
     }
-
-
 }

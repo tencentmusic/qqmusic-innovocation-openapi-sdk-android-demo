@@ -135,6 +135,67 @@
 
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="播放控制:" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/fetchPlayDaily30"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="播放每日30首" />
+
+            <Button
+                android:id="@+id/fetchPlayRecNewSongs"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="播放新歌推荐" />
+
+            <Button
+                android:id="@+id/fetchPersonalRecommendSong"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="播放猜你喜欢歌曲" />
+
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/edt_Similar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="输入一个songId/mid,用于推荐相似单曲" />
+
+        <Button
+            android:id="@+id/fetchPlaySimilarSongs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="播放相似单曲" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/fetchHomeRecSongList"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="播放首页推荐歌单" />
+
+            <Button
+                android:id="@+id/fetchHomeRecSongs"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="播放首页推荐单曲" />
+        </LinearLayout>
+
         <Button
             android:id="@+id/stopPlay"
             android:layout_width="wrap_content"

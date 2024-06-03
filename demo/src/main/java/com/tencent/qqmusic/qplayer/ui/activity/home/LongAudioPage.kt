@@ -33,6 +33,8 @@ import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
+import com.tencent.qqmusic.openapisdk.hologram.HologramManager
+import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.openapisdk.model.AreaShelf
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.SongInfo
@@ -109,6 +111,9 @@ fun LongAudioPage(homeViewModel: HomeViewModel) {
 //                Log.i(TAG, "一级tab click")
 //            }
         ) {
+            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                IFireEyeXpmService.XpmEvent.PAGE_SCROLL, "LongAudioPage_TabLevel1_${pagerState.currentPage}"
+            )
             LongAudioCategorySecondPage(categories, pagerState.currentPage, homeViewModel)
     }
 }}
@@ -172,6 +177,9 @@ fun LongAudioCategorySecondPage(categories: List<Category>, index: Int, homeView
                 }
         ) { page ->
             Log.i(TAG, "long audio: current index $index, index2:${pagerState2.currentPage}")
+            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                IFireEyeXpmService.XpmEvent.PAGE_SCROLL, "LongAudioPage_TabLevel2_${pagerState2.currentPage}"
+            )
 
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
@@ -223,7 +231,20 @@ fun LongAudioCategoryPageDetail(flow: Flow<PagingData<AreaShelf>>? = null, categ
     if (shelfes.itemCount == 0) return
     val activity = LocalContext.current as Activity
     val width = UiUtils.getDisplayWidth(activity)
-    LazyColumn(state = rememberLazyListState(), modifier = Modifier.fillMaxSize()) {
+    val scrollState = rememberLazyListState()
+    if (scrollState.isScrollInProgress) {
+        DisposableEffect(key1 = Unit) {
+            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                IFireEyeXpmService.XpmEvent.LIST_SCROLL, "LongAudioCategoryPageDetail_${categoryId}_${subCategoryId}", 1
+            )
+            onDispose {
+                HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                    IFireEyeXpmService.XpmEvent.LIST_SCROLL, "LongAudioCategoryPageDetail_${categoryId}_${subCategoryId}", 0
+                )
+            }
+        }
+    }
+    LazyColumn(state = scrollState, modifier = Modifier.fillMaxSize()) {
         this.items(shelfes) { shelf ->
             shelf?: return@items
             val albums = shelf.shelfItems.map { it.album }
@@ -250,16 +271,28 @@ fun LongAudioCategoryPageDetail(flow: Flow<PagingData<AreaShelf>>? = null, categ
                         .align(Alignment.BottomEnd)
                         .clickable {
                             if (shelf.jumpInfo?.interfaceName?.isNullOrEmpty() == true) {
-                                Toast.makeText(activity, "interfaceName为空", Toast.LENGTH_SHORT).show()
+                                Toast
+                                    .makeText(activity, "interfaceName为空", Toast.LENGTH_SHORT)
+                                    .show()
                                 return@clickable
                             }
                             shelf.jumpInfo?.interfaceName?.apply {
                                 if (this.equals("fetchCategoryPageModuleContentLongAudio")) {
-                                    LongAudioModuleContentActivity.start(activity, shelf.jumpInfo?.args?.getOrNull(0)?.intVal ?: 0, shelf.shelfTitle)
+                                    LongAudioModuleContentActivity.start(
+                                        activity,
+                                        shelf.jumpInfo?.args?.getOrNull(0)?.intVal ?: 0,
+                                        shelf.shelfTitle
+                                    )
                                 } else if (this.equals("fetchAlbumListOfLongAudioByCategory")) {
                                     LongAudioCategoryActivity.start(activity, "", shelf.jumpInfo)
                                 } else {
-                                    Toast.makeText(activity, "interfaceName不支持", Toast.LENGTH_SHORT).show()
+                                    Toast
+                                        .makeText(
+                                            activity,
+                                            "interfaceName不支持",
+                                            Toast.LENGTH_SHORT
+                                        )
+                                        .show()
                                 }
                             }
                         }
@@ -274,7 +307,9 @@ fun LongAudioCategoryPageDetail(flow: Flow<PagingData<AreaShelf>>? = null, categ
                         .wrapContentSize()
                         .padding(padding)
                         .clickable {
-
+                            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                                IFireEyeXpmService.XpmEvent.CLICK, "LongAudioPage_AlbumActivity"
+                            )
                             activity.startActivity(
                                 Intent(activity, AlbumActivity::class.java)
                                     .putExtra(AlbumActivity.KEY_ALBUM_ID, album.id)

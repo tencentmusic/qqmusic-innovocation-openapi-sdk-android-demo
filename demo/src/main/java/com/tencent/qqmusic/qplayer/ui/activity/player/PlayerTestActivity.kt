@@ -52,7 +52,7 @@ class PlayerTestActivity : ComponentActivity() {
 
     private var reInitPlayerEnv: Button? = null
 
-    @SuppressLint("MissingInflatedId")
+    @SuppressLint("MissingInflatedId","SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(
@@ -110,12 +110,12 @@ class PlayerTestActivity : ComponentActivity() {
                 ) {
                     if (it.isSuccess()) {
                         val ret = OpenApiSDK.getPlayerApi().playSongs(it.data!!, it.data!!.indices.random())
-                        Handler(Looper.getMainLooper()).postDelayed(Runnable {
+                        Handler(Looper.getMainLooper()).postDelayed({
                             //OpenApiSDK.getPlayerApi().seek(301318)
                         }, 10)
                         Log.d(TAG, "playsongs ret = $ret")
                         finish()
-                        Handler(Looper.getMainLooper()).postDelayed(Runnable {
+                        Handler(Looper.getMainLooper()).postDelayed({
                             startActivity(Intent(this, PlayerActivity::class.java))
                         }, 1000)
                     } else {
@@ -181,7 +181,7 @@ class PlayerTestActivity : ComponentActivity() {
         val edtMVCahce = findViewById<EditText>(R.id.edt_mv_cache).apply {
             hint = (sharedPreferences?.getInt("MV_CACHE", 500) ?: 500).toString()
         }
-        val btnMVCache = findViewById<Button>(R.id.btn_mv_cache).apply {
+        findViewById<Button>(R.id.btn_mv_cache).apply {
             setOnClickListener {
                 val cacheSize = edtMVCahce.text.toString().toIntOrNull() ?: 500
                 sharedPreferences?.edit()?.putInt("MV_CACHE", cacheSize)?.apply()
@@ -192,6 +192,7 @@ class PlayerTestActivity : ComponentActivity() {
         playControllerView()
     }
 
+    @SuppressLint("SetTextI18n")
     private fun refresh() {
         val textQuality = findViewById<TextView>(R.id.text_prefre_quality)
 
@@ -362,6 +363,144 @@ class PlayerTestActivity : ComponentActivity() {
     }
 
     private fun playControllerView(){
+        findViewById<Button>(R.id.fetchPlayDaily30).setOnClickListener {
+            thread {
+                OpenApiSDK.getOpenApi().fetchDailyRecommendSong {
+                    if (it.isSuccess()){
+                        AppScope.launchIO {
+                            OpenApiSDK.getPlayerApi().playSongs(it.data!!)
+                        }
+                        Toast.makeText(this,"播放每日30首成功",Toast.LENGTH_SHORT).show()
+                    }else{
+                        Toast.makeText(this,it.errorMsg,Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+        findViewById<Button>(R.id.fetchPlayRecNewSongs).setOnClickListener {
+            thread {
+                val tagMapList = mapOf(12 to "内地", 9 to "韩国", 13 to "港台",
+                    3 to "欧美", 8 to "日本", 1 to "最新")
+                val tagId = tagMapList.keys.random()
+                //12:内地；9:韩国；13:港台；3:欧美；8:日本 1:最新
+                OpenApiSDK.getOpenApi().fetchNewSongRecommend(
+                    tag = tagId,
+                    callback = {
+                        if (it.isSuccess()){
+                            AppScope.launchIO {
+                                OpenApiSDK.getPlayerApi().playSongs(it.data!!)
+                            }
+                            Toast.makeText(this,"播放新歌推荐成功:${tagMapList[tagId]}", Toast.LENGTH_SHORT).show()
+                        }else{
+                            Toast.makeText(this,it.errorMsg,Toast.LENGTH_SHORT).show()
+                        }
+                })
+            }
+        }
+        findViewById<Button>(R.id.fetchPlaySimilarSongs).setOnClickListener {
+            thread {
+                val edtSimilar = findViewById<EditText>(R.id.edt_Similar)
+                val edtSimilarText = edtSimilar.text.toString()
+                // 0039eBnn3dVsNo
+                var songId: Long? = null
+                var songMid: String? = null
+                val id = edtSimilarText.toLongOrNull()
+                if (id != null) {
+                    songId=id
+                } else {
+                    songMid=edtSimilarText
+                }
+                val hasRecList:List<Long> = OpenApiSDK.getPlayerApi().getPlayList().map { it.songId }
+                OpenApiSDK.getOpenApi().fetchSimilarSong(
+                    songId = songId,
+                    mid = songMid,
+                    hasRecommendList = hasRecList,
+                    callback = {
+                        if (it.isSuccess()){
+                            AppScope.launchIO {
+                                OpenApiSDK.getPlayerApi().playSongs(it.data!!)
+                            }
+                            Toast.makeText(this,"播放相似单曲成功",Toast.LENGTH_SHORT).show()
+                        }else{
+                            Toast.makeText(this,it.errorMsg,Toast.LENGTH_SHORT).show()
+                        }
+                })
+            }
+        }
+        findViewById<Button>(R.id.fetchPersonalRecommendSong).setOnClickListener {
+            thread {
+                OpenApiSDK.getOpenApi().fetchPersonalRecommendSong {
+                    if (it.isSuccess()){
+                        AppScope.launchIO {
+                            OpenApiSDK.getPlayerApi().playSongs(it.data!!)
+                        }
+                        Toast.makeText(this,"播放猜你喜欢成功",Toast.LENGTH_SHORT).show()
+                    }else{
+                        Toast.makeText(this,it.errorMsg,Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+        findViewById<Button>(R.id.fetchHomeRecSongs).setOnClickListener {
+            thread {
+                OpenApiSDK.getOpenApi().fetchHomepageRecommendation( listOf(200)) { homeRce ->
+                    if (homeRce.isSuccess()) {
+                        val songIds = mutableListOf<Long>()
+                        homeRce.data!!.shelfList.forEach {  shelf->
+                            shelf.cardList.forEach {card->
+                                val id = card.id.toLongOrNull()
+                                if(id!=null){
+                                    songIds.add(id)
+                                }
+                            }
+                        }
+                        if (songIds.isEmpty()){
+                            Toast.makeText(this, "首页推荐歌曲数为0", Toast.LENGTH_SHORT).show()
+                            return@fetchHomepageRecommendation
+                        }
+                        OpenApiSDK.getOpenApi().fetchSongInfoBatch(songIds, callback = {
+                            if (it.isSuccess()){
+                                AppScope.launchIO {
+                                    OpenApiSDK.getPlayerApi().playSongs(it.data!!)
+                                }
+                                Toast.makeText(this, "播放首页推荐单曲成功", Toast.LENGTH_SHORT).show()
+                            }else{
+                                Toast.makeText(this, it.errorMsg, Toast.LENGTH_SHORT).show()
+                            }
+                        })
+
+                    }else{
+                        Toast.makeText(this, homeRce.errorMsg, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+        findViewById<Button>(R.id.fetchHomeRecSongList).setOnClickListener {
+            thread {
+                OpenApiSDK.getOpenApi().fetchHomepageRecommendation( listOf(500)) { homeRce ->
+                    if (homeRce.isSuccess()) {
+                        val rcItemId = homeRce.data!!.rcItemList.firstOrNull()
+                        if (rcItemId==null){
+                            Toast.makeText(this, "首页推荐歌单为空", Toast.LENGTH_SHORT).show()
+                            return@fetchHomepageRecommendation
+                        }
+                        OpenApiSDK.getOpenApi().fetchSongOfFolder(rcItemId.toString(), callback = {
+                            if (it.isSuccess()){
+                                AppScope.launchIO {
+                                    OpenApiSDK.getPlayerApi().playSongs(it.data!!)
+                                }
+                                Toast.makeText(this, "播放首页推荐歌单成功", Toast.LENGTH_SHORT).show()
+                            }else{
+                                Toast.makeText(this, it.errorMsg, Toast.LENGTH_SHORT).show()
+                            }
+                        })
+                    }else{
+                        Toast.makeText(this, homeRce.errorMsg, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+
         findViewById<Button>(R.id.stopPlay).setOnClickListener {
             AppScope.launchIO {
                 OpenApiSDK.getPlayerApi().stop()

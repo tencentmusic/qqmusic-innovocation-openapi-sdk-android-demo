@@ -97,6 +97,10 @@ dependencies {
     if (!isLiteSDK.toBoolean()) {
         implementation "com.tencent.qqmusic.openapi:openapi-sdk:$sdk_version"
     }
+    implementation("com.tencent.qqmusic.modular:framework-common:0.7.7") {
+        exclude group: 'com.tencent.qqmusic', module: 'logproxy'
+        exclude group: 'com.tencent.qqmusic.modular', module: 'framework-log-proxy'
+    }
     implementation 'com.tencent.mm.opensdk:wechat-sdk-android-without-mta:6.8.0'
 
     implementation 'com.google.android.material:material:1.4.0'
@@ -134,6 +138,8 @@ dependencies {
     implementation 'com.yuyh.json:jsonviewer:1.0.6'
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
 
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.8.1'
+    if (!rootProject.ext.isDebugBuild()) {
+        debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.8.1'
+    }
 }
 

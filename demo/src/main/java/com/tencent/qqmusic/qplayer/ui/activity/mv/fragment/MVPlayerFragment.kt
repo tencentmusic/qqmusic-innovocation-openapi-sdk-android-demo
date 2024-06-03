@@ -36,6 +36,8 @@ import com.tencent.qqmusic.edgemv.player.PlayError
 import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
+import com.tencent.qqmusic.openapisdk.hologram.HologramManager
+import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.player.PlayerState
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
@@ -499,6 +501,9 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
             }
 
             PlayerState.PREPARED -> {
+                HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                    IFireEyeXpmService.XpmEvent.MV_PLAY, TAG
+                )
                 updateMVView()
                 mPlayer?.play()
             }

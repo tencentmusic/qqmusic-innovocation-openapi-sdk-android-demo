@@ -54,6 +54,8 @@ import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
+import com.tencent.qqmusic.openapisdk.hologram.HologramManager
+import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.PartnerLoginActivity
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
@@ -312,6 +314,11 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
     ) { page ->
         val index = pagerState.currentPage
         Log.i(TAG, "MineSongList: current index $index")
+
+        HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+            IFireEyeXpmService.XpmEvent.PAGE_SCROLL,
+            "Mine_$index"
+        )
 
         when (index) {
             0 -> {
