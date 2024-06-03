@@ -25,6 +25,7 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.model.SoundEffectItem
 import com.tencent.qqmusic.openapisdk.model.VipType
+import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.utils.UiUtils
@@ -71,7 +72,17 @@ class SoundEffectActivity : ComponentActivity() {
                             }
                             val ret = OpenApiSDK
                                 .getPlayerApi()
-                                .setSoundEffectType(effect)
+                                .setSoundEffectType(effect) { status ->
+                                    AppScope.launchUI {
+                                        when (status) {
+                                            1 -> UiUtils.showToast("设置音效->开始下载音效")
+                                            2 -> UiUtils.showToast("设置音效->下载完成")
+                                            3 -> UiUtils.showToast("设置音效->下载失败")
+                                            4 -> UiUtils.showToast("设置音效->已在下载中")
+                                        }
+                                    }
+                                    true
+                                }
                             if (ret == 0) {
                                 UiUtils.showToast("设置音效->${effect.name}")
                                 curId.value = effect.sdkId
@@ -87,7 +98,25 @@ class SoundEffectActivity : ComponentActivity() {
                         }) {
                         Row(modifier = Modifier.weight(1f)) {
                             Text(text = effect.name)
-                            if (effect.vipFlag == 1) {
+                            if (effect.isCustomEffect()) {
+                                Text(
+                                    text = " 定制音效",
+                                    modifier = Modifier.padding(5.dp, 0.dp)
+                                )
+                                if (effect.vipFlag == 2) {
+                                    Text(
+                                        text = " 超级会员",
+                                        modifier = Modifier.padding(5.dp, 0.dp),
+                                        color = Color.Yellow,
+                                    )
+                                } else if (effect.vipFlag == 1) {
+                                    Text(
+                                        text = " 豪华绿钻",
+                                        modifier = Modifier.padding(5.dp, 0.dp),
+                                        color = Color.Green,
+                                    )
+                                }
+                            } else if (effect.vipFlag == 1) {
                                 val vipType = OpenApiSDK.getPlayerApi().getSoundEffectVipType()
                                 val soundEffectVipText = when (vipType) {
                                     VipType.SUPER_VIP -> {

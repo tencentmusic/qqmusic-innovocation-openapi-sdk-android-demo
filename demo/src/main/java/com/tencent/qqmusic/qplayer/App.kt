@@ -3,12 +3,13 @@ package com.tencent.qqmusic.qplayer
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
+import android.os.Debug
 import android.os.StrictMode
 import android.util.Log
 import android.widget.Toast
-import com.google.gson.Gson
+import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.innovation.common.util.DeviceUtils
-import com.tencent.qqmusic.innovation.common.util.ProcessUtils
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LogEvent
 import com.tencent.qqmusic.openapisdk.core.InitConfig
@@ -17,6 +18,7 @@ import com.tencent.qqmusic.openapisdk.core.network.NetworkTimeoutConfig
 import com.tencent.qqmusic.qplayer.baselib.util.GsonHelper
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
+import com.tencent.qqmusic.qplayer.utils.FireEyeMonitorConfigImpl
 import com.tencent.qqmusic.qplayer.utils.PrivacyManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -33,9 +35,6 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        if (!ProcessUtils.isMainProcess()) {
-//            Debug.waitForDebugger()
-        }
         if (MustInitConfig.openStrictMode()) {
             openStrictMode()
         }
@@ -70,12 +69,10 @@ class App : Application() {
 
         fun init(context: Context) {
             Log.i(TAG, "init Application")
-
-
             OpenApiSDK.registerBusinessEventHandler {
                 when (it.code) {
                     LogEvent.LogFileCanNotWrite -> {
-                        GlobalScope.launch(Dispatchers.Main){
+                        GlobalScope.launch(Dispatchers.Main) {
                             delay(2000)
                             Toast.makeText(context, "日志路径不可读写，使用默认路径", Toast.LENGTH_SHORT).show()
                         }
@@ -83,17 +80,19 @@ class App : Application() {
                 }
             }
 
-            Global.isDebug = true
             val sharedPreferences: SharedPreferences? = try {
                 context.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
             } catch (e: Exception) {
                 QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
                 null
             }
+
             val isUseForegroundService = sharedPreferences?.getBoolean("isUseForegroundService", true) ?: true
             val logFileDir = sharedPreferences?.getString("logFileDir", "")
             val savedTimeoutConfig = sharedPreferences?.getString("NetworkTimeoutConfig", "")
             val timeoutConfig = GsonHelper.safeFromJson(savedTimeoutConfig, NetworkTimeoutConfig::class.java) ?: NetworkTimeoutConfig.DEFAULT()
+            val isMutiChannel = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S_V2
+            MLog.i(TAG, "isMutiChannel:$isMutiChannel ,${Build.VERSION.SDK_INT}")
             val initConfig = InitConfig(
                 context.applicationContext,
                 MustInitConfig.APP_ID,
@@ -106,8 +105,10 @@ class App : Application() {
                 this.deviceConfigInfo.apply {
                     hardwareInfo = ""
                 }
+                this.enableBluetoothListener = false
                 this.logFileDir = logFileDir
                 this.networkTimeoutConfig = timeoutConfig
+                this.isMutiChannel = isMutiChannel
             }
             val start = System.currentTimeMillis()
             OpenApiSDK.init(initConfig)

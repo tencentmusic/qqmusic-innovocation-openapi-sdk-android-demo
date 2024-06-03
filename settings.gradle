@@ -15,6 +15,7 @@ if (useSdkSource) {
         includeBuild '../Android',{
            dependencySubstitution {
                substitute module('com.tencent.qqmusic.openapi:openapi-sdk') using project(':entry')
+               substitute module('com.tencent.qqmusic.openapi:openapi-sdk-gradle-plugin') using project(':sdk-gradle-plugin')
            }
         }
         includeBuild '../module_playback_audio',{

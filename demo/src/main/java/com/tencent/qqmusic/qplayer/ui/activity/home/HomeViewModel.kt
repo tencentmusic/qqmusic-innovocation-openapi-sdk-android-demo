@@ -86,7 +86,7 @@ class HomeViewModel : ViewModel() {
         private const val TAG = "HomeViewModel"
         var myFolderRequested = false
         var mRankGroupsDisable = false
-        var mSceneCategoriesDisable = true
+        var mSceneCategoriesDisable = false
         var myFavRequested = false
         var myFavAlbumRequested = -1
         var myRecentRequested = false

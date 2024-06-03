@@ -11,11 +11,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ScrollableTabRow
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +32,8 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
+import com.tencent.qqmusic.openapisdk.hologram.HologramManager
+import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderActivity
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVFunctionPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
@@ -92,6 +98,11 @@ fun homePageTabs(homeViewModel: HomeViewModel) {
         val index = pagerState.currentPage
         Log.i(TAG, "HomePage: current index $index")
 
+        HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+            IFireEyeXpmService.XpmEvent.PAGE_SCROLL,
+            "Home_${index}"
+        )
+
         when (index) {
             0 -> {
                 categoryFoldersPage(homeViewModel)
@@ -129,7 +140,24 @@ fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolea
         homeViewModel.fetchSceneCategory()
     }
     var categories = if (fetchSceneSongList) homeViewModel.sceneCategories else homeViewModel.categories
-    LazyColumn {
+    val scrollState = rememberLazyListState()
+    if (scrollState.isScrollInProgress) {
+        DisposableEffect(key1 = Unit) {
+            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                IFireEyeXpmService.XpmEvent.LIST_SCROLL,
+                "CategoryFolderPage",
+                1
+            )
+            onDispose {
+                HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                    IFireEyeXpmService.XpmEvent.LIST_SCROLL,
+                    "CategoryFolderPage",
+                    scrollState = 0 // idle
+                )
+            }
+        }
+    }
+    LazyColumn(state = scrollState) {
         items(categories.count()) { it ->
             val topCategory = categories.getOrNull(it) ?: return@items
             val subCategories = topCategory.subCategory ?: emptyList()
@@ -154,6 +182,16 @@ fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolea
                             .wrapContentWidth()
                             .padding(16.dp)
                             .clickable {
+                                val location = "CategoryFolderPage_" + if (fetchSceneSongList) {
+                                    "SongListActivity"
+                                } else {
+                                    "FolderActivity"
+                                }
+                                HologramManager
+                                    .getService(IFireEyeXpmService::class.java)
+                                    ?.monitorXpmEvent(
+                                        IFireEyeXpmService.XpmEvent.CLICK, location
+                                    )
                                 if (fetchSceneSongList) {
                                     activity.startActivity(
                                         Intent(activity, SongListActivity::class.java)

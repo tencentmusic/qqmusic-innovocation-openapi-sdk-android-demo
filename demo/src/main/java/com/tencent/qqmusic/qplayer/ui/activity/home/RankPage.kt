@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -32,6 +33,8 @@ import androidx.compose.ui.unit.sp
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.google.accompanist.flowlayout.FlowRow
+import com.tencent.qqmusic.openapisdk.hologram.HologramManager
+import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 
 /**
@@ -46,6 +49,18 @@ fun rankPage(homeViewModel: HomeViewModel){
     val activity = LocalContext.current as Activity
     var groups = homeViewModel.rankGroups
     val listState = rememberLazyListState()
+    if (listState.isScrollInProgress) {
+        DisposableEffect(key1 = Unit) {
+            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                IFireEyeXpmService.XpmEvent.LIST_SCROLL, "rankPage", 1
+            )
+            onDispose {
+                HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                    IFireEyeXpmService.XpmEvent.LIST_SCROLL, "rankPage", 0
+                )
+            }
+        }
+    }
     LazyColumn(
         state = listState
     ){
@@ -78,6 +93,9 @@ fun rankPage(homeViewModel: HomeViewModel){
                         modifier = Modifier
                             .wrapContentSize()
                             .clickable {
+                                HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                                    IFireEyeXpmService.XpmEvent.CLICK, "rankPage_SongListActivity"
+                                )
                                 activity.startActivity(
                                     Intent(activity, SongListActivity::class.java)
                                         .putExtra(SongListActivity.KEY_RANK_ID, rank.id)

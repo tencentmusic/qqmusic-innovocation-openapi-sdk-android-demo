@@ -1,7 +1,6 @@
 package com.tencent.qqmusic.qplayer.ui.activity.download
 
 import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -18,41 +17,33 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.Button
+import androidx.compose.material.Checkbox
+import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
+import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
-import coil.compose.rememberImagePainter
-import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.download.DownloadTask
-import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
-import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.model.download.DownloadStatus
-import com.tencent.qqmusic.qplayer.R
-import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
-import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.itemUI
 import com.tencent.qqmusic.qplayer.utils.QQMusicUtil
 import com.tencent.qqmusic.qplayer.utils.UiUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 
 class DownloadActivity: ComponentActivity() {
 
@@ -74,6 +65,7 @@ class DownloadActivity: ComponentActivity() {
         }
     }
 
+    @Preview
     @Composable
     fun DownloadView() {
         val downloadTask = downloadViewModel.taskList
@@ -82,22 +74,64 @@ class DownloadActivity: ComponentActivity() {
         }.map {
             it.task.getSongInfo()
         }
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            this.items(downloadTask.size) { index ->
-                val task = downloadTask.elementAtOrNull(index) ?: return@items
-                DownloadItem(task) {
-                    OpenApiSDK.getPlayerApi().playSongs(finishedSong, index)
+        val selectedTasks = arrayListOf<DownloadTask>()
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(text = "下载管理", fontSize = 18.sp) },
+                    contentColor = Color.White
+                )
+            }
+        ) {
+            Column {
+                if (downloadTask.isNotEmpty()) {
+                    Button(onClick = {
+                        if (selectedTasks.isEmpty()) {
+                            Toast.makeText(this@DownloadActivity, "请先选择歌曲", Toast.LENGTH_SHORT).show()
+                        } else {
+                            OpenApiSDK.getDownloadApi().deleteDownloadSongList(selectedTasks.map { it.getSongInfo() }) {
+                                val text = if (it) {
+                                    "删除成功"
+                                } else {
+                                    "删除失败"
+                                }
+                                Toast.makeText(this@DownloadActivity, text, Toast.LENGTH_SHORT).show()
+                            }
+                            selectedTasks.clear()
+                        }
+                    }) {
+                        Text(text = "删除")
+                    }
+                }
+
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    this.items(downloadTask.size) { index ->
+                        val task = downloadTask.elementAtOrNull(index) ?: return@items
+                        DownloadItem(task, onClick = {
+                            OpenApiSDK.getPlayerApi().playSongs(finishedSong, index)
+                        }) {
+                            if (it) {
+                                selectedTasks.add(task.task)
+                            } else {
+                                selectedTasks.remove(task.task)
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
     @Composable
-    fun DownloadItem(wrapper: DownloadTaskWrapper, onClick: () -> Unit) {
+    fun DownloadItem(wrapper: DownloadTaskWrapper, onClick: () -> Unit, onChecked: (Boolean) -> Unit) {
         val activity = LocalContext.current as Activity
         val coroutineScope = rememberCoroutineScope()
         val item = wrapper.task
         val song = item.getSongInfo()
+        val checked = remember {
+            mutableStateOf(false)
+        }
 
         ConstraintLayout(
             modifier = Modifier
@@ -110,14 +144,22 @@ class DownloadActivity: ComponentActivity() {
                     }
                 }
         ) {
-            val (songInfo, progress, menu) = createRefs()
+            val (checkBox, songInfo, progress, menu) = createRefs()
+            Checkbox(checked = checked.value,
+                modifier = Modifier.constrainAs(checkBox) {
+                    start.linkTo(parent.start)
+                },
+                onCheckedChange = {
+                    checked.value = checked.value.not()
+                    onChecked.invoke(it)
+            })
             Column(
                 modifier = Modifier
-                    .padding(start = 10.dp)
+                    .padding(start = 5.dp)
                     .constrainAs(songInfo) {
                         top.linkTo(parent.top)
                         bottom.linkTo(parent.bottom)
-                        start.linkTo(parent.start)
+                        start.linkTo(checkBox.end)
                     }
                 , horizontalAlignment = Alignment.Start) {
 
@@ -194,7 +236,14 @@ class DownloadActivity: ComponentActivity() {
                 TextButton(modifier = Modifier.height(20.dp),
                     contentPadding = PaddingValues(0.dp),
                     onClick = {
-                        OpenApiSDK.getDownloadApi().deleteDownloadTask(item, true)
+                        OpenApiSDK.getDownloadApi().deleteDownloadSong(item.getSongInfo()) {
+                            val text = if (it) {
+                                "删除成功"
+                            } else {
+                                "删除失败"
+                            }
+                            Toast.makeText(this@DownloadActivity, text, Toast.LENGTH_SHORT).show()
+                        }
                     }
                 ) {
                     Text(text = "删除", fontSize = 10.sp)

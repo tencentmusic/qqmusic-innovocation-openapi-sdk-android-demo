@@ -14,12 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
 import com.tencent.qqmusic.openapisdk.model.AreaId
 import com.tencent.qqmusic.qplayer.ui.activity.main.AreaSectionDetailPage
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.FreeSongPagingSource
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPage
 
 private const val TAG = "AreaSectionPage"
 
@@ -41,7 +37,6 @@ fun areaScreen(homeViewModel: HomeViewModel) {
         "Dolby专区",
         "臻品全景声专区",
         "Wanos专区",
-        "免登录专区",
         "场景歌单",
         "新碟"
     )
@@ -93,14 +88,9 @@ fun areaScreen(homeViewModel: HomeViewModel) {
             AreaSectionDetailPage(AreaId.Wanos, homeViewModel)
         }
         4 -> {
-            SongListPage(Pager(PagingConfig(pageSize = 20)) {
-                FreeSongPagingSource()
-            }.flow)
-        }
-        5 -> {
             categoryFoldersPage(homeViewModel = homeViewModel, true)
         }
-        6 -> {
+        5 -> {
             NewAlbumPage(homeViewModel)
         }
     }

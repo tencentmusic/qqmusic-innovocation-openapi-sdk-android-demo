@@ -1,10 +1,20 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.app.Activity
+import android.content.Context
+import android.graphics.Color
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.TextView
 import android.widget.Toast
+import androidx.recyclerview.widget.ListAdapter
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
+import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
+import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusic.qplayer.utils.hasWanos
 import kotlin.concurrent.thread
@@ -69,12 +79,12 @@ object QualityAlert {
                     if (isDownload) {
                         "臻品音质2.0 - 不支持下载"
                     } else {
-                        "臻品音质2.0-(hasQuality:${if (curSong?.hasQualityGalaxy() == true) "true" else "false"})$accessStr" + tryPlayQualityLabel
+                        "臻品音质2.0-$accessStr$tryPlayQualityLabel"
                     }
                 }
                 "GALAXY" -> {
                     if (curSong?.isGalaxyEffectType() == true) {
-                        "臻品全景声-(hasQuality:${if (curSong.hasQualityExcellent()) "true" else "false"})" +  accessStr + tryPlayQualityLabel
+                        "臻品全景声-$accessStr$tryPlayQualityLabel"
                     } else {
                         "臻品全景声" + UiUtils.getFormatSize(curSong?.getSizeGalaxy()?.toLong()) + accessStr + tryPlayQualityLabel
                     }
@@ -90,10 +100,10 @@ object QualityAlert {
                     it
                 }
             }
-        }.toTypedArray()
+        }
 
         androidx.appcompat.app.AlertDialog.Builder(activity)
-            .setItems(stringArray) { _, which ->
+            .setAdapter(CustomArrayAdapter(activity, stringArray, curSong)) { _, which ->
                 thread {
                     val nextQuality = qualityOrder.getOrNull(which)
                         ?: PlayerEnums.Quality.LQ
@@ -103,7 +113,7 @@ object QualityAlert {
                             refresh(nextQuality)
                             "切换歌曲品质成功"
                         }
-                        PlayDefine.PlayError.PLAY_ERR_DEVICE_NO_SUPPORT -> "设备不支持杜比"
+                        PlayDefine.PlayError.PLAY_ERR_DEVICE_NO_SUPPORT -> if (nextQuality == Quality.DOLBY) "设备不支持杜比" else "设备不支持臻品2.0"
                         PlayDefine.PlayError.PLAY_ERR_NO_QUALITY -> "没有对应音质"
                         PlayDefine.PlayError.PLAY_ERR_PLAYER_ERROR -> "播放器异常"
                         PlayDefine.PlayError.PLAY_ERR_NEED_VIP -> "需要VIP"
@@ -125,5 +135,24 @@ object QualityAlert {
                     }
                 }
             }.show()
+    }
+
+    class CustomArrayAdapter(context: Context, private val items: List<String>, val songInfo: SongInfo?) : ArrayAdapter<String>(context, android.R.layout.select_dialog_item, items) {
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val view = super.getView(position, convertView, parent)
+            val textView = view.findViewById<TextView>(android.R.id.text1)
+            if (songInfo == null || items.size != qualityOrder.size) {
+                textView.setTextColor(context.resources.getColor(R.color.text_black))
+            } else {
+                val quality = qualityOrder[position]
+                val hasQuality = OpenApiSDK.getPlayerApi().getSongHasQuality(songInfo, quality)
+                if (!hasQuality) {
+                    textView.setTextColor(context.resources.getColor(R.color.text_gray)) // Set your color here
+                } else {
+                    textView.setTextColor(context.resources.getColor(R.color.text_black)) // Set your color here
+                }
+            }
+            return view
+        }
     }
 }

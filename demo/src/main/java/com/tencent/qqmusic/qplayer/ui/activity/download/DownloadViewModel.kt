@@ -1,8 +1,10 @@
 package com.tencent.qqmusic.qplayer.ui.activity.download
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.download.DownloadError
@@ -11,6 +13,10 @@ import com.tencent.qqmusic.openapisdk.core.download.DownloadListener
 import com.tencent.qqmusic.openapisdk.core.download.DownloadTask
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.model.download.DownloadStatus
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class DownloadViewModel: ViewModel() {
 
@@ -38,7 +44,14 @@ class DownloadViewModel: ViewModel() {
                     getDownloadTasks()
                 }
                 DownloadEvent.DOWNLOAD_TASK_REMOVED -> {
-                    getDownloadTasks()
+                    viewModelScope.launch(Dispatchers.IO) {
+                        delay(200)
+                        getDownloadTasks()
+                    }
+                    if (PlayerObserver.currentSong?.songId == task?.getSongInfo()?.songId) {
+                        PlayerObserver.currentSong?.filePath = null
+                        PlayerObserver.curSongInfoChanged++
+                    }
                 }
                 else -> {
 
@@ -81,7 +94,6 @@ class DownloadViewModel: ViewModel() {
     }
 
     private fun getDownloadTasks() {
-        taskList.clear()
         OpenApiSDK.getDownloadApi().getDownloadTasks { tmpTaskList ->
             val finalTask = if (getFinishTask) {
                 tmpTaskList.filter {
@@ -90,6 +102,7 @@ class DownloadViewModel: ViewModel() {
             } else {
                 tmpTaskList
             }
+            taskList.clear()
             taskList.addAll(finalTask.map {
                 DownloadTaskWrapper(it, false)
             })

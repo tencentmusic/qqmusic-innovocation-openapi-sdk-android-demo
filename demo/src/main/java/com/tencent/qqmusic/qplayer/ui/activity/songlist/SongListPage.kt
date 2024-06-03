@@ -21,11 +21,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +55,8 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
+import com.tencent.qqmusic.openapisdk.hologram.HologramManager
+import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
@@ -138,6 +143,18 @@ fun SongListPage(
     val songs = flow.collectAsLazyPagingItems()
     Log.i(TAG, "SongListPage: songs count: ${songs.itemCount}")
     val listState = rememberLazyListState()
+    if (listState.isScrollInProgress) {
+        DisposableEffect(key1 = Unit) {
+            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                IFireEyeXpmService.XpmEvent.LIST_SCROLL, "SongListPage", 1
+            )
+            onDispose {
+                HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                    IFireEyeXpmService.XpmEvent.LIST_SCROLL, "SongListPage", 0
+                )
+            }
+        }
+    }
     Column {
         playlistHeader(songs = songs.snapshot().items, playListType = playListType, playListTypeId = playListTypeId)
 
@@ -307,7 +324,7 @@ private fun collectSongs(
                 } else {
                     OpenApiSDK.getOpenApi().addSongToFolder(
                         folderId,
-                        midList = songMids
+                        songList = songs
                     ) { resp ->
                         if(resp.isSuccess()){
                             collectState.value = !collectState.value
@@ -346,6 +363,11 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                             songs.indexOf(song)
                         )
                     if (result == 0) {
+                        HologramManager
+                            .getService(IFireEyeXpmService::class.java)
+                            ?.monitorXpmEvent(
+                                IFireEyeXpmService.XpmEvent.CLICK, "SongItemUI_PlayerActivity"
+                            )
                         activity.startActivity(Intent(activity, PlayerActivity::class.java))
                     } else {
                         coroutineScope.launch(Dispatchers.Main) {
@@ -577,7 +599,20 @@ fun SongListPage(songs: List<SongInfo>, displayOnly: Boolean = false, needPlayer
             top.linkTo(parent.top)
             bottom.linkTo(player.top)
         }) {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            val scrollState = rememberLazyListState()
+            if (scrollState.isScrollInProgress) {
+                DisposableEffect(key1 = Unit) {
+                    HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                        IFireEyeXpmService.XpmEvent.LIST_SCROLL, "SongListPage", 1
+                    )
+                    onDispose {
+                        HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
+                            IFireEyeXpmService.XpmEvent.LIST_SCROLL, "SongListPage", 0
+                        )
+                    }
+                }
+            }
+            LazyColumn(state = scrollState, modifier = Modifier.fillMaxSize()) {
                 this.items(songs.size) { index ->
                     val song = songs.elementAtOrNull(index) ?: return@items
                     itemUI(songs = songs, song = song, displayOnly)

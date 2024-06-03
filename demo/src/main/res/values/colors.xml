@@ -8,10 +8,13 @@
     <color name="black">#FF000000</color>
     <color name="gray">#FF666666</color>
     <color name="lightGray">#999999</color>
+
     <color name="white">#FFFFFFFF</color>
     <color name="colorPrimary">#FFFFFFFF</color>
     <color name="colorPrimaryDark">#FFFFFFFF</color>
     <color name="colorAccent">#D81B60</color>
+    <color name="text_black">#FF333333</color>
+    <color name="text_gray">#bbbbbb</color>
     <!-- 播放器界面相关颜色 -->
     <!--
     <color name="playInfo_song_name_text">#ffffff</color>

@@ -11,7 +11,6 @@ ext {
             allowInsecureProtocol true
         }
         maven { url 'https://mirrors.tencent.com/nexus/repository/maven-public/' }
-
     }
 
     kotlin_version = "1.6.10"
@@ -22,7 +21,7 @@ ext {
 
     sdk_version = project.hasProperty('edge_version') && "${edge_version}" != ""
             ? "${edge_version}"
-            : "2.1.0"
+            : "2.2.0"
 
     println "apk demo sdk_version:$sdk_version"
 
@@ -31,16 +30,41 @@ ext {
 
     minSdkVersion = 21
     targetSdkVersion = 30
-    compileSdkVersion = 30
+    compileSdkVersion = 32
 
     androidx_core_version = "1.1.0"
     androidx_compat_version = "1.0.0"
     androidx_anno_version = "1.1.0"
     androidx_media_version = "1.0.0"
     google_material_version = "1.0.0"
-    common_util_version = "1.2.8-edge"
+    common_util_version = "1.2.9-edge"
     mmkv_version = "1.2.16"
 
 
     gson_version = "2.8.8"
+
+    isDebugBuild = {
+        org.gradle.api.invocation.Gradle gradle = getGradle()
+        if (gradle != null) {
+            List<org.gradle.TaskExecutionRequest> taskRequests = gradle.getStartParameter().getTaskRequests()
+            println "+++++++++++++++ taskRequests = " + taskRequests
+            if (taskRequests != null) {
+                for (int i = 0; i < taskRequests.size(); i++) {
+                    org.gradle.TaskExecutionRequest taskRequest = taskRequests.get(i)
+                    List<String> taskArgs = taskRequest.args
+                    if (taskArgs != null) {
+                        for (int j = 0; j < taskArgs.size(); j++) {
+                            String taskArg = taskArgs.get(j)
+                            println "+++++++++++++++ taskArg = " + taskArg
+                            if (taskArg.matches(".*Debug")) {
+                                return true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return false
+    }
 }

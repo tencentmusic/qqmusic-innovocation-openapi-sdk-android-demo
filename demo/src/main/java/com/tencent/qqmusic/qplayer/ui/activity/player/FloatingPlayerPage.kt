@@ -165,6 +165,19 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
                         OpenApiSDK
                             .getPlayerApi()
                             .apply {
+                                if (getPlayList().isEmpty()) {
+                                    OpenApiSDK
+                                        .getOpenApi()
+                                        .fetchPersonalRecommendSong {
+                                            it.data?.let { it1 -> playSongs(it1) }
+                                        }
+                                    return@launchIO
+                                }
+                            }
+
+                        OpenApiSDK
+                            .getPlayerApi()
+                            .apply {
                                 if (isPlaying) pause(needFade) else play()
                                 val song = getCurrentSongInfo()
                                 if (song?.canPlay() != true) {
