@@ -37,8 +37,11 @@ fun areaScreen(homeViewModel: HomeViewModel) {
         "Dolby专区",
         "臻品全景声专区",
         "Wanos专区",
+        "黑胶专区",
+        "臻品母带专区",
         "场景歌单",
-        "新碟"
+        "新碟",
+        "小宇宙"
     )
 
     val callback = object : OnBackPressedCallback(true) {
@@ -88,10 +91,19 @@ fun areaScreen(homeViewModel: HomeViewModel) {
             AreaSectionDetailPage(AreaId.Wanos, homeViewModel)
         }
         4 -> {
-            categoryFoldersPage(homeViewModel = homeViewModel, true)
+            AreaSectionDetailPage(AreaId.Vinly, homeViewModel)
         }
         5 -> {
+            AreaSectionDetailPage(AreaId.Master, homeViewModel)
+        }
+        6 -> {
+            categoryFoldersPage(homeViewModel = homeViewModel, true)
+        }
+        7 -> {
             NewAlbumPage(homeViewModel)
+        }
+        8 -> {
+            AreaSectionDetailPage(AreaId.XiaoYuZhou, homeViewModel)
         }
     }
 

@@ -48,11 +48,11 @@ class MVPlayerActivity : AppCompatActivity() {
             val type = it.getStringExtra(Content_Type)
             val fragments = when (type) {
                 Recommend -> {
-                    listOf(MVRecommendFragment(this@MVPlayerActivity))
+                    listOf(MVRecommendFragment())
                 }
 
                 Dolby_Content -> {
-                    listOf(MVDolbyFragment(this@MVPlayerActivity))
+                    listOf(MVDolbyFragment())
                 }
 
                 Content_Detail -> {

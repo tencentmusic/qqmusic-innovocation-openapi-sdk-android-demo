@@ -59,6 +59,12 @@
             android:layout_height="wrap_content"
             android:text="填入Hires歌曲" />
 
+        <Button
+            android:id="@+id/btn_use_vinyl"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="填入黑胶歌曲" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -60,8 +60,6 @@ import com.tencent.qqmusic.openapisdk.business_common.event.event.TransactionPus
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.ISDKSpecialNeedInterface
 import com.tencent.qqmusic.openapisdk.core.player.PlayerModuleFunctionConfigParam
-import com.tencent.qqmusic.openapisdk.hologram.HologramManager
-import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
@@ -71,6 +69,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.home.VIPSuccessDialog
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
+import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import com.tencent.qqmusic.qplayer.utils.PrivacyManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -256,16 +255,16 @@ fun loginExpiredDialog(showDialog: Boolean, setShowDialog: (Boolean) -> Unit) {
 }
 
 @Composable
-fun Navigation(navController: NavHostController, categoryViewModel: HomeViewModel) {
+fun Navigation(navController: NavHostController, homeViewModel: HomeViewModel) {
     NavHost(navController, startDestination = NavigationItem.Home.route) {
         composable(NavigationItem.Home.route) {
-            HomeScreen(categoryViewModel)
+            HomeScreen(homeViewModel)
         }
         composable(NavigationItem.Books.route) {
-            SearchScreen()
+            SearchScreen(homeViewModel)
         }
         composable(NavigationItem.Profile.route) {
-            MineScreen()
+            MineScreen(homeViewModel)
         }
         composable(NavigationItem.Setting.route) {
             AppSetting()
@@ -304,10 +303,7 @@ fun BottomNavigationBar(navController: NavController) {
                 alwaysShowLabel = true,
                 selected = currentRoute == item.route,
                 onClick = {
-                    HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                        IFireEyeXpmService.XpmEvent.PAGE_SCROLL,
-                        item.title
-                    )
+                    PerformanceHelper.monitorClick("${item.title}")
                     navController.navigate(item.route) {
                         // Pop up to the start destination of the graph to
                         // avoid building up a large stack of destinations
@@ -329,7 +325,7 @@ fun BottomNavigationBar(navController: NavController) {
 }
 
 @Composable
-fun MainScreen(categoryViewModel: HomeViewModel = viewModel(), mineViewModel: MineViewModel = viewModel()) {
+fun MainScreen(homeViewModel: HomeViewModel = viewModel(), mineViewModel: MineViewModel = viewModel()) {
     val navController = rememberNavController()
     var showVipDialog = remember {
         mutableStateOf(false)
@@ -379,7 +375,7 @@ fun MainScreen(categoryViewModel: HomeViewModel = viewModel(), mineViewModel: Mi
             bottom.linkTo(playerPage.top)
             height = Dimension.fillToConstraints
         }) {
-            Navigation(navController = navController, categoryViewModel)
+            Navigation(navController = navController, homeViewModel)
         }
         Box(modifier = Modifier.constrainAs(playerPage) {
             bottom.linkTo(bottomNavigationBar.top)

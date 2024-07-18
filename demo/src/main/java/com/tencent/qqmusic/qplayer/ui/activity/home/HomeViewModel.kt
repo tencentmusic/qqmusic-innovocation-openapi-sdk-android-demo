@@ -275,6 +275,7 @@ class HomeViewModel : ViewModel() {
                     if (it.isSuccess()) {
                         favAlbums = it.data ?: emptyList()
                     }
+                    Log.d(TAG, "fetchCollectedAlbum res:${it.isSuccess()} size:${it.data?.size}")
                 }
             }
             myFavAlbumRequested = type
@@ -439,12 +440,38 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    fun fetchWanosSection(callback: (Area?) -> Unit) {
-        QLog.i(TAG, "fetch Wanos")
+    fun fetchSection(areaId: Int, callback: (Area?) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            OpenApiSDK.getOpenApi().fetchAreaSectionByShelfTypes(AreaId.Wanos, arrayListOf(AreaShelfType.AreaShelfType_Song), callback = {
+            OpenApiSDK.getOpenApi().fetchAreaSectionByShelfTypes(areaId, arrayListOf(AreaShelfType.AreaShelfType_Song), callback = {
                 if (it.isSuccess()) {
-                    QLog.i(TAG, "fetch galaxy success")
+                    callback.invoke(it.data)
+                } else {
+                    callback.invoke(null)
+                }
+            })
+        }
+    }
+
+    fun fetchVinylSection(callback: (Area?) -> Unit) {
+        QLog.i(TAG, "fetch vinyl")
+        viewModelScope.launch(Dispatchers.IO) {
+            OpenApiSDK.getOpenApi().fetchAreaSectionByShelfTypes(AreaId.Vinly, arrayListOf(AreaShelfType.AreaShelfType_Album, AreaShelfType.AreaShelfType_Folder), callback = {
+                if (it.isSuccess()) {
+                    QLog.i(TAG, "fetch vinyl success")
+                    callback.invoke(it.data)
+                } else {
+                    callback.invoke(null)
+                }
+            })
+        }
+    }
+
+    fun fetchMasterSection(callback: (Area?) -> Unit) {
+        QLog.i(TAG, "fetchMaster")
+        viewModelScope.launch(Dispatchers.IO) {
+            OpenApiSDK.getOpenApi().fetchAreaSectionByShelfTypes(AreaId.Master, arrayListOf(), callback = {
+                if (it.isSuccess()) {
+                    QLog.i(TAG, "fetchMaster success")
                     callback.invoke(it.data)
                 } else {
                     callback.invoke(null)

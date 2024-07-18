@@ -275,6 +275,16 @@ fun OtherScreen() {
             Toast.makeText(activity, "设置成功，立即生效", Toast.LENGTH_SHORT).show()
         }
 
+        val enableAccountPartner: MutableState<Boolean> = remember {
+            mutableStateOf(sharedPreferences?.getBoolean("accountModePartner", false) ?: false)
+        }
+        SingleItem(title = "是否使用三方账号独立登录模式(TV暗账号)", item = if (enableAccountPartner.value) "开启" else "关闭") {
+            val nextValue = enableAccountPartner.value.not()
+            sharedPreferences?.edit()?.putBoolean("accountModePartner", nextValue)?.apply()
+            enableAccountPartner.value = nextValue
+            Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
+        }
+
         Button(onClick = {
             OpenApiSDK.getLogApi().uploadLog(activity) { code, tips, uuid ->
                 Log.i("OtherScreen", "OtherScreen: code $code, tips $tips, uuid $uuid")

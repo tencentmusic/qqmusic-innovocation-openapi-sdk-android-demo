@@ -69,12 +69,12 @@ class PlayerTestActivity : ComponentActivity() {
 
 
         val mvID = findViewById<EditText>(R.id.play_mv_id).apply {
-            hint = "1861944"
+            hint = "a0040pizz4a"
         }
 
         findViewById<Button>(R.id.mv_test_button).apply {
             setOnClickListener {
-                val cacheSize = mvID.text.toString().ifEmpty { "1861944" }
+                val cacheSize = mvID.text.toString().ifEmpty { "a0040pizz4a" }
                 startActivity(Intent(this@PlayerTestActivity, MVPlayerActivity::class.java).apply {
                     putExtra(MVPlayerActivity.MV_ID, cacheSize)
                 })
@@ -155,13 +155,15 @@ class PlayerTestActivity : ComponentActivity() {
         }
 
         btnUseDolby.setOnClickListener {
-//            edt.setText("359434619,359434618,359434626,359434622,359434624")
             edt.setText("370513537")
         }
 
         findViewById<Button>(R.id.btn_use_hires).setOnClickListener {
-//            edt.setText("262607197")
             edt.setText("381885920,262607197")
+        }
+
+        findViewById<Button>(R.id.btn_use_vinyl).setOnClickListener {
+            edt.setText("399932197,399932192,399932196")
         }
 
         edtFolder.setTextIsSelectable(true)
@@ -229,6 +231,14 @@ class PlayerTestActivity : ComponentActivity() {
                 "臻品全景声"
             }
 
+            PlayerEnums.Quality.MASTER_TAPE -> {
+                "臻品母带"
+            }
+
+            PlayerEnums.Quality.MASTER_SR -> {
+                "臻品母带省流"
+            }
+
             else -> {
                 "未知"
             }
@@ -269,7 +279,6 @@ class PlayerTestActivity : ComponentActivity() {
     @SuppressLint("CutPasteId")
     private fun seekToPlayView(){
         var actionStateIndex:Int = sharedPreferences?.getInt("actionStateIndex", 0) ?: 0
-        val seekTimerSpinner: Spinner = findViewById(R.id.spinner_seek_timer)
         // 来源PlayerManagerImpl().needExportPlayState
         val myState = mapOf(
             "初始状态 0" to PlayDefine.PlayState.MEDIAPLAYER_STATE_IDLE,
@@ -282,29 +291,27 @@ class PlayerTestActivity : ComponentActivity() {
             "缓冲失败 701" to PlayDefine.PlayState.MEDIAPLAYER_STATE_BUFFER_FAILED
             )
         val seekTimerSpinnerOptions = myState.keys.toList()
-
         // 创建一个 ArrayAdapter 使用默认 spinner 布局和选项数组
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, seekTimerSpinnerOptions)
-
         // 指定下拉菜单的布局样式 - 简单的列表视图
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-
+        val seekTimerSpinner = findViewById<Spinner?>(R.id.spinner_seek_timer)
         // 应用适配器到 spinner
-        seekTimerSpinner.adapter = adapter
+        seekTimerSpinner?.let {
+            it.adapter = adapter
+            it.setSelection(actionStateIndex)
+            // 设置选项选择事件监听器
+            it.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                    view?.let { actionStateIndex = position }
+                }
 
-        seekTimerSpinner.setSelection(actionStateIndex)
-
-        // 设置选项选择事件监听器
-        seekTimerSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
-                // 选中后的动作
-                actionStateIndex = position
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>) {
-                // 可选的回调，没有选项被选中时的动作
+                override fun onNothingSelected(parent: AdapterView<*>) {
+                    // 可选的回调，没有选项被选中时的动作
+                }
             }
         }
+
         findViewById<EditText>(R.id.edt_params1).apply {
             hint = (sharedPreferences?.getString("params1", "") ?: "").toString()
         }
@@ -314,7 +321,6 @@ class PlayerTestActivity : ComponentActivity() {
         }
 
         var playerFuncIndex:Int = sharedPreferences?.getInt("playerFuncIndex", 0) ?: 0
-        val playerFuncSpinner: Spinner = findViewById(R.id.spinner_player_func)
         val funcMap = mutableMapOf<String,()->Any?>()
         val params1 = findViewById<EditText>(R.id.edt_params1).text.toString()
         funcMap["seekToPlay"] = {
@@ -322,34 +328,28 @@ class PlayerTestActivity : ComponentActivity() {
         }
         funcMap["seek"] = { OpenApiSDK.getPlayerApi().seek(params1.toIntOrNull() ?: 60000) }
         funcMap["playPos"] = { OpenApiSDK.getPlayerApi().playPos(params1.toIntOrNull() ?: 1) }
+
         val playerFuncSpinnerOptions = funcMap.keys.toList()
-        // 创建一个 ArrayAdapter 使用默认 spinner 布局和选项数组
         val adapter2 = ArrayAdapter(this, android.R.layout.simple_spinner_item, playerFuncSpinnerOptions)
-
-        // 指定下拉菜单的布局样式 - 简单的列表视图
         adapter2.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        val playerFuncSpinner: Spinner? = findViewById(R.id.spinner_player_func)
+        playerFuncSpinner?.let {
+            it.adapter = adapter2
+            it.setSelection(playerFuncIndex)
+            it.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                    view?.let { playerFuncIndex = position }
+                }
 
-        // 应用适配器到 spinner
-        playerFuncSpinner.adapter = adapter2
-
-        playerFuncSpinner.setSelection(playerFuncIndex)
-
-        // 设置选项选择事件监听器
-        playerFuncSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
-                // 选中后的动作
-                playerFuncIndex = position
-            }
-
-            override fun onNothingSelected(parent: AdapterView<*>) {
-                // 可选的回调，没有选项被选中时的动作
+                override fun onNothingSelected(parent: AdapterView<*>) {
+                }
             }
         }
+
 
         findViewById<Button>(R.id.btn_setToRun).setOnClickListener {
             sharedPreferences?.edit()?.putString("params1", findViewById<EditText>(R.id.edt_params1).text.toString())?.apply()
             sharedPreferences?.edit()?.putString("params2", findViewById<EditText>(R.id.edt_params2).text.toString())?.apply()
-
             sharedPreferences?.edit()?.putInt("actionStateIndex", actionStateIndex)?.apply()
             sharedPreferences?.edit()?.putInt("playerFuncIndex", playerFuncIndex)?.apply()
             funcMap[playerFuncSpinnerOptions[playerFuncIndex]]?.let { func ->
@@ -358,7 +358,6 @@ class PlayerTestActivity : ComponentActivity() {
                     dstState = myState[seekTimerSpinnerOptions[actionStateIndex]]
                 )
             }
-
         }
     }
 

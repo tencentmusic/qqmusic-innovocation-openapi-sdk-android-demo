@@ -39,13 +39,12 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
-import com.tencent.qqmusic.openapisdk.hologram.HologramManager
-import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.openapisdk.model.SearchType
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderPage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPage
+import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -159,11 +158,7 @@ fun SearchResultTabs(viewModel: HomeViewModel) {
         count = pages.size,
         state = pagerState
     ) {
-
-        HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-            IFireEyeXpmService.XpmEvent.PAGE_SCROLL,
-            "SearchReult_${tabList[pagerState.currentPage].second}"
-        )
+        PerformanceHelper.monitorPageScroll("SearchReult_${tabList[pagerState.currentPage].second}")
 
         val data = viewModel.searchResult.collectAsState().value
         when (tabList[pagerState.currentPage].second) {

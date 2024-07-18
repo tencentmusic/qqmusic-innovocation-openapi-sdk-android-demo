@@ -18,14 +18,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.pager.*
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
-import com.tencent.qqmusic.openapisdk.hologram.HologramManager
-import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.JumpInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumPage
+import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -49,9 +48,7 @@ class LongAudioCategoryActivity : ComponentActivity() {
 
         @JvmStatic
         fun start(context: Context, tag: String, jumpInfo: JumpInfo?) {
-            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                IFireEyeXpmService.XpmEvent.CLICK, "LongAudioPage_LongAudioCategoryActivity_$tag"
-            )
+            PerformanceHelper.monitorClick("LongAudioPage_LongAudioCategoryActivity_$tag")
             val starter = Intent(context, LongAudioCategoryActivity::class.java)
                 .putExtra("tag", tag)
                 .putExtra("jumpInfo", jumpInfo)

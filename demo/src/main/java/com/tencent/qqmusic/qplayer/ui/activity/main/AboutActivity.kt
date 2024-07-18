@@ -1,6 +1,7 @@
 package com.tencent.qqmusic.qplayer.ui.activity.main
 
 import android.app.Activity
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -30,6 +31,7 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.BuildConfig
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.deviceid.DeviceInfoManager
+import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 
 class AboutActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,7 +56,10 @@ fun AboutScreen() {
         CopyableText(title = "SDK版本号",content = BuildConfig.VERSION_NAME)
         CopyableText(title = "uin",content = CgiConfig.uin())
         CopyableText(title = "qime36",content = DeviceInfoManager.q36)
-        CopyableText(title = "协议",content = if (OpenApiSDK.isNewProtocol) "新协议" else "旧协议")
+        CopyableText(title = "协议", content = if (OpenApiSDK.isNewProtocol) "新协议" else "旧协议")
+        CopyableText(title = "APPID", content = MustInitConfig.APP_ID)
+        CopyableText(title = "APPKEY", content = MustInitConfig.APP_KEY)
+        CopyableText(title = "架构", content = Build.SUPPORTED_ABIS.first())
         Button(onClick = {
             OpenApiSDK.getLogApi().uploadLog(activity) { code, tips, uuid ->
                 Log.i(tag, "OtherScreen: code $code, tips $tips, uuid $uuid")
@@ -94,7 +99,9 @@ fun CopyableText(title: String, content: String) {
                     fontSize = 16.sp,
                     color = Color.Black
                 ),
-                modifier = Modifier.padding(horizontal = 16.dp).height(60.dp)
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .height(60.dp)
             )
         }
     }

@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -43,10 +44,13 @@ import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.mv.PlayerViewModel
 
-class MVDolbyFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
+class MVDolbyFragment : Fragment() {
+
+    private val mViewModelStoreOwner by lazy {  activity as AppCompatActivity }
+
 
     var composeView: ComposeView? = null
-    val playerViewModel by lazy { ViewModelProvider(viewModelStoreOwner).get(PlayerViewModel::class.java) }
+    val playerViewModel by lazy { ViewModelProvider(mViewModelStoreOwner)[PlayerViewModel::class.java] }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
     }

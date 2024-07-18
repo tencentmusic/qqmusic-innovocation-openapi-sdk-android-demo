@@ -12,22 +12,10 @@
         android:textColorHint="@color/black" />
 
     <Button
-        android:id="@+id/start"
+        android:id="@+id/play"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="开始缓存" />
-
-    <Button
-        android:id="@+id/stop"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="停止缓存" />
-
-    <Button
-        android:id="@+id/clear"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="清除缓存" />
+        android:text="播放歌曲" />
 
     <Button
         android:id="@+id/clearAll"
@@ -39,13 +27,7 @@
         android:id="@+id/check"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="检查缓存" />
-
-    <Button
-        android:id="@+id/play"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="播放缓存" />
+        android:text="检查缓存(废弃)" />
 
     <Button
         android:id="@+id/size"
@@ -66,7 +48,7 @@
 
     <TextView
         android:layout_marginTop="10dp"
-        android:text="设置缓存大小（sizeMb>50 songNum>10）"
+        android:text="设置缓存大小（sizeMb>=50）"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 
@@ -79,18 +61,10 @@
             android:id="@+id/edit_cache_size"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:hint="输入缓存大小(MB)"
+            android:hint="设置缓存上限(MB)"
             android:textSize="12sp"
             android:textColorHint="@color/gray" />
 
-        <EditText
-            android:layout_marginLeft="5dp"
-            android:textSize="12sp"
-            android:id="@+id/edit_cache_song_num"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:hint="输入最多歌曲数"
-            android:textColorHint="@color/gray" />
     </LinearLayout>
 
     <Button

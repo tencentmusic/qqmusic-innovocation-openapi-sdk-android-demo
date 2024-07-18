@@ -48,9 +48,12 @@ import com.tencent.qqmusic.openapisdk.core.player.VocalPercent
 import com.tencent.qqmusic.openapisdk.model.PlaySpeedType
 import com.tencent.qqmusic.openapisdk.model.ProfitInfo
 import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
+import com.tencent.qqmusic.qplayer.core.supersound.GalaxyFileQualityManager
+import com.tencent.qqmusic.qplayer.core.supersound.MasterSRManager
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiListenTogetherActivity
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
+import java.lang.StringBuilder
 import kotlin.concurrent.thread
 
 /**
@@ -408,6 +411,25 @@ fun PlayControlArea() {
         ) {
             Text("setUsageAndType")
         }
+        Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+
+        Text(
+            text = "是否支持MasterSR: ${MasterSRManager.isDeviceNotSupportMasterSRQuality()}",
+            fontFamily = FontFamily.Monospace
+        )
+
+        val fileStrBuilder = StringBuilder()
+        GalaxyFileQualityManager.getExcellentFile()?.forEach {
+            fileStrBuilder.appendLine(it.name)
+            if (it.name.contains("csv")){
+                fileStrBuilder.appendLine(it.readText())
+            }
+        }
+        fileStrBuilder.appendLine("md5:${GalaxyFileQualityManager.getExcellentFileMD5()}")
+        Text(
+            text = "全景声配置: $fileStrBuilder",
+            fontFamily = FontFamily.Monospace
+        )
     }
 
 }

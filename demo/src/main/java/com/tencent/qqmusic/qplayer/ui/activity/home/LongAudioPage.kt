@@ -30,24 +30,17 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
-import com.tencent.qqmusic.innovation.common.util.ToastUtils
-import com.tencent.qqmusic.openapisdk.business_common.Global
-import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
-import com.tencent.qqmusic.openapisdk.hologram.HologramManager
-import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.openapisdk.model.AreaShelf
 import com.tencent.qqmusic.openapisdk.model.Category
-import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.audio.LongAudioCategoryActivity
 import com.tencent.qqmusic.qplayer.ui.activity.audio.LongAudioModuleContentActivity
 import com.tencent.qqmusic.qplayer.ui.activity.audio.LongAudioRankActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumActivity
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
+import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
 /**
@@ -111,9 +104,7 @@ fun LongAudioPage(homeViewModel: HomeViewModel) {
 //                Log.i(TAG, "一级tab click")
 //            }
         ) {
-            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                IFireEyeXpmService.XpmEvent.PAGE_SCROLL, "LongAudioPage_TabLevel1_${pagerState.currentPage}"
-            )
+            PerformanceHelper.monitorPageScroll("LongAudioPage_TabLevel1_${pagerState.currentPage}")
             LongAudioCategorySecondPage(categories, pagerState.currentPage, homeViewModel)
     }
 }}
@@ -177,9 +168,7 @@ fun LongAudioCategorySecondPage(categories: List<Category>, index: Int, homeView
                 }
         ) { page ->
             Log.i(TAG, "long audio: current index $index, index2:${pagerState2.currentPage}")
-            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                IFireEyeXpmService.XpmEvent.PAGE_SCROLL, "LongAudioPage_TabLevel2_${pagerState2.currentPage}"
-            )
+            PerformanceHelper.monitorPageScroll("LongAudioPage_TabLevel2_${pagerState2.currentPage}")
 
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
@@ -232,18 +221,7 @@ fun LongAudioCategoryPageDetail(flow: Flow<PagingData<AreaShelf>>? = null, categ
     val activity = LocalContext.current as Activity
     val width = UiUtils.getDisplayWidth(activity)
     val scrollState = rememberLazyListState()
-    if (scrollState.isScrollInProgress) {
-        DisposableEffect(key1 = Unit) {
-            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                IFireEyeXpmService.XpmEvent.LIST_SCROLL, "LongAudioCategoryPageDetail_${categoryId}_${subCategoryId}", 1
-            )
-            onDispose {
-                HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                    IFireEyeXpmService.XpmEvent.LIST_SCROLL, "LongAudioCategoryPageDetail_${categoryId}_${subCategoryId}", 0
-                )
-            }
-        }
-    }
+    PerformanceHelper.MonitorListScroll(scrollState = scrollState, location = "LongAudioCategoryPageDetail_${categoryId}_${subCategoryId}")
     LazyColumn(state = scrollState, modifier = Modifier.fillMaxSize()) {
         this.items(shelfes) { shelf ->
             shelf?: return@items
@@ -307,9 +285,7 @@ fun LongAudioCategoryPageDetail(flow: Flow<PagingData<AreaShelf>>? = null, categ
                         .wrapContentSize()
                         .padding(padding)
                         .clickable {
-                            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                                IFireEyeXpmService.XpmEvent.CLICK, "LongAudioPage_AlbumActivity"
-                            )
+                            PerformanceHelper.monitorClick("LongAudioPage_AlbumActivity")
                             activity.startActivity(
                                 Intent(activity, AlbumActivity::class.java)
                                     .putExtra(AlbumActivity.KEY_ALBUM_ID, album.id)

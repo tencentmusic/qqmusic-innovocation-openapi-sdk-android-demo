@@ -33,9 +33,8 @@ import androidx.compose.ui.unit.sp
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.google.accompanist.flowlayout.FlowRow
-import com.tencent.qqmusic.openapisdk.hologram.HologramManager
-import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
+import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 
 /**
  * Created by tannyli on 2022/12/21.
@@ -49,18 +48,7 @@ fun rankPage(homeViewModel: HomeViewModel){
     val activity = LocalContext.current as Activity
     var groups = homeViewModel.rankGroups
     val listState = rememberLazyListState()
-    if (listState.isScrollInProgress) {
-        DisposableEffect(key1 = Unit) {
-            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                IFireEyeXpmService.XpmEvent.LIST_SCROLL, "rankPage", 1
-            )
-            onDispose {
-                HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                    IFireEyeXpmService.XpmEvent.LIST_SCROLL, "rankPage", 0
-                )
-            }
-        }
-    }
+    PerformanceHelper.MonitorListScroll(scrollState = listState, location = "rankPage")
     LazyColumn(
         state = listState
     ){
@@ -93,9 +81,7 @@ fun rankPage(homeViewModel: HomeViewModel){
                         modifier = Modifier
                             .wrapContentSize()
                             .clickable {
-                                HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                                    IFireEyeXpmService.XpmEvent.CLICK, "rankPage_SongListActivity"
-                                )
+                                PerformanceHelper.monitorClick("rankPage_SongListActivity")
                                 activity.startActivity(
                                     Intent(activity, SongListActivity::class.java)
                                         .putExtra(SongListActivity.KEY_RANK_ID, rank.id)

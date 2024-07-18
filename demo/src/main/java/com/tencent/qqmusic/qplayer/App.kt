@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
-import android.os.Debug
 import android.os.StrictMode
 import android.util.Log
 import android.widget.Toast
@@ -112,6 +111,7 @@ class App : Application() {
             }
             val start = System.currentTimeMillis()
             OpenApiSDK.init(initConfig)
+            OpenApiSDK.setAppForeground(true)
             GlobalScope.launch(Dispatchers.Default) {
                 try {
                     val enableLog = sharedPreferences?.getBoolean("enableLog", true) ?: true

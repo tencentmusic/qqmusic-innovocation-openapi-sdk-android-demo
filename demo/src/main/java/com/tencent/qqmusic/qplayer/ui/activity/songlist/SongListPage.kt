@@ -55,6 +55,7 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
+import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.openapisdk.hologram.HologramManager
 import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.openapisdk.model.Album
@@ -67,7 +68,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity.Companion.MV_
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
-import com.tencent.qqmusic.qplayer.utils.hasWanos
+import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -143,18 +144,7 @@ fun SongListPage(
     val songs = flow.collectAsLazyPagingItems()
     Log.i(TAG, "SongListPage: songs count: ${songs.itemCount}")
     val listState = rememberLazyListState()
-    if (listState.isScrollInProgress) {
-        DisposableEffect(key1 = Unit) {
-            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                IFireEyeXpmService.XpmEvent.LIST_SCROLL, "SongListPage", 1
-            )
-            onDispose {
-                HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                    IFireEyeXpmService.XpmEvent.LIST_SCROLL, "SongListPage", 0
-                )
-            }
-        }
-    }
+    PerformanceHelper.MonitorListScroll(scrollState = listState, location = "SongListPage")
     Column {
         playlistHeader(songs = songs.snapshot().items, playListType = playListType, playListTypeId = playListTypeId)
 
@@ -363,11 +353,7 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                             songs.indexOf(song)
                         )
                     if (result == 0) {
-                        HologramManager
-                            .getService(IFireEyeXpmService::class.java)
-                            ?.monitorXpmEvent(
-                                IFireEyeXpmService.XpmEvent.CLICK, "SongItemUI_PlayerActivity"
-                            )
+                        PerformanceHelper.monitorClick("SongItemUI_PlayerActivity")
                         activity.startActivity(Intent(activity, PlayerActivity::class.java))
                     } else {
                         coroutineScope.launch(Dispatchers.Main) {
@@ -447,9 +433,17 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                             .height(10.dp)
                     )
 
-                } else if (song.hasWanos()) {
+                } else if (OpenApiSDK.getPlayerApi().getSongHasQuality(song, Quality.WANOS)) {
                     Image(
                         painter = painterResource(R.drawable.acion_icon_quality_wanos), contentDescription = null, modifier = Modifier
+                            .width(18.dp)
+                            .height(10.dp)
+                    )
+                } else if (OpenApiSDK.getPlayerApi().getSongHasQuality(song, Quality.VINYL)) {
+                    Image(
+                        painter = painterResource(R.drawable.action_icon_quality_vinyl), contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
                             .width(18.dp)
                             .height(10.dp)
                     )
@@ -600,18 +594,7 @@ fun SongListPage(songs: List<SongInfo>, displayOnly: Boolean = false, needPlayer
             bottom.linkTo(player.top)
         }) {
             val scrollState = rememberLazyListState()
-            if (scrollState.isScrollInProgress) {
-                DisposableEffect(key1 = Unit) {
-                    HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                        IFireEyeXpmService.XpmEvent.LIST_SCROLL, "SongListPage", 1
-                    )
-                    onDispose {
-                        HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                            IFireEyeXpmService.XpmEvent.LIST_SCROLL, "SongListPage", 0
-                        )
-                    }
-                }
-            }
+            PerformanceHelper.MonitorListScroll(scrollState = scrollState, location = "SongListPage")
             LazyColumn(state = scrollState, modifier = Modifier.fillMaxSize()) {
                 this.items(songs.size) { index ->
                     val song = songs.elementAtOrNull(index) ?: return@items
