@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.res.Configuration
 import android.widget.Toast
 import com.tencent.qqmusic.innovation.common.util.UtilContext
-import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.openapisdk.model.SongInfo
@@ -124,6 +123,12 @@ object UiUtils {
             }
             PlayerEnums.Quality.WANOS -> {
                 R.drawable.acion_icon_quality_wanos
+            }
+            PlayerEnums.Quality.VINYL -> {
+                R.drawable.action_icon_quality_vinyl
+            }
+            PlayerEnums.Quality.MASTER_TAPE, PlayerEnums.Quality.MASTER_SR -> {
+                R.drawable.master_tape_icon
             }
             else -> {
                 R.drawable.ic_lq

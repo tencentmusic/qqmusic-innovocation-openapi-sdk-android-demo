@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.Button
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.OutlinedTextField
@@ -45,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberImagePainter
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
@@ -54,8 +54,6 @@ import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
-import com.tencent.qqmusic.openapisdk.hologram.HologramManager
-import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.PartnerLoginActivity
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
@@ -68,6 +66,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.search.singerPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.BuyAlbumPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPage
+import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,14 +74,11 @@ import kotlinx.coroutines.launch
 private const val TAG = "MinePage"
 
 @Composable
-fun MinePage() {
+fun MinePage(homeViewModel: HomeViewModel) {
     val activity = LocalContext.current as Activity
 
     val loginText = remember { mutableStateOf("") }
     val lifecycleOwner = LocalLifecycleOwner.current
-    val homeViewModel by lazy {
-        HomeViewModel()
-    }
     val mineViewModel by lazy { MineViewModel() }
 
     DisposableEffect(lifecycleOwner) {
@@ -116,7 +112,7 @@ fun MinePage() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        MineSongList(activity, viewModel())
+        MineSongList(activity, homeViewModel)
     }
 }
 
@@ -144,6 +140,44 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewMo
                     HomeViewModel.clearRequestState()
                 }, modifier = Modifier.padding(8.dp, 0.dp, 0.dp, 0.dp)) {
                     Text(text = "退出登录")
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Button(onClick = {
+                    OpenApiSDK.getLoginApi().qqLoginWeb(activity) { ret, msg ->
+                        activity.runOnUiThread {
+                            Log.i(TAG, "LoginPage: qq ret $ret, msg: $msg")
+                            if (ret.not()) {
+                                Toast.makeText(activity, "QQ登录失败: $msg", Toast.LENGTH_SHORT).show()
+                            }
+                            HomeViewModel.clearRequestState()
+                            mineViewModel.updateData()
+                            info.value = "QQ已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                        }
+                    }
+                }, modifier = Modifier.padding(0.dp)) {
+                    Text(text = "QQ登录")
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // 三方登录成功 也给Q音独立登录的入口
+                Button(onClick = {
+                    OpenApiSDK.getLoginApi().qrCodeLogin(activity) { b, msg ->
+                        if (b) {
+
+                            info.value = "扫码已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                            mineViewModel.updateData()
+                        } else {
+                            Toast.makeText(activity, "登录失败: $msg", Toast.LENGTH_SHORT).show()
+                        }
+                        HomeViewModel.clearRequestState()
+                        mineViewModel.updateData()
+                    }
+                    info.value = "扫码登录结果:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                }, modifier = Modifier.padding(0.dp)) {
+                    Text(text = "扫码登录")
                 }
 
             }
@@ -315,10 +349,7 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
         val index = pagerState.currentPage
         Log.i(TAG, "MineSongList: current index $index")
 
-        HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-            IFireEyeXpmService.XpmEvent.PAGE_SCROLL,
-            "Mine_$index"
-        )
+        PerformanceHelper.monitorPageScroll("Mine_$index")
 
         when (index) {
             0 -> {

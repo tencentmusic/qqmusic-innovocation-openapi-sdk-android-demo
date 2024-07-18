@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,17 +22,18 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelStoreOwner
 import com.tencent.qqmusic.edgemv.impl.AreaID
 import com.tencent.qqmusic.edgemv.impl.GetMVRecommendCmd
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVResDetailPage
 import com.tencent.qqmusic.qplayer.ui.activity.mv.PlayerViewModel
 
-class MVRecommendFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
+class MVRecommendFragment : Fragment() {
+
+    private val mViewModelStoreOwner by lazy {  activity as AppCompatActivity }
 
     private var composeView: ComposeView? = null
-    private val playerViewModel by lazy { ViewModelProvider(viewModelStoreOwner)[PlayerViewModel::class.java] }
+    private val playerViewModel by lazy { ViewModelProvider(mViewModelStoreOwner)[PlayerViewModel::class.java] }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_compose_view, container, false)

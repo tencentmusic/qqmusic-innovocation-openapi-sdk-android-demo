@@ -2,13 +2,12 @@ package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.app.Activity
 import android.content.Context
-import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
-import androidx.recyclerview.widget.ListAdapter
+import com.tencent.qqmusic.openapisdk.business_common.utils.Utils
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
@@ -16,8 +15,8 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.utils.UiUtils
-import com.tencent.qqmusic.qplayer.utils.hasWanos
 import kotlin.concurrent.thread
+import kotlin.jvm.internal.Intrinsics.Kotlin
 
 object QualityAlert {
     private const val TAG = "QualityAlert"
@@ -30,7 +29,9 @@ object QualityAlert {
             PlayerEnums.Quality.DOLBY,
             PlayerEnums.Quality.HIRES,
             PlayerEnums.Quality.EXCELLENT,
-            PlayerEnums.Quality.GALAXY
+            PlayerEnums.Quality.GALAXY,
+            PlayerEnums.Quality.MASTER_TAPE,
+            PlayerEnums.Quality.MASTER_SR,
         )
 
     var qualityOrderString =
@@ -43,15 +44,28 @@ object QualityAlert {
             "HIRES",
             "EXCELLENT",
             "GALAXY",
+            "MASTER_TAPE",
+            "MASTER_SR",
         )
 
     fun showQualityAlert(activity: Activity, isDownload: Boolean, setBlock: (Int)->Int, refresh: (Int)->Unit) {
         val curSong = OpenApiSDK.getPlayerApi().getCurrentSongInfo()
-        if (curSong?.hasWanos() == true) {
-            qualityOrderString = arrayOf("WANOS")
+        var realQuality: Int? = null
+        curSong?.apply {
+            if (OpenApiSDK.getPlayerApi().getSongHasQuality(curSong, Quality.WANOS)) {
+                qualityOrderString = arrayOf("WANOS")
+                realQuality = Quality.WANOS
+            } else if (OpenApiSDK.getPlayerApi().getSongHasQuality(curSong, Quality.VINYL)) {
+                qualityOrderString = arrayOf("黑胶")
+                realQuality = Quality.VINYL
+            }
         }
+
         val stringArray = qualityOrderString.map {
-            val quality = qualityOrder.getOrNull(qualityOrderString.indexOf(it)) ?: qualityOrder[0]
+            val quality = qualityOrder.getOrNull(qualityOrderString.indexOf(it)) ?: kotlin.run {
+                realQuality ?: qualityOrder[2]
+            }
+
             val accessStr = UiUtils.getFormatAccessLabel(curSong, quality, isDownload)
             val tryPlayQualityLabel = if (OpenApiSDK.getPlayerApi().canTryOpenQuality(curSong, quality)) {
                 "-可试听"
@@ -96,6 +110,12 @@ object QualityAlert {
                         "WANOS $accessStr"
                     }
                 }
+                "MASTER_TAPE" -> {
+                    "臻品母带 "+ UiUtils.getFormatSize(curSong?.getSongQuality(Quality.MASTER_TAPE)?.size?.toLong()) + accessStr + tryPlayQualityLabel
+                }
+                "MASTER_SR" -> {
+                    "臻品母带省流版"+ UiUtils.getFormatSize(curSong?.getSongQuality(Quality.MASTER_SR)?.size?.toLong()) + accessStr + tryPlayQualityLabel
+                }
                 else -> {
                     it
                 }
@@ -105,15 +125,19 @@ object QualityAlert {
         androidx.appcompat.app.AlertDialog.Builder(activity)
             .setAdapter(CustomArrayAdapter(activity, stringArray, curSong)) { _, which ->
                 thread {
-                    val nextQuality = qualityOrder.getOrNull(which)
-                        ?: PlayerEnums.Quality.LQ
+                    val nextQuality = if (realQuality != null) {
+                        realQuality
+                    } else {
+                        qualityOrder.getOrNull(which)
+                    } ?: PlayerEnums.Quality.LQ
+
                     val ret = setBlock(nextQuality)
                     val msg = when (ret) {
                         PlayDefine.PlayError.PLAY_ERR_NONE -> {
                             refresh(nextQuality)
                             "切换歌曲品质成功"
                         }
-                        PlayDefine.PlayError.PLAY_ERR_DEVICE_NO_SUPPORT -> if (nextQuality == Quality.DOLBY) "设备不支持杜比" else "设备不支持臻品2.0"
+                        PlayDefine.PlayError.PLAY_ERR_DEVICE_NO_SUPPORT -> "设备不支持${Utils.qualityToString(nextQuality)} 音质"
                         PlayDefine.PlayError.PLAY_ERR_NO_QUALITY -> "没有对应音质"
                         PlayDefine.PlayError.PLAY_ERR_PLAYER_ERROR -> "播放器异常"
                         PlayDefine.PlayError.PLAY_ERR_NEED_VIP -> "需要VIP"

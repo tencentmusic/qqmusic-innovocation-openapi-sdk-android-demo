@@ -21,7 +21,7 @@ ext {
 
     sdk_version = project.hasProperty('edge_version') && "${edge_version}" != ""
             ? "${edge_version}"
-            : "2.2.0"
+            : "2.3.0"
 
     println "apk demo sdk_version:$sdk_version"
 

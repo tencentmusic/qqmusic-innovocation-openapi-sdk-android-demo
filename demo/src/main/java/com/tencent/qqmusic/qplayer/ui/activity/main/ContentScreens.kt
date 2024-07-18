@@ -69,7 +69,7 @@ fun SearchScreen(homeViewModel: HomeViewModel = viewModel()) {
 }
 
 @Composable
-fun MineScreen() {
-    MinePage()
+fun MineScreen(homeViewModel: HomeViewModel = viewModel()) {
+    MinePage(homeViewModel)
 }
 

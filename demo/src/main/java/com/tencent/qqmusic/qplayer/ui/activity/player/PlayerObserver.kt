@@ -17,18 +17,17 @@ import com.tencent.qqmusic.openapisdk.core.download.DownloadEvent
 import com.tencent.qqmusic.openapisdk.core.download.DownloadListener
 import com.tencent.qqmusic.openapisdk.core.download.DownloadTask
 import com.tencent.qqmusic.openapisdk.core.player.IMediaEventListener
-import com.tencent.qqmusic.openapisdk.core.player.OnVocalAccompanyStatusChangeListener
 import com.tencent.qqmusic.openapisdk.core.player.IProgressChangeListener
+import com.tencent.qqmusic.openapisdk.core.player.OnVocalAccompanyStatusChangeListener
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
-import com.tencent.qqmusic.openapisdk.core.player.PlayerApi
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEvent
 import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyConfig
-import com.tencent.qqmusic.openapisdk.core.player.ai.AIListenError
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.model.aiaccompany.VoicePrompts
+import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiAccompanyHelper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 //
@@ -173,23 +172,25 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                     }
                 }
                 PlayerEvent.Event.API_EVENT_SONG_PLAY_ERROR -> {
-                    val errorCode = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_ERROR_CODE)
-                    Log.i(TAG, "onEvent: current error $errorCode")
-                    if (currentSong?.canPlay() != true) {
-                        Toast.makeText(
-                            UtilContext.getApp(),
-                            currentSong?.unplayableMsg ?: "",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        Toast.makeText(
-                            UtilContext.getApp(),
-                            "播放遇到错误，code:$errorCode",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    GlobalScope.launch(Dispatchers.Main) {
+                        val errorCode = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_ERROR_CODE)
+                        Log.i(TAG, "onEvent: current error $errorCode")
+                        if (currentSong?.canPlay() != true) {
+                            Toast.makeText(
+                                UtilContext.getApp(),
+                                currentSong?.unplayableMsg ?: "",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            Toast.makeText(
+                                UtilContext.getApp(),
+                                "播放遇到错误，code:$errorCode",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        setPlayState("播放错误(code=${errorCode})")
+                        resetPlayProgress()
                     }
-                    setPlayState("播放错误(code=${errorCode})")
-                    resetPlayProgress()
                 }
 
                 PlayerEvent.Event.API_EVENT_PLAY_LIST_CHANGED -> {

@@ -2,6 +2,7 @@ package com.tencent.qqmusic.qplayer.ui.activity.person
 
 import android.os.SystemClock
 import android.util.Log
+import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tencent.qqmusic.openapisdk.business_common.Global
@@ -68,8 +69,15 @@ class MineViewModel : ViewModel() {
                 _partnerAccountInfo.value = OpenApiSDK.getPartnerApi().queryThirdPartyAccountID()
             })
 
-            OpenApiSDK.getOpenApi().fetchGreenMemberInformation {
-                _userVipInfo.value = it.data
+            // 第三方独立登录。获取会员的接口使用独立接口
+            if (Global.getLoginModuleApi().openIdInfo?.type == AuthType.PARTNER) {
+                OpenApiSDK.getOpenApi().fetchPartnerMemberInformation {
+                    _userVipInfo.value = it.data
+                }
+            } else {
+                OpenApiSDK.getOpenApi().fetchGreenMemberInformation {
+                    _userVipInfo.value = it.data
+                }
             }
         }
     }
@@ -102,6 +110,8 @@ class MineViewModel : ViewModel() {
             "豪华绿钻"
         } else if (vipInfo?.greenVipFlag == 1) {
             "绿钻"
+        } else if (vipInfo?.partnerVipFlag == 1) {
+            "三方独立会员"
         } else {
             ""
         }
@@ -144,6 +154,8 @@ class MineViewModel : ViewModel() {
             vipInfo.eightStartTime
         } else if (vipInfo?.longAudioVip == 1) {
             vipInfo.longAudioVipStartTime
+        } else if (vipInfo?.partnerVipFlag == 1) {
+            vipInfo.partnerVipStartTime
         } else {
             "信息获取不明"
         }
@@ -164,6 +176,8 @@ class MineViewModel : ViewModel() {
             vipInfo.eightEndTime
         } else if (vipInfo?.longAudioVip == 1) {
             vipInfo.longAudioVipEndTime
+        } else if (vipInfo?.partnerVipFlag == 1) {
+            vipInfo.partnerVipEndTime
         } else {
             "信息获取不明"
         }

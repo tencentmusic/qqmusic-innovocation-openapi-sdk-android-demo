@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Dialog
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,10 +15,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.constraintlayout.compose.ConstraintLayout
+import coil.compose.rememberImagePainter
 import com.google.accompanist.flowlayout.FlowRow
 import com.tencent.qqmusic.openapisdk.model.*
+import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.openapi.internal.AreaTag
 import com.tencent.qqmusic.qplayer.ui.activity.area.AreaListActivity
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderActivity
@@ -30,49 +35,43 @@ private const val TAG = "DolbySectionPage"
 @Composable
 fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
     val activity = LocalContext.current as Activity
-    var areaShelves: List<AreaShelf> by remember {
+    var areaShelves: List<AreaShelf>? by remember {
         mutableStateOf(emptyList<AreaShelf>())
     }
     var areaAreaTitle: String = ""
     var areaAreaDesc: String = ""
     var areaAreaCover: String = ""
+    val callback: (Area?) -> Unit = {
+        if (it!=null) {
+            areaAreaTitle = it.title
+            areaAreaDesc = it.desc
+            areaAreaCover = it.cover
+            areaShelves = it.shelves
+        }
+    }
 
-    if (areaId == AreaId.AreaDolby) {
-        viewModel.fetchDolbySection(callback = {
-            if (it!=null) {
-                areaAreaTitle = it.title
-                areaAreaDesc = it.desc
-                areaAreaCover = it.cover
-                areaShelves = it.shelves
+    when (areaId) {
+        AreaId.AreaDolby -> {
+            viewModel.fetchDolbySection(callback)
+        }
+        AreaId.AreaHires -> {
+            viewModel.fetchHiresSection(callback)
+        }
+        AreaId.AreaGalaxy -> {
+            viewModel.fetchGalaxySection(callback)
+        }
+        AreaId.Vinly -> {
+            viewModel.fetchVinylSection(callback)
+        }
+        AreaId.Master -> {
+            viewModel.fetchMasterSection(callback)
+        }
+        else -> {
+            if (areaId == AreaId.Wanos) {
+                viewModel.showDialog = true
             }
-        })
-    } else if (areaId == AreaId.AreaHires) {
-        viewModel.fetchHiresSection(callback = {
-            if (it!=null) {
-                areaAreaTitle = it.title
-                areaAreaDesc = it.desc
-                areaAreaCover = it.cover
-                areaShelves = it.shelves
-            }
-        })
-    } else if (areaId == AreaId.AreaGalaxy) {
-        viewModel.fetchGalaxySection(callback = {
-            if (it!=null) {
-                areaAreaTitle = it.title
-                areaAreaDesc = it.desc
-                areaAreaCover = it.cover
-                areaShelves = it.shelves
-            }
-        })
-    }else if (areaId == AreaId.Wanos){
-        viewModel.fetchWanosSection(callback = {
-            if (it != null) {
-                areaAreaTitle = it.title
-                areaAreaDesc = it.desc
-                areaAreaCover = it.cover
-                areaShelves = it.shelves
-            }
-        })
+            viewModel.fetchSection(areaId, callback)
+        }
     }
 
     if (viewModel.showDialog) {
@@ -113,8 +112,8 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
     }
 
     LazyColumn {
-        items(areaShelves.count()) { it ->
-            val shelf: AreaShelf = areaShelves.getOrNull(it) ?: return@items
+        items(areaShelves?.count() ?: 0) { it ->
+            val shelf: AreaShelf = areaShelves?.getOrNull(it) ?: return@items
             if (shelf.shelfItems.isEmpty()) return@items;
             val shelfItems: List<AreaShelfItem> = shelf.shelfItems
 
@@ -146,7 +145,13 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                     modifier = Modifier
                         .wrapContentWidth()
                         .clickable {
-                            AreaListActivity.start(activity, areaId, shelf.shelfType, shelf.shelfId, shelf.shelfTitle)
+                            AreaListActivity.start(
+                                activity,
+                                areaId,
+                                shelf.shelfType,
+                                shelf.shelfId,
+                                shelf.shelfTitle
+                            )
                         }
                 )
 
@@ -173,10 +178,11 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = title,
-                                    fontSize = 16.sp
-                                )
+                                if (item.songInfo?.isLongAudioSong() == true) {
+                                    PodcastItem(song = item.songInfo)
+                                } else {
+                                    Text(text = title, fontSize = 16.sp)
+                                }
                             }
                         }
                         AreaShelfType.AreaShelfType_Folder-> {
@@ -231,4 +237,71 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
         }
     }
 
+}
+
+@Composable
+fun PodcastItem(song: SongInfo?) {
+    if (song == null) {
+        return
+    }
+    ConstraintLayout(modifier = Modifier.padding(start = 10.dp, end = 10.dp)) {
+        val (cover, songInfo, collect) = createRefs()
+        Image(
+            painter = rememberImagePainter(song.smallCoverUrl()),
+            contentDescription = null,
+            modifier = Modifier
+                .size(50.dp)
+                .padding(2.dp)
+                .constrainAs(cover) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                    start.linkTo(parent.start)
+                    end.linkTo(songInfo.start)
+                }
+        )
+        Column(
+            modifier = Modifier
+                .padding(start = 10.dp)
+                .constrainAs(songInfo) {
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                    start.linkTo(cover.end)
+                    end.linkTo(parent.end)
+                }, horizontalAlignment = Alignment.Start
+        ) {
+            val txtColor = if (song.canPlay()) {
+                Color.Black
+            } else {
+                Color.Gray
+            }
+            Text(text = song.songName, color = txtColor, modifier = Modifier.fillMaxWidth())
+            Text(
+                text = (song.singerName ?: "未知") + ", ${song.updateTime}" + ", ${song.listenCount}",
+                color = txtColor
+            )
+            Row {
+                if (song.vip == 1) {
+                    Image(
+                        painter = painterResource(R.drawable.pay_icon_in_cell_old),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(end = 5.dp)
+                            .width(18.dp)
+                            .height(10.dp)
+                    )
+                }
+                if (song.longAudioVip == 1) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_long_audio_vip_new),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(end = 5.dp)
+                            .width(18.dp)
+                            .height(10.dp)
+                    )
+                }
+            }
+        }
+
+    }
 }

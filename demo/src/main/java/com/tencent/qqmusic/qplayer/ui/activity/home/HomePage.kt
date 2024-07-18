@@ -32,11 +32,10 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
-import com.tencent.qqmusic.openapisdk.hologram.HologramManager
-import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderActivity
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVFunctionPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
+import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -98,10 +97,7 @@ fun homePageTabs(homeViewModel: HomeViewModel) {
         val index = pagerState.currentPage
         Log.i(TAG, "HomePage: current index $index")
 
-        HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-            IFireEyeXpmService.XpmEvent.PAGE_SCROLL,
-            "Home_${index}"
-        )
+        PerformanceHelper.monitorPageScroll("Home_${index}")
 
         when (index) {
             0 -> {
@@ -141,22 +137,7 @@ fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolea
     }
     var categories = if (fetchSceneSongList) homeViewModel.sceneCategories else homeViewModel.categories
     val scrollState = rememberLazyListState()
-    if (scrollState.isScrollInProgress) {
-        DisposableEffect(key1 = Unit) {
-            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                IFireEyeXpmService.XpmEvent.LIST_SCROLL,
-                "CategoryFolderPage",
-                1
-            )
-            onDispose {
-                HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                    IFireEyeXpmService.XpmEvent.LIST_SCROLL,
-                    "CategoryFolderPage",
-                    scrollState = 0 // idle
-                )
-            }
-        }
-    }
+    PerformanceHelper.MonitorListScroll(scrollState = scrollState, location = "CategoryFolderPage")
     LazyColumn(state = scrollState) {
         items(categories.count()) { it ->
             val topCategory = categories.getOrNull(it) ?: return@items
@@ -187,11 +168,7 @@ fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolea
                                 } else {
                                     "FolderActivity"
                                 }
-                                HologramManager
-                                    .getService(IFireEyeXpmService::class.java)
-                                    ?.monitorXpmEvent(
-                                        IFireEyeXpmService.XpmEvent.CLICK, location
-                                    )
+                                PerformanceHelper.monitorClick(location)
                                 if (fetchSceneSongList) {
                                     activity.startActivity(
                                         Intent(activity, SongListActivity::class.java)

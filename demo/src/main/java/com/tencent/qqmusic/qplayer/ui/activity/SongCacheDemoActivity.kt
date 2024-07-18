@@ -11,10 +11,10 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.widget.addTextChangedListener
-import com.tencent.qqmusic.openapisdk.business_common.Global
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
-import com.tencent.qqmusic.openapisdk.core.player.SongCacheCallback
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.utils.UiUtils
@@ -45,75 +45,24 @@ class SongCacheDemoActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_song_cache)
-        findViewById<View>(R.id.start).setOnClickListener {
+        findViewById<View>(R.id.play).setOnClickListener {
             getCurrentSongId()?.let {
                 querySongInfo(it) { songInfo ->
-                    display.text = "开始缓存, 请稍等..."
-                    OpenApiSDK.getSongCacheApi().startCache(songInfo, object : SongCacheCallback {
-                        override fun onSuccess(songInfo: SongInfo) {
-                            Toast.makeText(this@SongCacheDemoActivity, "缓存成功", Toast.LENGTH_SHORT)
-                                .show()
-                            display.text = "缓存成功"
-                            refreshExist()
-                        }
+                    OpenApiSDK.getPlayerApi().playSongs(listOf(songInfo))
+                }
+            }
+        }
 
-                        override fun onFailed(songInfo: SongInfo, errorMsg: String) {
-                            Toast.makeText(this@SongCacheDemoActivity, "缓存失败", Toast.LENGTH_SHORT)
-                                .show()
-                            refreshExist()
-                            display.text = "缓存失败: $errorMsg"
-                        }
-                    })
-                }
-            }
-        }
-        findViewById<View>(R.id.stop).setOnClickListener {
-            getCurrentSongId()?.let {
-                querySongInfo(it) { songInfo ->
-                    display.text = "停止缓存"
-                    val stopCache = OpenApiSDK.getSongCacheApi().stopCache(songInfo)
-                    if (stopCache) {
-                        display.text = "停止缓存成功"
-                        refreshExist()
-                    } else {
-                        display.text = "停止缓存失败"
-                    }
-                }
-            }
-        }
-        findViewById<View>(R.id.clear).setOnClickListener {
-            getCurrentSongId()?.let {
-                querySongInfo(it) { songInfo ->
-                    display.text = "清除缓存"
-                    val stopCache = OpenApiSDK.getSongCacheApi().clearCache(songInfo)
-                    if (stopCache) {
-                        display.text = "清除缓存成功"
-                        refreshExist()
-                    } else {
-                        display.text = "清除缓存失败"
-                    }
-                }
-            }
-        }
         findViewById<View>(R.id.clearAll).setOnClickListener {
             OpenApiSDK.getSongCacheApi().clearAllCaches()
         }
+
         findViewById<View>(R.id.check).setOnClickListener {
             refreshExist()
         }
 
-        findViewById<View>(R.id.play).setOnClickListener {
-            getCurrentSongId()?.let {
-                querySongInfo(it) { songInfo ->
-                    OpenApiSDK.getPlayerApi().playSongs(listOf(songInfo), 0)
-                }
-            }
-        }
-
         findViewById<View>(R.id.size).setOnClickListener {
-            val cacheSize = OpenApiSDK.getSongCacheApi().getCacheSize()
-            Log.d(TAG, "cache : $cacheSize cacheSize=${cacheSize / 1024 /1024} MB")
-            Toast.makeText(this, "size: ${UiUtils.getFormatSize(cacheSize)}", Toast.LENGTH_SHORT).show()
+            getCacheSize()
         }
 
         edit.addTextChangedListener(object : TextWatcher {
@@ -142,19 +91,19 @@ class SongCacheDemoActivity : AppCompatActivity() {
 
     private fun initSetCacheView() {
         val etSize = findViewById<EditText>(R.id.edit_cache_size)
-        val etSongNum = findViewById<EditText>(R.id.edit_cache_song_num)
         findViewById<Button>(R.id.custom_set_size).setOnClickListener {
             val size = etSize.text.toString().toIntOrNull() ?: 0
-            val songNum = etSongNum.text.toString().toIntOrNull() ?: 0
-            if (size == 0 || songNum == 0) {
-                Toast.makeText(this, "请输入正确的参数", Toast.LENGTH_SHORT).show()
+            if (size <= 0) {
+                Toast.makeText(this, "请输入正确的参数，最低设置50Mb", Toast.LENGTH_SHORT).show()
             } else {
-                val ret = OpenApiSDK.getSongCacheApi().setCacheMaxSize(size, songNum)
+                val ret = OpenApiSDK.getSongCacheApi().setCacheMaxSize(size)
                 if (ret == 0) {
-                    Toast.makeText(this, "设置成功", Toast.LENGTH_SHORT).show()
+                    getCacheSize()
                 } else {
-                    Toast.makeText(this, "设置失败", Toast.LENGTH_SHORT).show()
+                    val errMap = mapOf(-1 to "sdk异常", -2 to "参数不合法", -200 to "播放进程未启动或已死亡")
+                    Toast.makeText(this,"设置失败:${errMap[ret]}", Toast.LENGTH_SHORT).show()
                 }
+
             }
         }
     }
@@ -198,5 +147,10 @@ class SongCacheDemoActivity : AppCompatActivity() {
                 display.text = "查询歌曲信息失败：${it.errorMsg}"
             }
         }
+    }
+    private fun getCacheSize(){
+        val cacheSize = OpenApiSDK.getSongCacheApi().getCacheSize()
+        Log.d(TAG, "cache : $cacheSize cacheSize=${cacheSize / 1024 /1024} MB")
+        Toast.makeText(this, "size: ${UiUtils.getFormatSize(cacheSize)}", Toast.LENGTH_SHORT).show()
     }
 }

@@ -38,10 +38,6 @@ class OpenApiDemoActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "OpenApiDemoActivity"
-        private val testMultiBlockingGetBlock: OpenApi.(OpenApiCallback<OpenApiResponse<VipInfo>>) -> Unit = {
-            OpenApiSDK.getOpenApi().fetchGreenMemberInformation(callback = it)
-        }
-        private var hasRunConcurrent = false
     }
 
     private val methodNameToBlock = mutableMapOf<String, (MethodNameWidthParam) -> Unit>()
@@ -244,7 +240,8 @@ class OpenApiDemoActivity : AppCompatActivity() {
             errorOpiNameAndMsg.clear()
             displayTv.text = "正在请求, 请稍等..."
             thread {
-
+                val startTime = System.currentTimeMillis()
+                Log.d(TAG, "请求所有接口 start")
                 // 先创建一个歌单，用作后续的deleteFolder、addSongToFolder、deleteSongFromFolder的folderId默认值
                 OpenApiSDK.getOpenApi().blockingGet<String> {
                     OpenApiSDK.getOpenApi().createFolder("一键测试的前置创建歌单") { callback ->
@@ -326,6 +323,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
                     displayTv.text = text
                 }
                 displayMode = true
+                Log.d(TAG, "请求所有接口 end, 总耗时: ${(System.currentTimeMillis() - startTime).div(1000)}s")
             }
         }
 
@@ -430,6 +428,12 @@ class OpenApiDemoActivity : AppCompatActivity() {
     }
 
     private fun setupMethodNameToBlock() {
+        methodNameToBlock["fetchAreaSectionByShelfTypes"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.fetchAreaSectionByShelfTypes(paramStr1!!.toInt(), listOf(1004), commonCallback)
+        }
+
         methodNameToBlock["fetchGreenMemberInformation"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
@@ -438,6 +442,10 @@ class OpenApiDemoActivity : AppCompatActivity() {
         methodNameToBlock["fetchIotMemberInformation"] = {
             val commonCallback = CallbackWithName(it)
             openApi.fetchIotMemberInformation(commonCallback)
+        }
+        methodNameToBlock["fetchPartnerMemberInformation"] = {
+            val commonCallback = CallbackWithName(it)
+            openApi.fetchPartnerMemberInformation(commonCallback)
         }
         methodNameToBlock["fetchUserInfo"] = {
             val commonCallback = CallbackWithName(it)
@@ -661,11 +669,6 @@ class OpenApiDemoActivity : AppCompatActivity() {
             fillDefaultParamIfNull(it)
             openApi.fetchJustListenRadio(commonCallback)
         }
-        methodNameToBlock["fetchJustListenRank"] = {
-            val commonCallback = CallbackWithName(it)
-            fillDefaultParamIfNull(it)
-            openApi.fetchJustListenRank(commonCallback)
-        }
         methodNameToBlock["fetchSongOfJustListenRadio"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
@@ -712,7 +715,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
             fillDefaultParamIfNull(it)
             // 19535: 大张伟
             openApi.fetchSongOfSinger(
-                paramStr1!!.toInt(), paramStr2?.toInt() ?: 0, paramStr3?.toInt() ?: 20, paramStr4?.toInt() ?: 0, callback = commonCallback
+                paramStr1!!.toInt(), paramStr2.toString(),paramStr3?.toInt() ?: 0, paramStr4?.toInt() ?: 20, paramStr5?.toInt() ?: 0, callback = commonCallback
             )
         }
         methodNameToBlock["fetchHotSingerList"] = {
@@ -727,7 +730,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
             fillDefaultParamIfNull(it)
             // 19535: 大张伟
             openApi.fetchAlbumOfSinger(
-                paramStr1!!.toInt(), paramStr2?.toInt() ?: 0, paramStr3?.toInt() ?: 20, paramStr4?.toInt() ?: 0, callback = commonCallback
+                paramStr1!!.toInt(), paramStr2?.toString(), paramStr3?.toInt() ?: 0, paramStr4?.toInt() ?: 20, paramStr5?.toInt() ?: 0, callback = commonCallback
             )
         }
         methodNameToBlock["fetchDailyRecommendSong"] = {
@@ -1053,6 +1056,11 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
+                "fetchPartnerMemberInformation", listOf(), listOf()
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
                 "fetchIotMemberInformation", listOf(), listOf()
             )
         )
@@ -1222,11 +1230,6 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "fetchJustListenRank", listOf(), listOf()
-            )
-        )
-        methodNameWithParamList.add(
-            MethodNameWidthParam(
                 "fetchSongOfJustListenRadio", listOf("电台id"), listOf("601")
             )
         )
@@ -1262,7 +1265,8 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "fetchSongOfSinger", listOf("歌手id", "页码（可不传）", "每页返回数量（可不传）", "排序类型（0按时间; 1按热度）"), listOf("19535", null, null, "0")
+                "fetchSongOfSinger", listOf("歌手id", "歌手mid", "页码（可不传）",
+                    "每页返回数量（可不传）", "排序类型（0按时间; 1按热度）"), listOf("19535", "", null, null, "0")
             )
         )
         methodNameWithParamList.add(
@@ -1289,7 +1293,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
 
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "fetchAlbumOfSinger", listOf("歌手id", "页码（可不传）", "每页返回数量（可不传）", "排序类型（0按时间; 1按热度）"), listOf("19535", null, null, "0")
+                "fetchAlbumOfSinger", listOf("歌手id", "歌手mid", "页码（可不传）", "每页返回数量（可不传）", "排序类型（0按时间; 1按热度）"), listOf("19535", "", null, null, "0")
             )
         )
         methodNameWithParamList.add(
@@ -1455,6 +1459,9 @@ class OpenApiDemoActivity : AppCompatActivity() {
             MethodNameWidthParam(
                 "collectLongAudioSong", listOf("收藏", "歌曲id列表"), listOf("true", "314377847")
             )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam("fetchAreaSectionByShelfTypes", listOf("专区类型"), listOf("675"))
         )
         methodNameWithParamList.sortBy {
             it.name

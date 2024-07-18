@@ -14,34 +14,43 @@ import org.json.JSONObject
  */
 class FireEyeMonitorConfigImpl: IMonitorConfigApi {
     override fun channelId(): String {
-        return ""
+        return Global.channelId
     }
 
     override fun memoryAndTraceConfig(): Pair<JSONObject?, JSONObject?> {
-        return null to JSONObject()
+        return null to JSONObject().apply {
+            put("anr_sample_ratio", 0.10f)
+            put("fps_sample_ratio", 0.10f)
+        }
     }
 
     override fun uid(): String {
-        return  ""
+        return SessionManager.getSession().uid ?: ""
     }
 
     override fun uin(): String {
-        return  ""
+        return OpenApiSDK.getLoginApi().getUserOpenId()
     }
 
     override fun uniqueId(): String {
-        return ""
+        return SessionManager.getSession().uid
     }
 
     override fun versionName(): String {
-        return ""
+        return Global.versionName
     }
 
     override fun xpmConfig(): JSONObject? {
-        return null
+        return JSONObject().apply {
+            put("xpm_open_sample", 0.10f)
+            put("xpm_stack_sample", 0.10f)
+            put("xpm_mode_sample_n", 2)
+            put("xpm_test", false)
+        }
     }
 
     override fun reportXpmEvent(event: Map<String, String>) {
         super.reportXpmEvent(event)
+        Log.i("FireEyeXpm", "reportXpmEvent: ${GsonHelper.safeToJson(event)}")
     }
 }

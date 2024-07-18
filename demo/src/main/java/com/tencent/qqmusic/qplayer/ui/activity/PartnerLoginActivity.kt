@@ -6,15 +6,19 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
+import androidx.compose.material.Checkbox
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
@@ -66,6 +70,10 @@ fun PartnerLoginPage(impl: IPartnerLogin? = null, sharedPreferences: SharedPrefe
 
     val result = remember {
         mutableStateOf("")
+    }
+
+    val cbForceBind = remember{
+        mutableStateOf(true)
     }
 
     ConstraintLayout(modifier = Modifier.fillMaxSize().verticalScroll(state = rememberScrollState())) {
@@ -137,21 +145,34 @@ fun PartnerLoginPage(impl: IPartnerLogin? = null, sharedPreferences: SharedPrefe
             Text(text = result.value)
         }
 
-
-        Button(onClick = {
-            result.value = execute
-            impl?.updateThirdPartyAccount(appId.value, token.value, accountId.value
-            ) { response -> result.value = "ret: ${response?.ret} msg : ${response?.errorMsg}" }
-        }, modifier = Modifier
-            .padding(start = 30.dp, top = 60.dp, end = 30.dp)
-            .height(60.dp)
-            .constrainAs(bindView) {
-                width = Dimension.fillToConstraints
-                start.linkTo(parent.start)
-                end.linkTo(parent.end)
-                top.linkTo(resultView.bottom)
-            }) {
-            Text(text = "绑定音乐帐号")
+        Row (
+            modifier = Modifier
+                .padding(start = 30.dp, top = 60.dp, end = 30.dp)
+                .fillMaxWidth()
+                .height(60.dp)
+                .constrainAs(bindView) {
+                    width = Dimension.fillToConstraints
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                    top.linkTo(resultView.bottom)
+                },
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = cbForceBind.value,
+                onCheckedChange = {cbForceBind.value = it}
+            )
+            Text(text = "强制绑定", modifier = Modifier.padding(5.dp))
+            Button(onClick = {
+                result.value = execute
+                impl?.updateThirdPartyAccount(appId.value, token.value, accountId.value,
+                    cbForceBind.value
+                ) { response -> result.value = "ret: ${response?.ret} msg : ${response?.errorMsg} bindAccountID: ${response?.data}" }
+            }, modifier = Modifier.fillMaxSize()
+                ) {
+                Text(text = "绑定音乐帐号")
+            }
         }
 
         Button(onClick = {
@@ -173,7 +194,7 @@ fun PartnerLoginPage(impl: IPartnerLogin? = null, sharedPreferences: SharedPrefe
         Button(onClick = {
             result.value = execute
             impl?.queryThirdPartyAccountBindState(appId.value, token.value, accountId.value
-            ) { response -> result.value = "ret: ${response?.ret} msg : ${response?.errorMsg}" }
+            ) { response -> result.value = "ret: ${response?.ret} msg : ${response?.errorMsg}  bindAccountID: ${response?.data}" }
         }, modifier = Modifier
             .padding(start = 30.dp, top = 30.dp, end = 30.dp)
             .height(60.dp)

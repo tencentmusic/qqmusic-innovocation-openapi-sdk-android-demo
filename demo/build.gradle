@@ -15,7 +15,7 @@ android {
     defaultConfig {
         applicationId "com.tencent.qqmusicrecognition"
         minSdkVersion 21
-        targetSdk 33
+        targetSdk 32
         versionCode rootProject.ext.appVersionCode
         versionName rootProject.ext.appVersionName
 
@@ -32,6 +32,8 @@ android {
         ndk{                                            // add this
             abiFilters "arm64-v8a","x86_64","x86","armeabi-v7a"
         }
+        buildConfigField "String", "DEMO_APPID", "\"${System.getenv('demoAppId') ?: ""}\""
+        buildConfigField "String", "DEMO_APPKEY", "\"${System.getenv('demoAppKey') ?: ""}\""
     }
 
     buildTypes {
@@ -41,9 +43,14 @@ android {
         release {
             multiDexEnabled true
             debuggable true
-            minifyEnabled false
+            minifyEnabled true
+            // 是否zip对齐
+            zipAlignEnabled true
+            // 移除无用的resource文件
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             buildConfigField("boolean", "IS_DEBUG", "false")
+            signingConfig signingConfigs.debug
         }
     }
     compileOptions {

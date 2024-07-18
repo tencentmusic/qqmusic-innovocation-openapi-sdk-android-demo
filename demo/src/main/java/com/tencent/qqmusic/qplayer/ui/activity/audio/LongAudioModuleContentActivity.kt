@@ -23,10 +23,9 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
 import coil.compose.rememberImagePainter
 import com.google.accompanist.pager.*
-import com.tencent.qqmusic.openapisdk.hologram.HologramManager
-import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
+import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 
 /**
  * 长音频品类二级更多页面
@@ -47,9 +46,7 @@ class LongAudioModuleContentActivity : ComponentActivity() {
 
         @JvmStatic
         fun start(context: Context, shelfId: Int, shelfTitle: String) {
-            HologramManager.getService(IFireEyeXpmService::class.java)?.monitorXpmEvent(
-                IFireEyeXpmService.XpmEvent.CLICK, "LongAudioCategoryPageDetail_LongAudioModuleContentActivity_${shelfTitle}"
-            )
+            PerformanceHelper.monitorClick("LongAudioCategoryPageDetail_LongAudioModuleContentActivity_${shelfTitle}")
             val starter = Intent(context, LongAudioModuleContentActivity::class.java)
                 .putExtra("shelfId", shelfId)
                 .putExtra("shelfTitle", shelfTitle)

@@ -36,6 +36,7 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.tencent.qqmusic.openapisdk.model.AreaShelf
 import com.tencent.qqmusic.openapisdk.model.AreaShelfItem
 import com.tencent.qqmusic.openapisdk.model.AreaShelfType
+import com.tencent.qqmusic.qplayer.ui.activity.main.PodcastItem
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import kotlinx.coroutines.flow.Flow
@@ -166,10 +167,11 @@ class AreaListActivity: ComponentActivity() {
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = title,
-                            fontSize = 16.sp
-                        )
+                        if (song.isLongAudioSong()) {
+                            PodcastItem(song = song)
+                        } else {
+                            Text(text = title, fontSize = 16.sp)
+                        }
                     }
                 }
 
