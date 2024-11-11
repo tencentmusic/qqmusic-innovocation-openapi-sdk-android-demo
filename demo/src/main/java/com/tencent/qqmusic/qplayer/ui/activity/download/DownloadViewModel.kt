@@ -2,7 +2,7 @@ package com.tencent.qqmusic.qplayer.ui.activity.download
 
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tencent.qqmusic.innovation.common.logging.MLog
@@ -23,6 +23,8 @@ class DownloadViewModel: ViewModel() {
     private val TAG = "DownloadViewModel"
 
     val taskList = mutableStateListOf<DownloadTaskWrapper>()
+
+    val toastMessage = MutableLiveData<String>()
 
     private val listener = object : DownloadListener {
         override fun onEvent(event: DownloadEvent, task: DownloadTask?) {
@@ -106,8 +108,32 @@ class DownloadViewModel: ViewModel() {
             taskList.addAll(finalTask.map {
                 DownloadTaskWrapper(it, false)
             })
+            cmpDownloadList()
+        }
+
+    }
+
+    private fun cmpDownloadList() {
+        // 对比getDownloadTasks和getDownloadSongs的结果列表是否一致，不一致弹toast
+        OpenApiSDK.getDownloadApi().getDownloadSongs { songs ->
+            if (taskList.map { it.task.getSongInfo()}.containsAll(songs)){
+                val taskSongs = taskList.map { it.task.getSongInfo().songId }
+                val songIds = songs.map { it.songId }
+                val dif1 = taskSongs.minus(songIds.toSet())
+                val dif2 = songIds.minus(taskSongs.toSet())
+                val symmetricDifference = (dif1 + dif2).toSet()
+                if (symmetricDifference.isNotEmpty()) {
+                    Log.e(TAG,"下载列表异常:$symmetricDifference,taskSongs=$taskSongs,songIds=$songIds")
+                    showMyToast("获取下载列表异常，异常数=${symmetricDifference.size}")
+                }
+            }
         }
     }
+
+    private fun showMyToast(message: String) {
+        toastMessage.value = message
+    }
+
 }
 
 data class DownloadTaskWrapper(

@@ -1,5 +1,7 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -23,8 +25,7 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEvent
 import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyConfig
 import com.tencent.qqmusic.openapisdk.model.SongInfo
-import com.tencent.qqmusic.openapisdk.model.aiaccompany.VoicePrompts
-import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiAccompanyHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -50,14 +51,23 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
     var playPosition: Float by mutableStateOf(0f)
     var seekPosition: Float by mutableStateOf(-1f)
     var playSpeed: Float by mutableStateOf(OpenApiSDK.getPlayerApi().getPlaySpeed())
+    var maxVolumeRatio: Float by mutableStateOf(OpenApiSDK.getPlayerApi().getVolumeRatio())
     var vocalAccompanyConfig: VocalAccompanyConfig by mutableStateOf(OpenApiSDK.getVocalAccompanyApi().currentVocalAccompanyConfig())
 
     var isSeekBarTracking by mutableStateOf(false)
 
     private var doSomething:Pair<Int,()->Any?>? = null
-
+    val sharedPreferences: SharedPreferences? = try {
+        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+    } catch (e: Exception) {
+        Log.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
+        null
+    }
 
     init {
+    }
+
+    private fun initProgressChangeListener() {
         OpenApiSDK.getVocalAccompanyApi().addVocalAccompanyStatusChangeListener(this)
         OpenApiSDK.getPlayerApi().registerProgressChangedListener(object :IProgressChangeListener{
             override fun progressChanged(curPlayTime: Long,
@@ -65,6 +75,8 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                                          bufferLength: Long,
                                          totalLength: Long) {
                 MLog.i("PlayerPage", "curTime$curPlayTime,(${PlayerObserver.convertTime(curPlayTime / 1000)}),${convertTime(OpenApiSDK.getPlayerApi().getDuration()!!.toLong() / 1000)}, bufferLength = $bufferLength, totalLength = $totalLength")
+
+                doSomeThingOnEventStateChange(0, Pair(curPlayTime, totalTime))
                 if (isSeekBarTracking) {
                     MLog.i("PlayerPage", "isSeekBarTracking = true")
                 }
@@ -226,7 +238,8 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                         }
                         PlayDefine.PlayState.MEDIAPLAYER_STATE_STARTED -> {
                             setPlayState("播放中")
-                            if (currentSong?.canPlayTry() == true && currentSong?.canPlayWhole() != true) {
+                            val currentSongInfo = OpenApiSDK.getPlayerApi().getCurrentSongInfo()
+                            if (currentSongInfo?.canPlayTry() == true && !currentSongInfo.canPlayWhole()) {
                                 Toast.makeText(
                                     UtilContext.getApp(),
                                     "完整播放受限，将播放试听片段",
@@ -276,6 +289,13 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                 PlayerEvent.Event.API_EVENT_PLAY_SPEED_CHANGED -> {
                     playSpeed = arg.getFloat(PlayerEvent.Key.API_EVENT_KEY_PLAY_SPEED, 1.0f)
                 }
+                PlayerEvent.Event.API_EVENT_PLAY_SERVICE_STATE_CHANGED -> {
+                    val connect = arg.getBoolean(PlayerEvent.Key.API_EVENT_KEY_PLAY_SERVICE_CONNECTED)
+                    Log.i(TAG, "API_EVENT_PLAY_SERVICE_STATE_CHANGED connect=$connect")
+                    if (connect) {
+                        initProgressChangeListener()
+                    }
+                }
                 else -> {
                 }
             }
@@ -303,12 +323,37 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
         doSomething = Pair(dstState, func)
     }
 
-    private fun doSomeThingOnEventStateChange(curState:Int){
+    fun doSomeThingOnPlayTime(func: ()-> Any?, onPlayTimeSec:Int){
+        doSomething = Pair(onPlayTimeSec, func)
+    }
+
+    private fun doSomeThingOnEventStateChange(curState:Int, playTime:Pair<Long,Long>?=null){
         doSomething?.let { (dstState,func)->
-               if(dstState==curState){
-                   func()
-                   doSomething = null
-               }
+            if (playTime!=null){
+                val curPlayTime = playTime.first
+                val totalTime = playTime.second
+                var runTime = dstState*1000L
+                if (dstState<0){
+                    runTime += (totalTime/1000*1000)
+                }
+                if (curPlayTime >= runTime){
+                    Log.d(TAG, "doSomeThingOnPlayTime:hit playTime=${curPlayTime}")
+                    func()
+                    doSomething = null
+                }
+            }else if(dstState ==curState){
+                Log.d(TAG, "doSomeThingOnEventStateChange:hit playState=$curState")
+                func()
+                doSomething = null
+            }
+        }
+    }
+    private val tryPauseFirst = sharedPreferences?.getBoolean("tryPauseFirst", false)
+    private val needFade = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
+    fun tryPauseFirst(){
+        if(tryPauseFirst==true){
+            val result = OpenApiSDK.getPlayerApi().pause(needFade)
+            Log.d(TAG, "[tryPauseFirst] pause needFade=$needFade ret=$result")
         }
     }
 }

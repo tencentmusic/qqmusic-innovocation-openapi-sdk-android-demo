@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
 
     <application
         android:name=".App"
@@ -17,6 +19,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.QPlayerSDKAndroid">
+        <activity
+            android:name=".ui.activity.main.FreeLimitedTimeActivity"
+            android:exported="false" />
         <activity
             android:name=".ui.activity.mv.MVPlayerActivity"
             android:exported="false" />
@@ -72,8 +77,9 @@
         <activity android:name=".ui.activity.audio.LongAudioModuleContentActivity" />
         <activity android:name=".ui.activity.login.WebViewActivity" />
         <activity android:name=".ui.activity.search.SearchPageActivity" />
-        <activity android:name=".ui.activity.download.DownloadActivity"/>
-        <activity android:name=".ui.activity.aiaccompany.AiListenTogetherActivity"/>
+        <activity android:name=".ui.activity.download.DownloadActivity" />
+        <activity android:name=".ui.activity.aiaccompany.AiListenTogetherActivity" />
+        <activity android:name=".ui.activity.musictherapy.MusicTherapyActivity" />
     </application>
 
 </manifest>

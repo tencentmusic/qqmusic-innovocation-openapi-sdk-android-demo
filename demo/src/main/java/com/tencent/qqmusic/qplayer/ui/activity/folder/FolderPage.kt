@@ -1,18 +1,20 @@
 package com.tencent.qqmusic.qplayer.ui.activity.folder
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -56,10 +58,11 @@ fun FolderScreen(folders: List<Folder>) {
     }
 }
 
-@OptIn(ExperimentalCoilApi::class)
+@OptIn(ExperimentalCoilApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun FolderPage(folders: List<Folder>) {
     val activity = LocalContext.current as Activity
+    val clipboardManager = LocalContext.current.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
     val scrollState = rememberLazyListState()
     PerformanceHelper.MonitorListScroll(scrollState = scrollState, location = "FolderPage")
@@ -71,19 +74,31 @@ fun FolderPage(folders: List<Folder>) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp)
-                    .clickable {
-                        if (folderDeleted) {
-                            Toast
-                                .makeText(activity, "原歌单已删除，无法请求详情", Toast.LENGTH_SHORT)
-                                .show()
-                        } else {
-                            PerformanceHelper.monitorClick("FolderPage_SongListActivity")
-                            activity.startActivity(
-                                Intent(activity, SongListActivity::class.java)
-                                    .putExtra(SongListActivity.KEY_FOLDER_ID, folder.id)
+                    .combinedClickable(
+                        onClick = {
+                            if (folderDeleted) {
+                                Toast
+                                    .makeText(activity, "原歌单已删除，无法请求详情", Toast.LENGTH_SHORT)
+                                    .show()
+                            } else {
+                                PerformanceHelper.monitorClick("FolderPage_SongListActivity")
+                                activity.startActivity(
+                                    Intent(activity, SongListActivity::class.java)
+                                        .putExtra(SongListActivity.KEY_FOLDER_ID, folder.id)
+                                )
+                            }
+                        },
+                        onLongClick = {
+                            // 复制文件夹名称到剪贴板
+                            clipboardManager.setPrimaryClip(
+                                ClipData.newPlainText(
+                                    "FolderId",
+                                    folder.id
+                                )
                             )
+                            Toast.makeText(activity, "歌单Id已复制到剪贴板", Toast.LENGTH_SHORT).show()
                         }
-                    }
+                    )
             ) {
                 Image(
                     painter = rememberImagePainter(folder.picUrl),

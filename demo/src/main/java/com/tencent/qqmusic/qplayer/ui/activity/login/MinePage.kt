@@ -307,7 +307,8 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
 //        "已购有声书"
         "订阅歌手",
         "自建歌单",
-        "已下载歌曲"
+        "已下载歌曲",
+        "其他端播放列表"
     )
 
     val pagerState = rememberPagerState()
@@ -448,6 +449,22 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
                     putExtra(DownloadActivity.FROM_DOWNLOAD_SONG_PAGE, true)
                 }) }) {
                     Text(text = "前往已下载歌曲")
+                }
+            }
+
+            16 -> {
+                //其他端播放列表
+                viewModel.fetchOtherFlatPlayList()
+                Column {
+                    val songOfOther = viewModel.songOfOther
+                    if(songOfOther.playList.isNullOrEmpty()) {
+                        Text(text = "未获取到其他平台的数据")
+                    } else {
+                        Text(text = "来自${songOfOther.getPlatformString()}平台的${songOfOther.playList?.size}首歌(${songOfOther.suggestShowText})")
+                    }
+                    songOfOther.playList?.let {
+                        SongListPage(songs = it, needPlayer = false)
+                    }
                 }
             }
         }

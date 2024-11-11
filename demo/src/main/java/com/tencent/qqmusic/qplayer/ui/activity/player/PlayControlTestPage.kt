@@ -52,6 +52,7 @@ import com.tencent.qqmusic.qplayer.core.supersound.GalaxyFileQualityManager
 import com.tencent.qqmusic.qplayer.core.supersound.MasterSRManager
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiListenTogetherActivity
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
+import com.tencent.qqmusic.qplayer.ui.activity.musictherapy.MusicTherapyActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import java.lang.StringBuilder
 import kotlin.concurrent.thread
@@ -101,6 +102,58 @@ fun PlayControlArea() {
         var canTryExcellentQuality by remember { mutableStateOf(false) }
         var canTryGalaxyQuality by remember { mutableStateOf(false) }
         var canTryDolbyQuality by remember { mutableStateOf(false) }
+
+        Text(
+            text = "最大音量比例：${PlayerObserver.maxVolumeRatio}",
+            fontFamily = FontFamily.Monospace
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "0",
+                fontFamily = FontFamily.Monospace
+            )
+
+            Slider(
+                value = PlayerObserver.toOneDigits(PlayerObserver.maxVolumeRatio),
+                valueRange = 0f..1.0f,
+                onValueChange = {
+                    PlayerObserver.maxVolumeRatio = PlayerObserver.toOneDigits(it)
+                },
+                onValueChangeFinished = {
+                    val ret = OpenApiSDK.getPlayerApi().setVolumeRatio(PlayerObserver.maxVolumeRatio)
+                    Toast.makeText(UtilContext.getApp(), if (ret) "设置最大音量比例为: ${PlayerObserver.maxVolumeRatio}" else "设置最大比例失败，请重试", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier
+                    .weight(1f, true)
+                    .padding(horizontal = 10.dp)
+            )
+
+            Text(
+                text = "1.0",
+                fontFamily = FontFamily.Monospace
+            )
+        }
+
+        Button(
+            onClick = {
+                activity.startActivity(Intent(activity, MusicTherapyActivity::class.java))
+            }
+        ) {
+            Text(text = "前往疗愈播放器")
+        }
+
+        Divider(
+            modifier = Modifier
+                .padding(top = 9.dp)
+                .fillMaxWidth()
+                .height(3.dp)
+        )
 
         Button(
             onClick = {

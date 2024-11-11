@@ -1,7 +1,6 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.text.TextUtils
@@ -45,9 +44,8 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
-import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.internal.lyric.LyricLoadInterface
-import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.tryPauseFirst
 import com.tencent.qqmusictvsdk.internal.lyric.LyricManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -62,12 +60,7 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
         activity.startActivity(Intent(activity, PlayerActivity::class.java))
     }
 
-    val sharedPreferences: SharedPreferences? = try {
-        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
-    } catch (e: Exception) {
-        QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
-        null
-    }
+    val sharedPreferences: SharedPreferences? = observer.sharedPreferences
 
     ConstraintLayout(modifier = Modifier
         .fillMaxWidth()
@@ -178,12 +171,22 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
                         OpenApiSDK
                             .getPlayerApi()
                             .apply {
-                                if (isPlaying) pause(needFade) else play()
+                                if (isPlaying) {
+                                    tryPauseFirst()
+                                    pause(needFade)
+                                } else {
+                                    tryPauseFirst()
+                                    play()
+                                }
                                 val song = getCurrentSongInfo()
                                 if (song?.canPlay() != true) {
                                     withContext(Dispatchers.Main) {
                                         Toast
-                                            .makeText(activity, song?.unplayableMsg ?: "", Toast.LENGTH_SHORT)
+                                            .makeText(
+                                                activity,
+                                                song?.unplayableMsg ?: "",
+                                                Toast.LENGTH_SHORT
+                                            )
                                             .show()
                                     }
 

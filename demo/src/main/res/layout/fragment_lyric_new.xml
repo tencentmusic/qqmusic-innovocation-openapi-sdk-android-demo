@@ -16,7 +16,6 @@
         android:layout_marginRight="0dp"
         android:clipChildren="true"
         android:clipToPadding="true"
-        android:background="@color/lightGray"
         android:layout_above="@+id/switch_lyric_btn"
         >
 

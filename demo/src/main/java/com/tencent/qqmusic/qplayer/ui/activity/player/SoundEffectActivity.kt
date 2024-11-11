@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.paging.*
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
@@ -31,6 +32,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -73,12 +75,14 @@ class SoundEffectActivity : ComponentActivity() {
                             val ret = OpenApiSDK
                                 .getPlayerApi()
                                 .setSoundEffectType(effect) { status ->
-                                    AppScope.launchUI {
-                                        when (status) {
-                                            1 -> UiUtils.showToast("设置音效->开始下载音效")
-                                            2 -> UiUtils.showToast("设置音效->下载完成")
-                                            3 -> UiUtils.showToast("设置音效->下载失败")
-                                            4 -> UiUtils.showToast("设置音效->已在下载中")
+                                    vm.viewModelScope.launch {
+                                        withContext(Dispatchers.Main) {
+                                            when (status) {
+                                                1 -> UiUtils.showToast("设置音效->开始下载音效")
+                                                2 -> UiUtils.showToast("设置音效->下载完成")
+                                                3 -> UiUtils.showToast("设置音效->下载失败")
+                                                4 -> UiUtils.showToast("设置音效->已在下载中")
+                                            }
                                         }
                                     }
                                     true
@@ -86,9 +90,23 @@ class SoundEffectActivity : ComponentActivity() {
                             if (ret == 0) {
                                 UiUtils.showToast("设置音效->${effect.name}")
                                 curId.value = effect.sdkId
-                            } else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT) {
-                                UiUtils.showToast("为保证您的听歌体验，杜比或臻品类歌曲播放中不建议叠加其他音效等效果")
-                            } else if (ret == PlayDefine.PlayError.PLAY_ERR_NEED_VIP){
+                            }
+                            else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_WANOS) {
+                                UiUtils.showToast("为保证您的听歌体验，WANOS歌曲播放中不建议叠加其他音效等效果")
+                            }
+                            else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_DOLBY) {
+                                UiUtils.showToast("为保证您的听歌体验，杜比音质播放中不建议叠加其他音效等效果")
+                            }
+                            else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_EXCELLENT) {
+                                UiUtils.showToast("为保证您的听歌体验，臻品2.0播放中不建议叠加其他音效等效果")
+                            }
+                            else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_GALAXY) {
+                                UiUtils.showToast("为保证您的听歌体验，臻品全景声音质播放中不建议叠加其他音效等效果")
+                            }
+                            else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_MASTER_TAPE) {
+                                UiUtils.showToast("为保证您的听歌体验，臻品母带音质播放中不建议叠加其他音效等效果")
+                            }
+                            else if (ret == PlayDefine.PlayError.PLAY_ERR_NEED_VIP){
                                 UiUtils.showToast("需要vip")
                             } else if (ret == PlayDefine.PlayError.PLAY_ERR_NEED_SUPER_VIP) {
                                 UiUtils.showToast("需要超级会员")

@@ -1,7 +1,6 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
@@ -47,10 +46,10 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiAccompanyHelper
 import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricNewActivity
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.tryPauseFirst
 import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPageActivity
 import com.tencent.qqmusic.qplayer.ui.activity.ui.QQMusicSlider
 import com.tencent.qqmusic.qplayer.ui.activity.ui.Segment
@@ -90,12 +89,7 @@ fun PlayerPage(observer: PlayerObserver) {
         activity.startActivity(Intent(activity, LyricNewActivity::class.java))
     }
 
-    val sharedPreferences: SharedPreferences? = try {
-        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
-    } catch (e: Exception) {
-        QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
-        null
-    }
+    val sharedPreferences: SharedPreferences? = observer.sharedPreferences
 
     Column(
         modifier = Modifier
@@ -159,6 +153,7 @@ fun PlayerPage(observer: PlayerObserver) {
                 modifier = Modifier
                     .size(50.dp)
                     .clickable {
+                        tryPauseFirst()
                         QualityAlert.showQualityAlert(activity, isDownload = false, {
                             OpenApiSDK
                                 .getPlayerApi()
@@ -208,8 +203,9 @@ fun PlayerPage(observer: PlayerObserver) {
                                 .getOpenApi()
                                 .fetchPersonalFolder {
                                     if (it.isSuccess()) {
-                                        val folderId = it.data?.firstOrNull { folder -> folder.name == "我喜欢" }?.id
-                                            ?: return@fetchPersonalFolder
+                                        val folderId =
+                                            it.data?.firstOrNull { folder -> folder.name == "我喜欢" }?.id
+                                                ?: return@fetchPersonalFolder
                                         if (collectState.value) {
                                             OpenApiSDK
                                                 .getOpenApi()
@@ -345,14 +341,16 @@ fun PlayerPage(observer: PlayerObserver) {
                                 Toast.makeText(activity, "完整播放受限，将播放试听片段", Toast.LENGTH_SHORT).show()
                             }
                         }
-
-                        val res = OpenApiSDK.getPlayerApi().seek(seekPosition)
+                        tryPauseFirst()
+                        val needFade = PlayerObserver.sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
+                        val res = OpenApiSDK.getPlayerApi().seekToPlay(seekPosition.toLong(), needFade)
+//                        val res = OpenApiSDK.getPlayerApi().seek(seekPosition, true)
                         if (res.toInt() == seekPosition) {
                             QLog.i(TAG, "PlayerPage seek success res = $res, seekPosition = $seekPosition")
                         } else {
                             QLog.i(TAG, "PlayerPage seek fail res = $res, seekPosition = $seekPosition")
                         }
-                        observer.seekPosition = res.toFloat()
+                        observer.seekPosition = seekPosition.toFloat()
                     }
                 },
                 modifier = Modifier
@@ -400,6 +398,7 @@ fun PlayerPage(observer: PlayerObserver) {
                 modifier = Modifier
                     .size(30.dp)
                     .clickable {
+                        tryPauseFirst()
                         val currIndex = modeOrder.indexOf(currMode)
                         OpenApiSDK
                             .getPlayerApi()
@@ -416,6 +415,7 @@ fun PlayerPage(observer: PlayerObserver) {
                     .size(80.dp)
                     .clickable {
                         thread {
+                            tryPauseFirst()
                             val ret = OpenApiSDK
                                 .getPlayerApi()
                                 .prev()
@@ -436,6 +436,7 @@ fun PlayerPage(observer: PlayerObserver) {
                     .size(80.dp)
                     .clickable {
                         thread {
+                            tryPauseFirst()
                             val ret = if (isPlaying) {
                                 OpenApiSDK
                                     .getPlayerApi()
@@ -447,6 +448,7 @@ fun PlayerPage(observer: PlayerObserver) {
                             }
                             Log.d(TAG, "play or pause, ret=$ret")
                             if (ret != 0) {
+                                tryPauseFirst()
                                 val song = OpenApiSDK
                                     .getPlayerApi()
                                     .getCurrentSongInfo()
@@ -472,6 +474,7 @@ fun PlayerPage(observer: PlayerObserver) {
                     .size(80.dp)
                     .clickable {
                         thread {
+                            tryPauseFirst()
                             val ret = OpenApiSDK
                                 .getPlayerApi()
                                 .next()

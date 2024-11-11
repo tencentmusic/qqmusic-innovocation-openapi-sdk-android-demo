@@ -167,10 +167,14 @@ class AreaListActivity: ComponentActivity() {
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        if (song.isLongAudioSong()) {
-                            PodcastItem(song = song)
-                        } else {
-                            Text(text = title, fontSize = 16.sp)
+                        Column {
+                            if (song.isLongAudioSong()) {
+                                PodcastItem(song = song)
+                            } else {
+                                Text(text = title, fontSize = 16.sp)
+                            }
+
+                            Text(text = "Vip ：${if (song.vip == 1) "VIP" else "普通"}")
                         }
                     }
                 }

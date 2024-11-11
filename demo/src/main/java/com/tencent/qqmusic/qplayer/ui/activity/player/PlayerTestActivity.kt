@@ -17,17 +17,26 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.viewModels
+import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.lifecycleScope
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
+import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.openapisdk.hologram.EdgeMvProvider
 import com.tencent.qqmusic.openapisdk.model.PlaySpeedType
+import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListViewModel
 import com.tencent.qqmusic.qplayer.utils.UiUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.concurrent.thread
 
 // 
@@ -48,8 +57,8 @@ class PlayerTestActivity : ComponentActivity() {
             null
         }
     }
-
-
+    private val songListViewModel: SongListViewModel by viewModels()
+    private val songList = mutableStateOf(emptyList<SongInfo>())
     private var reInitPlayerEnv: Button? = null
 
     @SuppressLint("MissingInflatedId","SetTextI18n")
@@ -143,6 +152,42 @@ class PlayerTestActivity : ComponentActivity() {
                 }, 1000)
             }
         }
+        findViewById<Button>(R.id.btn_add_song_to_playList).setOnClickListener{
+            thread {
+                val songIdText = edt.text.toString()
+                val split = songIdText.split(",")
+                // 0039eBnn3dVsNo
+                val songIdList = mutableListOf<Long>()
+                val songMidList = mutableListOf<String>()
+                split.forEach {
+                    val id = it.toLongOrNull()
+                    if (id != null) {
+                        songIdList.add(id)
+                    } else {
+                        songMidList.add(it)
+                    }
+                }
+                OpenApiSDK.getOpenApi().fetchSongInfoBatch(
+                    songIdList = if (songIdList.isEmpty()) null else songIdList,
+                    midList = if (songMidList.isEmpty()) null else songMidList
+                ) {
+                    if (it.isSuccess()) {
+                        val ret = OpenApiSDK.getPlayerApi().appendSongToPlaylist(it.data!!, it.data!!.indices.random())
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            //OpenApiSDK.getPlayerApi().seek(301318)
+                        }, 10)
+                        Log.d(TAG, "appendSongToPlaylist ret = $ret")
+                        finish()
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            startActivity(Intent(this, PlayerActivity::class.java))
+                        }, 1000)
+                    } else {
+                        Toast.makeText(this, "查询歌曲失败: ${it.errorMsg}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+        }
 
         btnQuality.setOnClickListener {
             QualityAlert.showQualityAlert(this, false, {
@@ -178,6 +223,23 @@ class PlayerTestActivity : ComponentActivity() {
                 }
             )
         }
+        findViewById<Button>(R.id.btn_add_play_list).setOnClickListener {
+            songList.value.toMutableList().clear()
+            lifecycleScope.launch(Dispatchers.IO) {
+                // 8878146441;7459586253
+                songListViewModel.pagingFolderSongs(edtFolder.text.toString()) { songInfos, isEnd ->
+                    delay(1)
+                    val list = songList.value.toMutableList().apply {
+                        addAll(songInfos)
+                    }
+                    songList.value = list
+                    if (isEnd) {
+                        val insertIndex = OpenApiSDK.getPlayerApi().getPlayList().indices.random()
+                        OpenApiSDK.getPlayerApi().appendSongToPlaylist(songList.value, insertIndex)
+                    }
+                }
+            }
+        }
 
 
         val edtMVCahce = findViewById<EditText>(R.id.edt_mv_cache).apply {
@@ -199,19 +261,19 @@ class PlayerTestActivity : ComponentActivity() {
         val textQuality = findViewById<TextView>(R.id.text_prefre_quality)
 
         val qualityStr = when (OpenApiSDK.getPlayerApi().getPreferSongQuality()) {
-            PlayerEnums.Quality.HQ -> {
+            Quality.HQ -> {
                 "hq"
             }
 
-            PlayerEnums.Quality.SQ -> {
+            Quality.SQ -> {
                 "sq"
             }
 
-            PlayerEnums.Quality.STANDARD -> {
+            Quality.STANDARD -> {
                 "standard"
             }
 
-            PlayerEnums.Quality.LQ -> {
+            Quality.LQ -> {
                 "LQ"
             }
 
@@ -219,23 +281,23 @@ class PlayerTestActivity : ComponentActivity() {
                 "杜比"
             }
 
-            PlayerEnums.Quality.HIRES -> {
+            Quality.HIRES -> {
                 "HiRes"
             }
 
-            PlayerEnums.Quality.EXCELLENT -> {
+            Quality.EXCELLENT -> {
                 "臻品音质2.0"
             }
 
-            PlayerEnums.Quality.GALAXY -> {
+            Quality.GALAXY -> {
                 "臻品全景声"
             }
 
-            PlayerEnums.Quality.MASTER_TAPE -> {
+            Quality.MASTER_TAPE -> {
                 "臻品母带"
             }
 
-            PlayerEnums.Quality.MASTER_SR -> {
+            Quality.MASTER_SR -> {
                 "臻品母带省流"
             }
 
@@ -257,7 +319,8 @@ class PlayerTestActivity : ComponentActivity() {
     private fun reInitPlayerEnv() {
         OpenApiSDK.getPlayerApi().apply {
             //音质
-            setCurrentPlaySongQuality(PlayerEnums.Quality.STANDARD)
+            setPreferSongQuality(Quality.STANDARD)
+            setCurrentPlaySongQuality(Quality.STANDARD)
             //倍速
             val playType = getCurrentSongInfo()?.let {
                 if (it.isLongAudioSong()) {
@@ -266,12 +329,11 @@ class PlayerTestActivity : ComponentActivity() {
                     PlaySpeedType.SONG
                 }
             }
-            playType?.let {
-                setPlaySpeed(1.0F, playType)
-            }
-
+            playType?.let { setPlaySpeed(1.0F, playType) }
             //音效
             setSoundEffectType(null)
+            // 清理播放列表
+            clearPlayList()
             Toast.makeText(this@PlayerTestActivity, "恢复完成", Toast.LENGTH_SHORT).show()
         }
     }
@@ -281,6 +343,7 @@ class PlayerTestActivity : ComponentActivity() {
         var actionStateIndex:Int = sharedPreferences?.getInt("actionStateIndex", 0) ?: 0
         // 来源PlayerManagerImpl().needExportPlayState
         val myState = mapOf(
+            "达到预期播放时长执行 999 (params1时长单位s必填,负数为倒计时)" to 999,
             "初始状态 0" to PlayDefine.PlayState.MEDIAPLAYER_STATE_IDLE,
             "已准备 2" to PlayDefine.PlayState.MEDIAPLAYER_STATE_PREPARED,
             "正在播放 4" to PlayDefine.PlayState.MEDIAPLAYER_STATE_STARTED,
@@ -288,7 +351,7 @@ class PlayerTestActivity : ComponentActivity() {
             "已停止 6" to PlayDefine.PlayState.MEDIAPLAYER_STATE_STOPPED,
             "播放正常结束，对应播放器的onCompletion  7" to PlayDefine.PlayState.MEDIAPLAYER_STATE_PLAYBACKCOMPLETED,
             "正在缓冲 101" to PlayDefine.PlayState.MEDIAPLAYER_STATE_BUFFERING,
-            "缓冲失败 701" to PlayDefine.PlayState.MEDIAPLAYER_STATE_BUFFER_FAILED
+            "缓冲失败 701" to PlayDefine.PlayState.MEDIAPLAYER_STATE_BUFFER_FAILED,
             )
         val seekTimerSpinnerOptions = myState.keys.toList()
         // 创建一个 ArrayAdapter 使用默认 spinner 布局和选项数组
@@ -312,22 +375,16 @@ class PlayerTestActivity : ComponentActivity() {
             }
         }
 
-        findViewById<EditText>(R.id.edt_params1).apply {
-            hint = (sharedPreferences?.getString("params1", "") ?: "").toString()
-        }
-
-        findViewById<EditText>(R.id.edt_params2).apply {
-            hint = (sharedPreferences?.getString("params2", "") ?: "").toString()
-        }
-
         var playerFuncIndex:Int = sharedPreferences?.getInt("playerFuncIndex", 0) ?: 0
         val funcMap = mutableMapOf<String,()->Any?>()
         val params1 = findViewById<EditText>(R.id.edt_params1).text.toString()
+        val needFade = PlayerObserver.sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
         funcMap["seekToPlay"] = {
-            OpenApiSDK.getPlayerApi().seekToPlay(params1.toLongOrNull() ?: 60000L)
+            OpenApiSDK.getPlayerApi().seekToPlay(params1.toLongOrNull() ?: 60000L, needFade)
         }
         funcMap["seek"] = { OpenApiSDK.getPlayerApi().seek(params1.toIntOrNull() ?: 60000) }
         funcMap["playPos"] = { OpenApiSDK.getPlayerApi().playPos(params1.toIntOrNull() ?: 1) }
+        funcMap["pause"] = { OpenApiSDK.getPlayerApi().pause() }
 
         val playerFuncSpinnerOptions = funcMap.keys.toList()
         val adapter2 = ArrayAdapter(this, android.R.layout.simple_spinner_item, playerFuncSpinnerOptions)
@@ -348,15 +405,26 @@ class PlayerTestActivity : ComponentActivity() {
 
 
         findViewById<Button>(R.id.btn_setToRun).setOnClickListener {
-            sharedPreferences?.edit()?.putString("params1", findViewById<EditText>(R.id.edt_params1).text.toString())?.apply()
-            sharedPreferences?.edit()?.putString("params2", findViewById<EditText>(R.id.edt_params2).text.toString())?.apply()
             sharedPreferences?.edit()?.putInt("actionStateIndex", actionStateIndex)?.apply()
             sharedPreferences?.edit()?.putInt("playerFuncIndex", playerFuncIndex)?.apply()
             funcMap[playerFuncSpinnerOptions[playerFuncIndex]]?.let { func ->
-                PlayerObserver.doSomeThingOnEventStateChange(
-                    func = { func() },
-                    dstState = myState[seekTimerSpinnerOptions[actionStateIndex]]
-                )
+                when(actionStateIndex){
+                    0 -> {
+                        val onPlayTime = findViewById<EditText>(R.id.edt_params1).text.toString().toIntOrNull()
+                        if (onPlayTime==null){
+                            Toast.makeText(this, "params1为执行函数的播放时间,必填", Toast.LENGTH_SHORT).show()
+                        }else{
+                            // 按当前播放时间执行对应函数
+                            PlayerObserver.doSomeThingOnPlayTime({ func() }, onPlayTime)
+                        }
+                    }
+                    else -> {
+                        PlayerObserver.doSomeThingOnEventStateChange(
+                            func = { func() },
+                            dstState = myState[seekTimerSpinnerOptions[actionStateIndex]]
+                        )
+                    }
+                }
             }
         }
     }

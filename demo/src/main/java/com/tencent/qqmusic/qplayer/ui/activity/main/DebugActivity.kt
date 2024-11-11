@@ -8,21 +8,29 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,17 +39,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.edit
 import com.tencent.qqmusic.innovation.common.util.DeviceUtils
+import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.business_common.event.BusinessEventHandler
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LoginEvent
 import com.tencent.qqmusic.openapisdk.business_common.login.OpenIdInfo
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
+import com.tencent.qqmusic.openapisdk.hologram.HologramManager
+import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeService
+import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
@@ -58,24 +69,25 @@ class DebugActivity : ComponentActivity() {
     }
 }
 
-@Preview
+
 @Composable
 fun DebugScreen() {
     val activity = LocalContext.current as Activity
     val padding = 5.dp
     val strict = "严格模式"
-    val no_strict = "无检查模式"
+    val noStrict = "无检查模式"
     val sharedPreferences: SharedPreferences? = try {
         SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
     } catch (e: Exception) {
         QLog.e("DebugScreen", "getSharedPreferences error e = ${e.message}")
         null
     }
+
     val (showLoginDialog, setShowDialog) = remember { mutableStateOf(false) }
     val showLogDirDialog = remember { mutableStateOf(false) }
+    val showActivityDialog = remember { mutableStateOf(false) }
     val enableLog = sharedPreferences?.getBoolean("enableLog", true) ?: true
     var isEnableLog by remember { mutableStateOf(enableLog) }
-
 
     loginExpiredDialog(showDialog = showLoginDialog, setShowDialog = setShowDialog)
     DisposableEffect(Unit) {
@@ -103,7 +115,7 @@ fun DebugScreen() {
         var showDialog by remember { mutableStateOf(false) }
         if (showDialog) {
             MyMultiSelectDialog(
-                options = listOf(no_strict, strict),
+                options = listOf(noStrict, strict),
                 onOptionsSelected = { options ->
                     showDialog = false
                     MustInitConfig.setAppCheckMode(options == strict)
@@ -169,23 +181,53 @@ fun DebugScreen() {
             }
         }
 
+        val tryPauseFirst: MutableState<Boolean> = remember {
+            mutableStateOf(sharedPreferences?.getBoolean("tryPauseFirst", false) ?: false)
+        }
+        SingleItem(title = "播放页操作前进行暂停", item = tryPauseFirst.value.toString()) {
+            val nextValue = tryPauseFirst.value.not()
+            sharedPreferences?.edit()?.putBoolean("tryPauseFirst", nextValue)?.apply()
+            tryPauseFirst.value = nextValue
+            Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
+        }
 
+        SingleItem(title = "设置SessionActivity", item = "") {
+            showActivityDialog.value = true
+        }
 
-        Button(onClick = {
-            val openIdInfo = OpenIdInfo(
-                expireTime = 1662361845L,
-                accessToken = "auh148e418a6a50c19d5e17c21b535e02ff5fec7cedf73e002c56af56cf28fb2be4",
-                openId = "12951783807858803786",
-                refreshToken = "4989176387247f2a3ff438df2bd189fa2cf4a7dc8922f07c901675b8016bb834",
-                type = AuthType.WX
-            )
-
-            Global.getLoginModuleApi().updateOpenIdInfo(AuthType.WX, openIdInfo)
-            OpenApiSDK.getOpenApi().fetchCollectedFolder {
+        if (showActivityDialog.value) {
+            Dialog(onDismissRequest = {
+                showActivityDialog.value = false
+            }) {
+                val input = remember {
+                    mutableStateOf(sharedPreferences?.getString("sessionActivity", "") ?: "")
+                }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.background(color = Color(248, 248, 248))
+                ) {
+                    TextField(value = input.value,
+                        placeholder = {
+                            Text(text = "输入SessionActivity")
+                        }, onValueChange = {
+                            input.value = it
+                        }, modifier = Modifier.width(300.dp)
+                    )
+                    Button(onClick = {
+                        OpenApiSDK.getPlayerApi().setMediaSessionActivityName(input.value)
+                        showActivityDialog.value = false
+                        sharedPreferences?.edit { putString("sessionActivity", input.value) }
+                        Toast.makeText(
+                            activity,
+                            "切歌生效",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }) {
+                        Text(text = "确定")
+                    }
+                }
 
             }
-        }, modifier = Modifier.padding(padding)) {
-            Text(text = "测试登录态过期")
         }
 
         Button(onClick = {
@@ -202,15 +244,9 @@ fun DebugScreen() {
             Text(text = "播放进程立刻Crash！！")
         }
 
-
         Row {
             Button(onClick = {
-                OpenApiSDK.init(
-                    activity.applicationContext,
-                    MustInitConfig.APP_ID,
-                    MustInitConfig.APP_KEY,
-                    DeviceUtils.getAndroidID()
-                )
+                App.init(activity.applicationContext)
                 Toast.makeText(activity, "初始化成功", Toast.LENGTH_SHORT).show()
             }, modifier = Modifier.padding(padding)) {
                 Text(text = "初始化SDK")

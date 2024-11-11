@@ -62,6 +62,9 @@ class DownloadActivity: ComponentActivity() {
         downloadViewModel.init(fromDownloadSongPage)
         setContent {
             DownloadView()
+            downloadViewModel.toastMessage.observe(this) { message ->
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
