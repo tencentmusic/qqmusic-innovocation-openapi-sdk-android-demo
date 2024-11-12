@@ -84,13 +84,29 @@
                 android:layout_height="wrap_content"
                 android:text="搜索歌单" />
 
-        </LinearLayout>
+            <Button
+                android:id="@+id/btn_add_play_list"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="添加歌单到播放列表" />
 
+        </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
         <Button
             android:id="@+id/btn_play_list_update"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="更新播放列表" />
+        <Button
+            android:id="@+id/btn_add_song_to_playList"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="添加歌曲到播放列表" />
+    </LinearLayout>
+
 
         <Button
             android:id="@+id/reinit_player_env"

@@ -4,11 +4,13 @@ import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
+import android.os.Debug
 import android.os.StrictMode
 import android.util.Log
 import android.widget.Toast
 import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.innovation.common.util.DeviceUtils
+import com.tencent.qqmusic.innovation.common.util.ProcessUtils
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LogEvent
 import com.tencent.qqmusic.openapisdk.core.InitConfig
@@ -32,10 +34,18 @@ import kotlinx.coroutines.launch
 class App : Application() {
 
 
+    override fun attachBaseContext(base: Context?) {
+        super.attachBaseContext(base)
+        context  = this
+    }
+
     override fun onCreate() {
         super.onCreate()
-        if (MustInitConfig.openStrictMode()) {
-            openStrictMode()
+
+        if (!ProcessUtils.isMainProcess()) {
+//            Debug.waitForDebugger()
+            // 非主进程 不用初始化sdk
+            return
         }
 
         if (PrivacyManager.isGrant()) {
@@ -65,6 +75,7 @@ class App : Application() {
 
     companion object {
         private const val TAG = "App"
+        lateinit var context: Context
 
         fun init(context: Context) {
             Log.i(TAG, "init Application")
@@ -89,6 +100,8 @@ class App : Application() {
             val isUseForegroundService = sharedPreferences?.getBoolean("isUseForegroundService", true) ?: true
             val logFileDir = sharedPreferences?.getString("logFileDir", "")
             val savedTimeoutConfig = sharedPreferences?.getString("NetworkTimeoutConfig", "")
+            val enableAccountPartner = sharedPreferences?.getBoolean("accountModePartner", false) ?: false
+            val lowMemoryMode = sharedPreferences?.getBoolean("lowMemoryMode", false) ?: false
             val timeoutConfig = GsonHelper.safeFromJson(savedTimeoutConfig, NetworkTimeoutConfig::class.java) ?: NetworkTimeoutConfig.DEFAULT()
             val isMutiChannel = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S_V2
             MLog.i(TAG, "isMutiChannel:$isMutiChannel ,${Build.VERSION.SDK_INT}")
@@ -97,18 +110,23 @@ class App : Application() {
                 MustInitConfig.APP_ID,
                 MustInitConfig.APP_KEY,
                 DeviceUtils.getAndroidID(),
-
             ).apply {
                 this.isUseForegroundService = isUseForegroundService
                 this.crashConfig = InitConfig.CrashConfig(enableNativeCrashReport = true, enableAnrReport = true)
                 this.deviceConfigInfo.apply {
                     hardwareInfo = ""
+                    this.lowMemoryMode = lowMemoryMode
                 }
                 this.enableBluetoothListener = false
+                this.useMediaPlayerWhenPlayDolby = sharedPreferences?.getBoolean("useMediaPlayerWhenPlayDolby", false) ?: false
                 this.logFileDir = logFileDir
                 this.networkTimeoutConfig = timeoutConfig
                 this.isMutiChannel = isMutiChannel
+                if (enableAccountPartner) {
+                    this.accountMode = InitConfig.AccountMode.PARTNER_INDEPENDENT
+                }
             }
+            Global.setMonitorConfigApi(FireEyeMonitorConfigImpl())
             val start = System.currentTimeMillis()
             OpenApiSDK.init(initConfig)
             OpenApiSDK.setAppForeground(true)

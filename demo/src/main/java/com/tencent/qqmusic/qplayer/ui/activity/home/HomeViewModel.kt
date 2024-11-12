@@ -31,6 +31,7 @@ import com.tencent.qqmusic.openapisdk.model.BuyType
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.Folder
 import com.tencent.qqmusic.openapisdk.model.HotKey
+import com.tencent.qqmusic.openapisdk.model.OtherPlatListeningList
 import com.tencent.qqmusic.openapisdk.model.RankGroup
 import com.tencent.qqmusic.openapisdk.model.SearchResult
 import com.tencent.qqmusic.openapisdk.model.SongInfo
@@ -66,6 +67,7 @@ class HomeViewModel : ViewModel() {
     var recentLongRadio: List<Album> by mutableStateOf(emptyList())
     var albumOfRecord: List<Album> by mutableStateOf(emptyList())
     var songOfRecord: List<SongInfo> by mutableStateOf(emptyList())
+    var songOfOther: OtherPlatListeningList by mutableStateOf(OtherPlatListeningList())
 
     var longAudioCategoryPages: List<Category> by mutableStateOf(emptyList())
     private val _searchResult = MutableStateFlow<SearchResult?>(null)
@@ -85,6 +87,7 @@ class HomeViewModel : ViewModel() {
     companion object {
         private const val TAG = "HomeViewModel"
         var myFolderRequested = false
+        var mFetchOtherPlayList = false
         var mRankGroupsDisable = false
         var mSceneCategoriesDisable = false
         var myFavRequested = false
@@ -93,6 +96,7 @@ class HomeViewModel : ViewModel() {
         var fetchHotKey = false
         fun clearRequestState() {
             myFolderRequested = false
+            mFetchOtherPlayList = false
             myFavRequested = false
             myRecentRequested = false
             fetchHotKey = false
@@ -239,6 +243,20 @@ class HomeViewModel : ViewModel() {
                 }
             }
             myFolderRequested = true
+        }
+    }
+
+    fun fetchOtherFlatPlayList() {
+        if (!mFetchOtherPlayList) {
+            viewModelScope.launch(Dispatchers.IO) {
+                OpenApiSDK.getOpenApi().fetchOtherPlatListeningList {
+                    it.data?.let { data ->
+                        songOfOther = data
+                    }
+                    mFetchOtherPlayList = false
+                }
+            }
+            mFetchOtherPlayList = true
         }
     }
 

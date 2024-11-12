@@ -2,7 +2,9 @@ package com.tencent.qqmusic.qplayer.ui.activity
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.text.TextUtils
 import com.tencent.qqmusic.innovation.common.util.UtilContext
+import com.tencent.qqmusic.qplayer.BuildConfig
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 
 //
@@ -25,10 +27,7 @@ object MustInitConfig {
     }
 
     val APP_ID: String = ""
-
-    val APP_KEY = ""
-
-
+    val APP_KEY: String = ""
     const val QQ_APP_ID = ""
     const val WX_APP_ID = ""
     const val MATCH_ID = ""

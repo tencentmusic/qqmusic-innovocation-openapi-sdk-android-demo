@@ -1,9 +1,15 @@
 package com.tencent.qqmusic.qplayer.ui.activity.songlist
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.Scaffold
@@ -30,10 +36,11 @@ fun AlbumScreen(albums: List<Album>) {
     }
 }
 
-@OptIn(ExperimentalCoilApi::class)
+@OptIn(ExperimentalCoilApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun AlbumPage(albums: List<Album>) {
     val activity = LocalContext.current as Activity
+    val clipboardManager = LocalContext.current.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(albums.size) { index ->
@@ -42,10 +49,22 @@ fun AlbumPage(albums: List<Album>) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp)
-                    .clickable {
-                        activity.startActivity(Intent(activity, SongListActivity::class.java)
-                            .putExtra(SongListActivity.KEY_ALBUM_ID, album.id))
-                    }
+                    .combinedClickable(
+                        onClick = {
+                            activity.startActivity(Intent(activity, SongListActivity::class.java)
+                                .putExtra(SongListActivity.KEY_ALBUM_ID, album.id))
+                        },
+                        onLongClick = {
+                            // 复制文件夹名称到剪贴板
+                            clipboardManager.setPrimaryClip(
+                                ClipData.newPlainText(
+                                    "AlbumId",
+                                    album.id
+                                )
+                            )
+                            Toast.makeText(activity, "专辑Id已复制到剪贴板", Toast.LENGTH_SHORT).show()
+                        }
+                    )
             ) {
                 Image(
                     painter = rememberImagePainter(album.pic),

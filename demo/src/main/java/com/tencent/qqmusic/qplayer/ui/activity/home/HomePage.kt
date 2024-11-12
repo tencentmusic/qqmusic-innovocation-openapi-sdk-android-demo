@@ -12,14 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ScrollableTabRow
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +30,7 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderActivity
+import com.tencent.qqmusic.qplayer.ui.activity.home.ai.AIFunctionPage
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVFunctionPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
@@ -61,8 +59,8 @@ fun HomePage(homeViewModel: HomeViewModel) {
 @Composable
 fun homePageTabs(homeViewModel: HomeViewModel) {
     val pages = mutableListOf(
-        "分类歌单", "视频", "排行榜",
-        "专区", "长音频", "AI歌单",
+        "分类歌单", "视频", "AI功能", "排行榜",
+        "专区", "长音频",
     )
 
     val pagerState = rememberPagerState()
@@ -109,20 +107,19 @@ fun homePageTabs(homeViewModel: HomeViewModel) {
             }
 
             2 -> {
-                rankPage(homeViewModel)
+                AIFunctionPage()
             }
 
             3 -> {
-                AreaSectionPage(homeViewModel)
+                rankPage(homeViewModel)
             }
 
             4 -> {
-                LongAudioPage(homeViewModel = homeViewModel)
+                AreaSectionPage(homeViewModel)
             }
 
             5 -> {
-                aiIndex.value = Base
-                AIFolder(homeViewModel = homeViewModel)
+                LongAudioPage(homeViewModel = homeViewModel)
             }
         }
     }
@@ -135,7 +132,8 @@ fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolea
     if (fetchSceneSongList) {
         homeViewModel.fetchSceneCategory()
     }
-    var categories = if (fetchSceneSongList) homeViewModel.sceneCategories else homeViewModel.categories
+    var categories =
+        if (fetchSceneSongList) homeViewModel.sceneCategories else homeViewModel.categories
     val scrollState = rememberLazyListState()
     PerformanceHelper.MonitorListScroll(scrollState = scrollState, location = "CategoryFolderPage")
     LazyColumn(state = scrollState) {

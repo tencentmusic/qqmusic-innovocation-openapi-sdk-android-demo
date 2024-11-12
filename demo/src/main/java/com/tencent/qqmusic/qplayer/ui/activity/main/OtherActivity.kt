@@ -105,6 +105,9 @@ fun OtherScreen() {
             activity.startActivity(Intent(activity, PlayerActivity::class.java))
         }
 
+        SingleItem(title = "试用/限免相关", item = "") {
+            activity.startActivity(Intent(activity, FreeLimitedTimeActivity::class.java))
+        }
         SingleItem(title = "是否支持杜比",
             item = if (OpenApiSDK.getPlayerApi().supportDolbyDecoder()) "支持"
             else "不支持") {
@@ -250,7 +253,7 @@ fun OtherScreen() {
         SingleItem(title = "开启淡入淡出", item = if (needFadeWhenPlay.value) "开启" else "关闭") {
             val next_value = needFadeWhenPlay.value.not()
             sharedPreferences?.edit()?.putBoolean("needFadeWhenPlay", next_value)?.apply()
-            Toast.makeText(activity, "设置成功，立即生效", Toast.LENGTH_SHORT).show()
+            Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
             needFadeWhenPlay.value = next_value
         }
 
@@ -285,13 +288,33 @@ fun OtherScreen() {
             Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
         }
 
+        val enableMemoryMode: MutableState<Boolean> = remember {
+            mutableStateOf(sharedPreferences?.getBoolean("lowMemoryMode", false) ?: false)
+        }
+        SingleItem(title = "是否使用低内存模式(部分音质屏蔽)", item = if (enableMemoryMode.value) "开启" else "关闭") {
+            val nextValue = enableMemoryMode.value.not()
+            sharedPreferences?.edit()?.putBoolean("lowMemoryMode", nextValue)?.apply()
+            enableMemoryMode.value = nextValue
+            Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
+        }
+
+        val useMediaPlayer: MutableState<Boolean> = remember {
+            mutableStateOf(sharedPreferences?.getBoolean("useMediaPlayerWhenPlayDolby", false) ?: false)
+        }
+        SingleItem(title = "是否用系统播放器来播放杜比", item = if(useMediaPlayer.value) "MediaPlayer" else "MediaCodec") {
+            val nextValue = useMediaPlayer.value.not()
+            sharedPreferences?.edit()?.putBoolean("useMediaPlayerWhenPlayDolby", nextValue)?.apply()
+            useMediaPlayer.value = nextValue
+            Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
+        }
+
         Button(onClick = {
-            OpenApiSDK.getLogApi().uploadLog(activity) { code, tips, uuid ->
-                Log.i("OtherScreen", "OtherScreen: code $code, tips $tips, uuid $uuid")
+            OpenApiSDK.getLogApi().uploadLog(activity) { code, tips, uin ->
+                Log.i("OtherScreen", "OtherScreen: code $code, tips $tips, uin $uin")
                 AppScope.launchUI {
                     Toast.makeText(
                         activity,
-                        "日志上传结果, code:$code, msg:$tips, uuid $uuid",
+                        "日志上传结果, code:$code, msg:$tips, uin $uin",
                         Toast.LENGTH_SHORT
                     ).show()
                 }

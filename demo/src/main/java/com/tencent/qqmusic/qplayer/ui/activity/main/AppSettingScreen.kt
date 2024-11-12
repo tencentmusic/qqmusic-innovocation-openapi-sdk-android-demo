@@ -40,7 +40,7 @@ fun AppSetting() {
 
         SingleItem(title = "Debug调试页面", item = "") {
             if (!BuildConfig.IS_DEBUG) {
-                UiUtils.showToast("请使用Release包")
+                UiUtils.showToast("请使用debug包")
                 return@SingleItem
             }
             activity.startActivity(Intent(activity, DebugActivity::class.java))

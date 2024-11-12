@@ -25,7 +25,7 @@ class FireEyeMonitorConfigImpl: IMonitorConfigApi {
     }
 
     override fun uid(): String {
-        return SessionManager.getSession().uid ?: ""
+        return ""
     }
 
     override fun uin(): String {
@@ -33,7 +33,7 @@ class FireEyeMonitorConfigImpl: IMonitorConfigApi {
     }
 
     override fun uniqueId(): String {
-        return SessionManager.getSession().uid
+        return ""
     }
 
     override fun versionName(): String {

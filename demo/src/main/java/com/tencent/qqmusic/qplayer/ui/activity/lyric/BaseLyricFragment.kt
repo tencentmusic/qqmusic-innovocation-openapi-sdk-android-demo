@@ -9,6 +9,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Observer
 import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.view.lyric.LyricStateInterface
@@ -17,6 +18,9 @@ import com.tencent.qqmusic.openapisdk.core.view.lyric.OnLyricContentClickListene
 import com.tencent.qqmusic.openapisdk.core.view.lyric.OnLyricScrollChangeListener
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.ui.activity.player.LyricImageManager
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.sharedPreferences
+
 
 /**
  * Created by tannyli on 2023/11/30.
@@ -108,11 +112,17 @@ class BaseLyricFragment(val layoutId: Int = -1): Fragment(), LyricStateInterface
         view.findViewById<Button>(R.id.btn_old_style).setOnClickListener {
             this.startActivity(Intent(activity, LyricActivity::class.java))
         }
+
+        LyricImageManager.lyricImageLiveData.observe(viewLifecycleOwner, Observer {
+            MLog.i(TAG, "set $it")
+            rootView?.background = it
+        })
     }
 
     private fun onTapSeek(mStartTime: Long) {
         hideHighlightLyricInOffset.run()
-        OpenApiSDK.getPlayerApi().seekToPlay(mStartTime)
+        val needFade = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
+        OpenApiSDK.getPlayerApi().seekToPlay(mStartTime, needFade)
     }
     override fun onLoadLyric(
         isSuccess: Boolean,

@@ -42,7 +42,7 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
     var areaAreaDesc: String = ""
     var areaAreaCover: String = ""
     val callback: (Area?) -> Unit = {
-        if (it!=null) {
+        if (it != null) {
             areaAreaTitle = it.title
             areaAreaDesc = it.desc
             areaAreaCover = it.cover
@@ -54,22 +54,24 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
         AreaId.AreaDolby -> {
             viewModel.fetchDolbySection(callback)
         }
+
         AreaId.AreaHires -> {
             viewModel.fetchHiresSection(callback)
         }
+
         AreaId.AreaGalaxy -> {
             viewModel.fetchGalaxySection(callback)
         }
+
         AreaId.Vinly -> {
             viewModel.fetchVinylSection(callback)
         }
+
         AreaId.Master -> {
             viewModel.fetchMasterSection(callback)
         }
+
         else -> {
-            if (areaId == AreaId.Wanos) {
-                viewModel.showDialog = true
-            }
             viewModel.fetchSection(areaId, callback)
         }
     }
@@ -126,9 +128,9 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                 Text(
                     text = shelf.shelfTitle,
                     color = when (shelf.shelfType) {
-                        AreaShelfType.AreaShelfType_Song-> Color.Red
-                        AreaShelfType.AreaShelfType_Folder-> Color.Yellow
-                        AreaShelfType.AreaShelfType_Album-> Color.Blue
+                        AreaShelfType.AreaShelfType_Song -> Color.Red
+                        AreaShelfType.AreaShelfType_Folder -> Color.Yellow
+                        AreaShelfType.AreaShelfType_Album -> Color.Blue
                         else -> Color.Gray
                     },
                     fontSize = 18.sp
@@ -136,11 +138,12 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
 
                 Text(
                     text = when (shelf.shelfType) {
-                        AreaShelfType.AreaShelfType_Song-> "更多歌曲"
-                        AreaShelfType.AreaShelfType_Folder-> "更多歌单"
-                        AreaShelfType.AreaShelfType_Album-> "更多专辑"
-                        else -> ""},
-                    color =  Color.Gray,
+                        AreaShelfType.AreaShelfType_Song -> "更多歌曲"
+                        AreaShelfType.AreaShelfType_Folder -> "更多歌单"
+                        AreaShelfType.AreaShelfType_Album -> "更多专辑"
+                        else -> ""
+                    },
+                    color = Color.Gray,
                     fontSize = 18.sp,
                     modifier = Modifier
                         .wrapContentWidth()
@@ -161,7 +164,7 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                     val item = shelfItems.getOrNull(it) ?: return@repeat
                     var title: String = ""
                     when (shelf.shelfType) {
-                        AreaShelfType.AreaShelfType_Song-> {
+                        AreaShelfType.AreaShelfType_Song -> {
                             title = item.songInfo?.songName.toString()
                             val songId: Long = item.songInfo?.songId ?: 0
                             Box(
@@ -178,14 +181,19 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (item.songInfo?.isLongAudioSong() == true) {
-                                    PodcastItem(song = item.songInfo)
-                                } else {
-                                    Text(text = title, fontSize = 16.sp)
+                                Column {
+                                    if (item.songInfo?.isLongAudioSong() == true) {
+                                        PodcastItem(song = item.songInfo)
+                                    } else {
+                                        Text(text = title, fontSize = 16.sp)
+                                    }
+
+                                    Text(text = "Vip ：${if (item.songInfo?.vip == 1) "VIP" else "普通"}")
                                 }
                             }
                         }
-                        AreaShelfType.AreaShelfType_Folder-> {
+
+                        AreaShelfType.AreaShelfType_Folder -> {
                             title = item.folder?.name.toString()
                             val folderId: String = item.folder?.id.toString()
                             Box(
@@ -202,13 +210,17 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = title,
-                                    fontSize = 16.sp
-                                )
+                                Column {
+                                    Text(
+                                        text = title,
+                                        fontSize = 16.sp
+                                    )
+                                    Text(text = "歌曲数量 ：${item.folder?.songNum.toString()}")
+                                }
                             }
                         }
-                        AreaShelfType.AreaShelfType_Album-> {
+
+                        AreaShelfType.AreaShelfType_Album -> {
                             title = item.album?.name.toString()
                             val albumId: String = item.album?.id.toString()
                             Box(
@@ -225,10 +237,13 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = title,
-                                    fontSize = 16.sp
-                                )
+                                Column {
+                                    Text(
+                                        text = title,
+                                        fontSize = 16.sp
+                                    )
+                                    Text(text = "歌曲数量 ：${item.album?.songNum.toString()}")
+                                }
                             }
                         }
                     }

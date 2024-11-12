@@ -8,6 +8,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.utils.UiUtils.generateQRCode
 
 object MvBuyQRDialog {
 
@@ -35,24 +36,7 @@ object MvBuyQRDialog {
         }
     }
 
-    private fun generateQRCode(content: String?): Bitmap? {
-        val qrCodeWriter = QRCodeWriter()
-        try {
-            val bitMatrix: BitMatrix = qrCodeWriter.encode(content, BarcodeFormat.QR_CODE, 512, 512)
-            val width = bitMatrix.width
-            val height = bitMatrix.height
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
-            for (x in 0 until width) {
-                for (y in 0 until height) {
-                    bitmap.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
-                }
-            }
-            return bitmap
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return null
-        }
-    }
+
 }
 
 

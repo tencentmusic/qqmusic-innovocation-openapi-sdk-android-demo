@@ -2,12 +2,17 @@ package com.tencent.qqmusic.qplayer.utils
 
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.widget.Toast
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.common.BitMatrix
+import com.google.zxing.qrcode.QRCodeWriter
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import java.math.BigDecimal
 
 /**
@@ -59,7 +64,9 @@ object UiUtils {
     }
 
     fun showToast(msg: String) {
-        Toast.makeText(UtilContext.getApp(), msg, Toast.LENGTH_SHORT).show()
+        AppScope.launchUI {
+            Toast.makeText(UtilContext.getApp(), msg, Toast.LENGTH_SHORT).show()
+        }
     }
 
     fun isStrInt(str: String): Boolean {
@@ -135,5 +142,28 @@ object UiUtils {
             }
         }
         return icQuality
+    }
+
+
+     fun generateQRCode(content: String?): Bitmap? {
+         if (content.isNullOrEmpty()) {
+             return null
+         }
+        val qrCodeWriter = QRCodeWriter()
+        try {
+            val bitMatrix: BitMatrix = qrCodeWriter.encode(content, BarcodeFormat.QR_CODE, 512, 512)
+            val width = bitMatrix.width
+            val height = bitMatrix.height
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+            for (x in 0 until width) {
+                for (y in 0 until height) {
+                    bitmap.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                }
+            }
+            return bitmap
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
     }
 }

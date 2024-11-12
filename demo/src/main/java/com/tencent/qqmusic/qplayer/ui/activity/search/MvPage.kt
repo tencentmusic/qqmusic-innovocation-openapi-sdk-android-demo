@@ -29,6 +29,7 @@ import androidx.constraintlayout.compose.Dimension
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.openapisdk.model.SearchMVInfo
+import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 
 @Composable
@@ -86,7 +87,21 @@ fun MVSearchItem(data: SearchMVInfo) {
             ) {
                 Text(text = "标题 ： ${data.mvTitle}")
                 Text(text = "歌手 ： ${data.singer_name}")
+                Row {
+                    if ((data.mvDolby4KSize ?: 0) > 0) {
+                        Text(text = "杜比")
+                    }
+                    if ((data.mvExcellentSize ?: 0) > 0) {
+                        Text(text = "臻品")
+                    }
+                }
+                Text(text = "播放量 ： ${data.playCount}")
+
             }
+        }
+
+        AppScope.launchIO {
+
         }
     }
 }

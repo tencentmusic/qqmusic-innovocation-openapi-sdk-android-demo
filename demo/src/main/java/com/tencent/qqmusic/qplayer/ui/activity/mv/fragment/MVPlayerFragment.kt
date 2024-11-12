@@ -3,6 +3,9 @@ package com.tencent.qqmusic.qplayer.ui.activity.mv.fragment
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Surface
@@ -17,6 +20,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.widget.AppCompatSeekBar
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
@@ -37,6 +41,7 @@ import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.player.PlayerState
+import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
@@ -45,6 +50,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.mv.MvBuyQRDialog
 import com.tencent.qqmusic.qplayer.ui.activity.mv.PlayerViewModel
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
@@ -79,18 +85,20 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
     private var currentPlayTime: Long? = 0L
     private var seekBar: AppCompatSeekBar? = null
     private var constraintLayout: ConstraintLayout? = null
+    private var loadingText: TextView? = null
 
     private var collectButton: Button? = null
 
     private var isUserChangeProcess: Boolean = false
     private var mediaNetWork: IEdgeMediaNetWork? = null
-
     private var mPlayer: IEdgeMediaPlayer? = null
-
     private var currentPlayState: PlayerState? = null
 
+    private var buffering: Boolean = false
 
-    private val playerViewModel: PlayerViewModel = ViewModelProvider(viewModelStoreOwner)[PlayerViewModel::class.java]
+
+    private val playerViewModel: PlayerViewModel =
+        ViewModelProvider(viewModelStoreOwner)[PlayerViewModel::class.java]
 
     private val sharedPreferences: SharedPreferences? by lazy {
         try {
@@ -167,7 +175,9 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
                             }
 
                             QualityBlockReason.NO_PERMISSION_FOR_UER_OR_DEVICE -> {
-                                s = if (mPlayer?.getCurrentMediaRes()?.isHaveQuality(MediaQuality.EXCELLENT) == true && mPlayer?.getExpectQuality() == MediaQuality.EXCELLENT) {
+                                s = if (mPlayer?.getCurrentMediaRes()
+                                        ?.isHaveQuality(MediaQuality.EXCELLENT) == true && mPlayer?.getExpectQuality() == MediaQuality.EXCELLENT
+                                ) {
                                     if (mPlayer?.isDeviceSupportHighFrame() == true) {
                                         "当前用户无权限播放"
                                     } else {
@@ -197,9 +207,16 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
             AppScope.launchUI {
                 Toast.makeText(this@MVPlayerFragment.context, tip, Toast.LENGTH_SHORT).show()
                 if (showBuyQr) {
-                    MvBuyQRDialog.showQRCodeDialog(this@MVPlayerFragment.context!!, playerViewModel.currentData.value?.getBuyQRUrl()) {
+                    MvBuyQRDialog.showQRCodeDialog(
+                        this@MVPlayerFragment.context!!,
+                        playerViewModel.currentData.value?.getBuyQRUrl()
+                    ) {
                         AppScope.launchUI {
-                            Toast.makeText(this@MVPlayerFragment.context, "购买后请重新进入界面", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this@MVPlayerFragment.context,
+                                "购买后请重新进入界面",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
                 }
@@ -255,7 +272,11 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
         mPlayer?.setEventCallback(eventCallback)
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
         return inflater.inflate(R.layout.fragment_mvplayer, container, false)
     }
 
@@ -287,13 +308,17 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
 
     private fun initView(view: View) {
         constraintLayout = view.findViewById(R.id.root_con)
-
+        loadingText = view.findViewById(R.id.loading_state)
         collectButton = view.findViewById<Button?>(R.id.collect_button).apply {
             setOnClickListener {
                 mPlayer?.getCurrentMediaRes()?.let { mediaResDetail ->
                     if (mediaResDetail.getSwitchBitPass(MediaSwitchBlockReason.FAVORITE).not()) {
                         AppScope.launchUI {
-                            Toast.makeText(this@MVPlayerFragment.context, "该MV无收藏权限", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this@MVPlayerFragment.context,
+                                "该MV无收藏权限",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                         return@let
                     }
@@ -366,7 +391,11 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
             it.max = mPlayer?.getCurrentMediaRes()?.playTime?.toIntOrNull() ?: 0
             it.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
                 var userSelectTime = 0
-                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                override fun onProgressChanged(
+                    seekBar: SeekBar?,
+                    progress: Int,
+                    fromUser: Boolean
+                ) {
                     if (fromUser) {
                         userSelectTime = progress
                     }
@@ -400,7 +429,11 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
 
     @SuppressLint("CommitPrefEdits", "UseRequireInsteadOfGet")
     private fun changeQuality() {
-        MediaQualityDialog.showQualityAlert(this@MVPlayerFragment.activity!!, playerViewModel.currentData.value, mPlayer?.getDeviceSupportQualityList() ?: emptyList()) { quailty ->
+        MediaQualityDialog.showQualityAlert(
+            this@MVPlayerFragment.activity!!,
+            playerViewModel.currentData.value,
+            mPlayer?.getDeviceSupportQualityList() ?: emptyList()
+        ) { quailty ->
             val mQuality = quailty ?: MediaQuality.LQ
             mPlayer?.setExceptMvQuality(mQuality)
             AppScope.launchIO {
@@ -473,7 +506,12 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
 
             }
 
-            override fun surfaceChanged(surfaceHolder: SurfaceHolder, format: Int, width: Int, height: Int) {
+            override fun surfaceChanged(
+                surfaceHolder: SurfaceHolder,
+                format: Int,
+                width: Int,
+                height: Int
+            ) {
             }
 
             override fun surfaceDestroyed(surfaceHolder: SurfaceHolder) {
@@ -495,14 +533,47 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
         when (state) {
             PlayerState.SEEK_COMPLETED -> {
                 AppScope.launchUI {
-                    Toast.makeText(this@MVPlayerFragment.context, "进度调整完成", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@MVPlayerFragment.context,
+                        "进度调整完成",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
 
             PlayerState.PREPARED -> {
                 PerformanceHelper.monitorMvPlay(TAG)
                 updateMVView()
+                loadingText?.isVisible = false
                 mPlayer?.play()
+            }
+
+
+            PlayerState.BUFFERING_START -> {
+                buffering = true
+                AppScope.launchUI {
+                    loadingText?.isVisible = true
+                    loadingText?.text = "加载中"
+                }
+            }
+
+            PlayerState.ERROR -> {
+                if (buffering) {
+                    loadingText?.isVisible = true
+                    loadingText?.text =
+                        if (isNetworkAvailable(requireContext())) "缓冲失败" else "网络错误，请检查网络设置"
+                }
+            }
+
+
+            PlayerState.BUFFERING_END -> {
+                AppScope.launchUI {
+                    if (buffering) {
+                        loadingText?.isVisible = false
+                    }
+                    buffering = false
+                }
+
             }
 
             else -> {}
@@ -523,5 +594,19 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
         mPlayer = null
     }
 
+
+    private fun isNetworkAvailable(context: Context): Boolean {
+        val connectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val networkCapabilities = connectivityManager.activeNetwork ?: return false
+            val actNw =
+                connectivityManager.getNetworkCapabilities(networkCapabilities) ?: return false
+            return actNw.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        } else {
+            val networkInfo = connectivityManager.activeNetworkInfo
+            return networkInfo != null && networkInfo.isConnected
+        }
+    }
 
 }

@@ -34,21 +34,25 @@ object QualityAlert {
             PlayerEnums.Quality.MASTER_SR,
         )
 
-    var qualityOrderString =
-        arrayOf(
-            "LQ",
-            "STANDARD",
-            "HQ",
-            "SQ",
-            "DOLBY",
-            "HIRES",
-            "EXCELLENT",
-            "GALAXY",
-            "MASTER_TAPE",
-            "MASTER_SR",
-        )
+    var qualityOrderString = arrayOf("")
+
+    private fun initQualityOrderString() {
+        qualityOrderString = arrayOf(
+                "LQ",
+                "STANDARD",
+                "HQ",
+                "SQ",
+                "DOLBY",
+                "HIRES",
+                "EXCELLENT",
+                "GALAXY",
+                "MASTER_TAPE",
+                "MASTER_SR",
+            )
+    }
 
     fun showQualityAlert(activity: Activity, isDownload: Boolean, setBlock: (Int)->Int, refresh: (Int)->Unit) {
+        initQualityOrderString()
         val curSong = OpenApiSDK.getPlayerApi().getCurrentSongInfo()
         var realQuality: Int? = null
         curSong?.apply {
@@ -143,7 +147,8 @@ object QualityAlert {
                         PlayDefine.PlayError.PLAY_ERR_NEED_VIP -> "需要VIP"
                         PlayDefine.PlayError.PLAY_ERR_CANNOT_PLAY -> "歌曲不能播放"
                         PlayDefine.PlayError.PLAY_ERR_NONETWORK -> "无网络"
-                        PlayDefine.PlayError.PLAY_ERR_UNSUPPORT -> "试听歌曲无法切换音质"
+                        PlayDefine.PlayError.PLAY_ERR_UNSUPPORT,
+                        PlayDefine.PlayError.PLAY_ERR_CAN_NOT_SET_CURRENT_QUALITY -> "不支持切换此音质"
                         PlayDefine.PlayError.PLAY_ERR_NEED_SUPER_VIP -> "需要超级会员"
                         PlayDefine.PlayError.PLAY_ERR_NEED_PAY_ALBUM -> "需要专辑付费"
                         PlayDefine.PlayError.PLAY_ERR_NEED_PAY_TRACK -> "需要单曲付费"

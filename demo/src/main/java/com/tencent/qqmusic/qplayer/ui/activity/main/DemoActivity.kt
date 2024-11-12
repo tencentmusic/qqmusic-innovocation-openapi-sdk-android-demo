@@ -68,6 +68,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.home.VIPSuccessDialog
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
+import com.tencent.qqmusic.qplayer.ui.activity.player.LyricImageManager
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import com.tencent.qqmusic.qplayer.utils.PrivacyManager
@@ -224,7 +225,12 @@ class DemoActivity : ComponentActivity() {
             }
         })
 
+        sharedPreferences?.getString("sessionActivity", null)?.let {
+            OpenApiSDK.getPlayerApi().setMediaSessionActivityName(it)
+        }
+
         PlayerObserver.registerSongEvent()
+        LyricImageManager
     }
 
 }
