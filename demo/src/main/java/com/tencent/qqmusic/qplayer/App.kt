@@ -4,28 +4,41 @@ import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
-import android.os.Debug
 import android.os.StrictMode
 import android.util.Log
 import android.widget.Toast
+import com.tencent.config.ProcessUtil
 import com.tencent.qqmusic.innovation.common.logging.MLog
+import androidx.lifecycle.Observer
 import com.tencent.qqmusic.innovation.common.util.DeviceUtils
 import com.tencent.qqmusic.innovation.common.util.ProcessUtils
+import com.tencent.qqmusic.innovation.common.util.ToastUtils
+import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LogEvent
+import com.tencent.qqmusic.openapisdk.core.DeviceType
+import com.tencent.qqmusic.openapisdk.core.IAPPCallback
 import com.tencent.qqmusic.openapisdk.core.InitConfig
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.network.INetworkCheckInterface
 import com.tencent.qqmusic.openapisdk.core.network.NetworkTimeoutConfig
+import com.tencent.qqmusic.openapisdk.playerui.PlayerStyleManager
+import com.tencent.qqmusic.qplayer.ui.activity.player.DefaultImageLoader
+import com.tencent.qqmusic.playerinsight.CustomInsightConfig
 import com.tencent.qqmusic.qplayer.baselib.util.GsonHelper
+import com.tencent.qqmusic.qplayer.utils.AppLifeCycleManager
+import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.baselib.util.Md5Utils
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.baselib.util.deviceid.DeviceInfoManager
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.utils.FireEyeMonitorConfigImpl
 import com.tencent.qqmusic.qplayer.utils.PrivacyManager
+import com.tencent.qqmusic.qplayer.utils.SettingsUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
 
 /**
  * Created by tannyli on 2021/8/31.
@@ -33,16 +46,16 @@ import kotlinx.coroutines.launch
  */
 class App : Application() {
 
-
     override fun attachBaseContext(base: Context?) {
         super.attachBaseContext(base)
-        context  = this
+        context = this
     }
 
     override fun onCreate() {
         super.onCreate()
 
-        if (!ProcessUtils.isMainProcess()) {
+
+        if (!ProcessUtil.inMainProcess(this)) {
 //            Debug.waitForDebugger()
             // 非主进程 不用初始化sdk
             return
@@ -77,8 +90,18 @@ class App : Application() {
         private const val TAG = "App"
         lateinit var context: Context
 
+        @JvmStatic
         fun init(context: Context) {
             Log.i(TAG, "init Application")
+            PlayerStyleManager.observeForever(Observer {
+                if (it.from == PlayerStyleManager.SET_STYLE_PERMISSION_DENIED) {
+                    ToastUtils.showLong("播放器样式权益已失效")
+                } else if (it.from == PlayerStyleManager.SET_STYLE_DEFAULT_NULL) {
+                    ToastUtils.showLong("没有设置播放器样式")
+                }
+                MLog.i("PlayerStyleManager", "updatePlayerStyle $it， ")
+            })
+            PlayerStyleManager.setImageLoader(DefaultImageLoader())
             OpenApiSDK.registerBusinessEventHandler {
                 when (it.code) {
                     LogEvent.LogFileCanNotWrite -> {
@@ -97,6 +120,8 @@ class App : Application() {
                 null
             }
 
+            BaseFunctionManager.proxy.initDebug()
+
             val isUseForegroundService = sharedPreferences?.getBoolean("isUseForegroundService", true) ?: true
             val logFileDir = sharedPreferences?.getString("logFileDir", "")
             val savedTimeoutConfig = sharedPreferences?.getString("NetworkTimeoutConfig", "")
@@ -109,14 +134,23 @@ class App : Application() {
                 context.applicationContext,
                 MustInitConfig.APP_ID,
                 MustInitConfig.APP_KEY,
-                DeviceUtils.getAndroidID(),
+                "123456789", //合作方请自行获取唯一设备ID并传入
             ).apply {
+                this.appForeground = true
                 this.isUseForegroundService = isUseForegroundService
                 this.crashConfig = InitConfig.CrashConfig(enableNativeCrashReport = true, enableAnrReport = true)
                 this.deviceConfigInfo.apply {
-                    hardwareInfo = ""
+                    hardwareInfo = "L9"
+                    brand = "Xiaomi"
                     this.lowMemoryMode = lowMemoryMode
+                    // 设置设备类型
+                    this.deviceType = when (Md5Utils.getMD5String(MustInitConfig.APP_ID)) {
+                        "a3ef4dd61511b86a1e288ed3df6223fb" -> DeviceType.PHONE
+                        else -> DeviceType.CAR
+                    }
+
                 }
+                this.insightConfig = CustomInsightConfig(true, true)
                 this.enableBluetoothListener = false
                 this.useMediaPlayerWhenPlayDolby = sharedPreferences?.getBoolean("useMediaPlayerWhenPlayDolby", false) ?: false
                 this.logFileDir = logFileDir
@@ -125,9 +159,27 @@ class App : Application() {
                 if (enableAccountPartner) {
                     this.accountMode = InitConfig.AccountMode.PARTNER_INDEPENDENT
                 }
+                if (sharedPreferences?.getBoolean("useCustomNetworkCheck", false) == true) {
+                    val networkStatus = sharedPreferences.getBoolean("networkAvailable", true)
+                    SettingsUtil.isNetworkAvailable = networkStatus
+                    this.networkChecker = object : INetworkCheckInterface {
+                        override fun isNetworkAvailable(): Boolean {
+                            return SettingsUtil.isNetworkAvailable
+                        }
+                    }
+                }
+                this.appCallback = object : IAPPCallback {
+                    override fun getProfileTag(): String {
+//                        return JSONObject().apply {
+//                            put("name", "sss")
+//                        }.toString()
+                        return "{\"tags\":[\"chinoiserie\",\"china_chic\",\"folk\",\"electronica\"],\"cityLevel\":\"first_tier_city\"}"
+                    }
+                }
             }
             Global.setMonitorConfigApi(FireEyeMonitorConfigImpl())
             val start = System.currentTimeMillis()
+            Global.isDebug = BuildConfig.IS_DEBUG
             OpenApiSDK.init(initConfig)
             OpenApiSDK.setAppForeground(true)
             GlobalScope.launch(Dispatchers.Default) {

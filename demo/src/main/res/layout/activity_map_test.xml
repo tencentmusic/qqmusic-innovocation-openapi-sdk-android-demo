@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:ignore="HardcodedText" >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/dp100"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/headIcon_ImageView"
+                android:layout_width="@dimen/dp100"
+                android:layout_height="@dimen/dp100"
+                android:contentDescription="@string/headIcon_ImageView"
+                android:scaleType="centerCrop" />
+
+            <ImageView
+                android:id="@+id/vipIcon_ImageView"
+                android:layout_width="@dimen/dp50"
+                android:layout_height="@dimen/dp50"
+                android:layout_gravity="bottom|right"
+                android:contentDescription="@string/vipIcon_ImageView"
+                tools:ignore="RtlHardcoded" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/text_login_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/login_status" />
+
+        <Button
+            android:id="@+id/btn_map_test_login"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_map_test_login" />
+
+        <TextView
+            android:id="@+id/textView3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/textView3"
+            android:textColor="#4CAF50"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_map_rank"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="地图测试-播放榜单" />
+
+        <Button
+            android:id="@+id/btn_trans_play_first_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_trans_play_first_time" />
+
+        <Button
+            android:id="@+id/btn_trans_play"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_trans_play" />
+
+        <Button
+            android:id="@+id/btn_map_test_songInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_map_test_songInfo" />
+
+        <Button
+            android:id="@+id/btn_map_self_list"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="地图测试-播放自定义歌单" />
+
+        <Button
+            android:id="@+id/btn_map_self_radio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="地图测试-普通播放个性歌单(非电台模式)" />
+
+        <Button
+            android:id="@+id/btn_map_merchant_list"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="地图测试-播放商业化歌单" />
+
+        <Button
+            android:id="@+id/btn_map_member_list"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="地图测试-播放会员歌单" />
+
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/textView2"
+            android:textColor="#E53131"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_map_test_my_fav"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_map_test_my_fav" />
+
+        <Button
+            android:id="@+id/btn_map_test_recently"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_map_test_recently" />
+
+        <Button
+            android:id="@+id/btn_map_test_daily30"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_map_test_daily30" />
+
+        <Button
+            android:id="@+id/btn_map_fav"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_map_fav"/>
+
+        <TextView
+            android:id="@+id/textViewRadio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="电台:"
+            android:textColor="#673AB7"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_map_set_radio_playlist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="个性电台默认参数-仅添加至播放列表"/>
+
+        <Button
+            android:id="@+id/btn_map_set_radio_playlist_play"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="个性电台默认参数-直接播放-上报"/>
+
+        <Button
+            android:id="@+id/btn_map_set_radio_playlist_songs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="个性电台指定歌曲-仅添加至播放列表"/>
+
+        <Button
+            android:id="@+id/btn_map_set_radio_playlist_songs_play"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="个性电台指定歌曲-设置电台列表并播放"/>
+
+        <Button
+            android:id="@+id/btn_map_set_radio_playlist_songs_play_free"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="免费电台播放"/>
+
+        <Button
+            android:id="@+id/btn_map_stop_radio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="停止电台"/>
+
+        <TextView
+            android:id="@+id/textViewSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="语音点歌"
+            android:textColor="#03A9AA"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_map_search_song"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="语音点歌歌曲"/>
+
+        <Button
+            android:id="@+id/btn_map_search_folder"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="语音点歌歌单"/>
+
+        <TextView
+            android:id="@+id/textViewSetting"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/textViewSetting"
+            android:textColor="#03A9F4"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_map_get_operations"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="获取运营信息"/>
+
+        <Button
+            android:id="@+id/btn_refresh_songInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="更新播放列表歌曲链接" />
+
+        <Button
+            android:id="@+id/btn_songInfo_transfer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="songInfo转存再播放" />
+
+        <Button
+            android:id="@+id/btn_map_test_rebuild"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_map_test_rebuild" />
+
+        <Button
+            android:id="@+id/btn_map_set_callback_null"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="取消歌词和进度监听"/>
+
+        <Button
+            android:id="@+id/btn_map_test_clear_all_cache"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_map_test_clear_all_cache" />
+
+
+
+        <Button
+            android:id="@+id/btn_stop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="停止播放"/>
+
+    </LinearLayout>
+
+</ScrollView>
+

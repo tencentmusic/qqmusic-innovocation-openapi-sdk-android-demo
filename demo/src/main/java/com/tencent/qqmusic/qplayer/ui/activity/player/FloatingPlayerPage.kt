@@ -46,17 +46,21 @@ import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.core.internal.lyric.LyricLoadInterface
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.tryPauseFirst
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusictvsdk.internal.lyric.LyricManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+internal const val TEST_SONG_ID = 256979724L
+internal const val TEST_SONG_ID_2 = 317968884L
 
 @Composable
 fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
+
     val activity = LocalContext.current as Activity
     val isPlaying = observer.currentState == PlayDefine.PlayState.MEDIAPLAYER_STATE_STARTED
     val currentSong = observer.currentSong
-    val lyricView = lyric(fontSize = 40) {
+    val lyricView = lyric(fontSize = 40, observer = observer) {
         activity.startActivity(Intent(activity, PlayerActivity::class.java))
     }
 
@@ -67,7 +71,7 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
         .height(70.dp)
         .background(Color(0xFFF0FFF0))
         .clickable {
-            activity.startActivity(Intent(activity, PlayerActivity::class.java))
+            UiUtils.gotoPlayerPage()
         }) {
 
         val (image1, title, lyric, vipIcon, play, song_list) = createRefs()
@@ -129,21 +133,22 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
                     }
             )
         }
+        if (currentSong != null) {
+            Box(modifier = Modifier.constrainAs(lyric) {
+                start.linkTo(image1.end, 10.dp)
+                bottom.linkTo(parent.bottom, 10.dp)
+                top.linkTo(title.bottom)
+                end.linkTo(play.start)
+                width = Dimension.fillToConstraints
+            }) {
+                AndroidView(
+                    factory = {
+                        lyricView
+                    }, modifier = Modifier
+                        .size(width = 400.dp, height = 20.dp)
+                )
 
-        Box(modifier = Modifier.constrainAs(lyric) {
-            start.linkTo(image1.end, 10.dp)
-            bottom.linkTo(parent.bottom, 10.dp)
-            top.linkTo(title.bottom)
-            end.linkTo(play.start)
-            width = Dimension.fillToConstraints
-        }) {
-            AndroidView(
-                factory = {
-                    lyricView
-                }, modifier = Modifier
-                    .size(width = 400.dp, height = 20.dp)
-            )
-
+            }
         }
 
         val needFade = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
@@ -179,6 +184,18 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
                                     play()
                                 }
                                 val song = getCurrentSongInfo()
+                                if (song == null) {
+                                    OpenApiSDK
+                                        .getOpenApi()
+                                        .fetchSongInfoBatch(
+                                            songIdList = listOf(TEST_SONG_ID, TEST_SONG_ID_2),
+                                            callback = {
+                                                playRadio(it.data!!, autoPlay = true)
+                                            }
+                                        )
+//                                    playRadio(autoPlay = true)
+                                    return@apply
+                                }
                                 if (song?.canPlay() != true) {
                                     withContext(Dispatchers.Main) {
                                         Toast
@@ -226,7 +243,8 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
 fun lyric(
     fontSize: Int = 50,
     lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
-    click: (() -> Unit)? = null
+    observer: PlayerObserver,
+    click: (() -> Unit)? = null,
 ): LyricScrollView {
     val activity = LocalContext.current as Activity
     val lyricView: LyricScrollView by remember {
@@ -236,7 +254,7 @@ fun lyric(
                 setSingleLine(true)
                 setFontSize(fontSize.dp.value.toInt())
                 setColor(android.graphics.Color.parseColor("#30888888"))
-                setColorH(android.graphics.Color.parseColor("#888888"))
+                setColorH(observer.magicColor?.first?:android.graphics.Color.parseColor("#888888"))
                 setOnClickListener {
                     click?.let { it.invoke() }
                 }
@@ -252,6 +270,7 @@ fun lyric(
                 lyricView.startTimer()
                 LyricManager.instance.startLoadLyric(0)
             }
+
             Lifecycle.Event.ON_PAUSE -> {
                 lyricView.stopTimer()
                 LyricManager.instance.stopLoadLyric(0)

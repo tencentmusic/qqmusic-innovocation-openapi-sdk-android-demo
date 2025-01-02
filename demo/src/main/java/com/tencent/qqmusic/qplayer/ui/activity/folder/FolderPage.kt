@@ -60,7 +60,7 @@ fun FolderScreen(folders: List<Folder>) {
 
 @OptIn(ExperimentalCoilApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun FolderPage(folders: List<Folder>) {
+fun FolderPage(folders: List<Folder>, source:Int?=null) {
     val activity = LocalContext.current as Activity
     val clipboardManager = LocalContext.current.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
@@ -83,8 +83,12 @@ fun FolderPage(folders: List<Folder>) {
                             } else {
                                 PerformanceHelper.monitorClick("FolderPage_SongListActivity")
                                 activity.startActivity(
-                                    Intent(activity, SongListActivity::class.java)
-                                        .putExtra(SongListActivity.KEY_FOLDER_ID, folder.id)
+                                    Intent(activity, SongListActivity::class.java).apply {
+                                        putExtra(SongListActivity.KEY_FOLDER_ID, folder.id)
+                                        if (source!=null){
+                                            putExtra(SongListActivity.KEY_SOURCE, source)
+                                        }
+                                    }
                                 )
                             }
                         },

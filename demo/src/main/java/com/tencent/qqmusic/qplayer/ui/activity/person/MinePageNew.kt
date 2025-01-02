@@ -57,6 +57,8 @@ fun MinePageNew(model: MineViewModel) {
                     if (partnerIdInfo.isNullOrEmpty().not()) {
                         Text(text = "已登录第三方帐号 id：$partnerIdInfo")
                     }
+//                    Text(text = "是否高潜用户:${model.limitFree.collectAsState().value?.data?.payHighDive?:"null"}")
+//                    Text(text = "限免:${model.getLimitFreeInfo(model.limitFree.collectAsState().value)}")
                 }
             }
         }

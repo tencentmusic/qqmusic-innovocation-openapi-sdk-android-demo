@@ -494,6 +494,13 @@ private fun SegPage(
                                         }
                                     }
 
+                                    override fun onPlayProgressChange(
+                                        curPlayTime: Int,
+                                        duration: Int
+                                    ) {
+
+                                    }
+
                                 })
                             } else {
                                 text.value = "生成中"

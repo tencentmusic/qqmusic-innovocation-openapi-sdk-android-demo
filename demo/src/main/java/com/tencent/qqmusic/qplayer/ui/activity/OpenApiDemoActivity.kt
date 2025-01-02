@@ -22,6 +22,7 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.model.Rank
 import com.tencent.qqmusic.openapisdk.model.SearchType
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.qplayer.BaseFunctionManager
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.GsonHelper
 import com.tencent.qqmusic.qplayer.report.report.ClickExpoReport
@@ -1119,9 +1120,112 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 "collectLongAudioSong", listOf("收藏", "歌曲id列表"), listOf("true", "314377847")
             )
         )
+
+        methodNameToBlock["fetchNewAlbum"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            val area = paramStr1?.toIntOrNull() ?: 1
+            val pageIndex = paramStr2?.toIntOrNull() ?: 0
+            val pageSize = paramStr3?.toIntOrNull() ?: 10
+            val type = paramStr4?.toIntOrNull()
+            OpenApiSDK.getOpenApi().fetchNewAlbum(area, pageIndex, pageSize, type, commonCallback)
+        }
+
+        methodNameToBlock["fetchCustomSongListSquare"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.fetchCustomSongListSquare(commonCallback)
+        }
+
+        methodNameToBlock["fetchCustomSongListItemDetail"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.fetchCustomSongListItemDetail(
+                paramStr1!!,
+                paramStr2?.toInt() ?: 0,
+                paramStr3?.toInt() ?: 0,
+                paramStr4?.toInt() ?: 20,
+                callback = commonCallback
+            )
+        }
+
+        methodNameToBlock["fetchCustomSceneSongList"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.fetchCustomSceneSongList(
+                paramStr1!!,
+                paramStr2?.toInt() ?: 0,
+                paramStr3 ?: "",
+                paramStr4?.toInt() ?: 0,
+                paramStr5?.toInt() ?: 20,
+                callback = commonCallback
+            )
+        }
+
+        methodNameToBlock["openFreeListenMode"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.openFreeListenMode(commonCallback)
+        }
+
+        methodNameToBlock["getFreeListenInfo"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.getFreeListenInfo(commonCallback)
+        }
+
+        methodNameToBlock["getOperationsInfo"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.getOperationsInfo(commonCallback)
+        }
+        methodNameToBlock["fetchNewAlbum"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            val area = paramStr1?.toIntOrNull() ?: 1
+            val pageIndex = paramStr2?.toIntOrNull() ?: 0
+            val pageSize = paramStr3?.toIntOrNull() ?: 10
+            val type = paramStr4?.toIntOrNull()
+            OpenApiSDK.getOpenApi().fetchNewAlbum(area, pageIndex, pageSize, type, commonCallback)
+        }
     }
 
     private fun initMethodNameList() {
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "openFreeListenMode", listOf(), listOf()
+            )
+        )
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "getFreeListenInfo", listOf(), listOf()
+            )
+        )
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam("getOperationsInfo", listOf(), listOf())
+        )
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchCustomSongListSquare", listOf(), listOf()
+            )
+        )
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchCustomSongListItemDetail", listOf("itemid", "itemType"), listOf("9095655857", "2")
+            )
+        )
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchCustomSceneSongList", listOf("itemid", "itemType", "scene", "page", "count"), listOf("27", "1", "快乐", "0", "20")
+            )
+        )
+
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "fetchCategoryPageOfLongAudio", listOf(), listOf()
@@ -1154,14 +1258,14 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "createGreenOrder", listOf("matchId", "充值账号", "充值时长，单位月"), listOf(MustInitConfig.MATCH_ID, "17612107884285016458", "2")
+                "createGreenOrder", listOf("matchId", "充值账号", "充值时长，单位月"), listOf(BaseFunctionManager.proxy.getMatchID(), "17612107884285016458", "2")
             )
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "queryGreenOrder", listOf("matchId", "订单id"),
                 //listOf("OApi_Baidu", "185412__20211115")
-                listOf(MustInitConfig.MATCH_ID, "185412__20211115")
+                listOf(BaseFunctionManager.proxy.getMatchID(), "185412__20211115")
             )
         )
         methodNameWithParamList.add(

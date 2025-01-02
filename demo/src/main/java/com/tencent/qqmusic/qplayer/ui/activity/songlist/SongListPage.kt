@@ -21,14 +21,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,9 +53,8 @@ import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
-import com.tencent.qqmusic.openapisdk.hologram.HologramManager
-import com.tencent.qqmusic.openapisdk.hologram.service.IFireEyeXpmService
 import com.tencent.qqmusic.openapisdk.model.Album
+import com.tencent.qqmusic.openapisdk.model.PlayParam
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.core.player.playlist.MusicPlayList
@@ -66,9 +62,9 @@ import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity.Companion.MV_ID
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
-import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -79,6 +75,21 @@ import kotlinx.coroutines.launch
 //
 
 private const val TAG = "SongListPage"
+
+data class PlayListParams(
+    // 歌曲列表
+    val songList: List<SongInfo>,
+    // 播放位置
+    val startSong: SongInfo? = null,
+    // 歌曲列表类型
+    val playListType: Int = MusicPlayList.PLAY_LIST_NULL_TYPE,
+    // 歌曲列表ID
+    val playListTypeId: Long = 0,
+    // 是否只播放已加载歌曲
+    val displayOnly: Boolean = false,
+    // 是否只播放已缓存歌曲
+    val playCachedOnly: Boolean = false
+)
 
 @Composable
 fun SongListScreen(
@@ -141,7 +152,10 @@ fun SongListPage(
     observer: PlayerObserver = PlayerObserver
 ) {
     flow ?: return
+    val activity = LocalContext.current as Activity
+    val coroutineScope = rememberCoroutineScope()
     val songs = flow.collectAsLazyPagingItems()
+    val songList = songs.snapshot().filterNotNull().toList()
     Log.i(TAG, "SongListPage: songs count: ${songs.itemCount}")
     val listState = rememberLazyListState()
     PerformanceHelper.MonitorListScroll(scrollState = listState, location = "SongListPage")
@@ -152,7 +166,7 @@ fun SongListPage(
 
             this.items(songs) { song ->
                 song ?: return@items
-                itemUI(songs = songs.snapshot().filterNotNull().toList(), song = song)
+                itemUI(PlayListParams(songList, song, playListType, playListTypeId, displayOnly))
             }
         }
     }
@@ -198,7 +212,21 @@ fun playlistHeader(songs: List<SongInfo>, playListType: Int = 0, playListTypeId:
                 start.linkTo(parent.start)
             },
             onClick = {
-                OpenApiSDK.getPlayerApi().playSongs(songs, 0)
+                val playMode = OpenApiSDK.getPlayerApi().getPlayMode()
+                val playParams = PlayParam(playListType, playListTypeId, songs, -1, playMode, startPlay = true)
+                val ret = OpenApiSDK.getPlayerApi().playSongs(playParams)
+                if (ret != PlayDefine.PlayError.PLAY_ERR_NONE) {
+                    UiUtils.showToast("播放失败:ret:${ret}")
+                } else {
+                     val resType = when (playListType) {
+                         MusicPlayList.PLAY_LIST_ALBUM_TYPE -> 3
+                         MusicPlayList.PLAY_LIST_FOLDER_TYPE -> 4
+                         else -> return@Button
+                     }
+                    OpenApiSDK.getOpenApi().reportRecentPlay("$playListTypeId", resType) { resp->
+                        Log.i("playlistHeader", "reportRecentPlay resp: $resp")
+                    }
+                }
             }) {
             Text(text = "播放全部(${songs.size})")
         }
@@ -330,14 +358,14 @@ private fun collectSongs(
 }
 
 @Composable
-fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) {
+fun itemUI(params: PlayListParams) {
     val activity = LocalContext.current as Activity
     val currentSong = PlayerObserver.currentSong
     val coroutineScope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
 
     val collectState = remember {
-        mutableStateOf(song.hot == 1)
+        mutableStateOf(params.startSong?.hot == 1)
     }
     ConstraintLayout(
         modifier = Modifier
@@ -345,21 +373,35 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
             .padding(5.dp)
             .height(70.dp)
             .clickable {
-                if (displayOnly.not()) {
-                    val result = OpenApiSDK
-                        .getPlayerApi()
-                        .playSongs(
-                            songs,
-                            songs.indexOf(song)
-                        )
+                if (params.displayOnly.not()) {
+                    val result = if (params.playCachedOnly) {
+                        val startPos = params.startSong?.let { params.songList.indexOf(it) } ?: -1
+                        OpenApiSDK.getPlayerApi().playCachedSongs(params.songList, startPos)
+                    } else {
+                        val startPos = params.startSong?.let { params.songList.indexOf(it) } ?: -1
+                        val playMode = OpenApiSDK.getPlayerApi().getPlayMode()
+                        OpenApiSDK
+                            .getPlayerApi()
+                            .playSongs(PlayParam(params.playListType, params.playListTypeId, params.songList, startPos, playMode, startPlay = true))
+                    }
                     if (result == 0) {
                         PerformanceHelper.monitorClick("SongItemUI_PlayerActivity")
-                        activity.startActivity(Intent(activity, PlayerActivity::class.java))
+                        UiUtils.gotoPlayerPage()
+                        coroutineScope.launch(Dispatchers.IO) {
+                            val resType = when (params.playListType) {
+                                MusicPlayList.PLAY_LIST_ALBUM_TYPE -> 3
+                                MusicPlayList.PLAY_LIST_FOLDER_TYPE -> 4
+                                else -> return@launch
+                            }
+                            OpenApiSDK.getOpenApi().reportRecentPlay("${params.playListTypeId}", resType) { resp->
+                                Log.i("itemUI", "reportRecentPlay resp: $resp")
+                            }
+                        }
                     } else {
                         coroutineScope.launch(Dispatchers.Main) {
                             val toastTxt =
                                 if (result == PlayDefine.PlayError.PLAY_ERR_CANNOT_PLAY) {
-                                    "播放失败 错误码：$result， 错误信息：${song.unplayableMsg}"
+                                    "播放失败 错误码：$result， 错误信息：${params.startSong?.unplayableMsg}"
                                 } else {
                                     "播放失败 错误码：$result"
                                 }
@@ -374,7 +416,7 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
         val (cover, songInfo, next, playingIcon, collect, mv) = createRefs()
 
         Image(
-            painter = rememberImagePainter(song.smallCoverUrl()),
+            painter = rememberImagePainter(params.startSong?.smallCoverUrl()),
             contentDescription = null,
             modifier = Modifier
                 .size(50.dp)
@@ -395,18 +437,18 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                     start.linkTo(cover.end)
                 }, horizontalAlignment = Alignment.Start
         ) {
-            val txtColor = if (song.canPlay()) {
+            val txtColor = if (params.startSong?.canPlay() == true) {
                 Color.Black
             } else {
                 Color.Gray
             }
-            Text(text = song.songName, color = txtColor)
+            Text(text = params.startSong?.songName ?: "", color = txtColor)
             Text(
-                text = song.singerName ?: "未知",
+                text = params.startSong?.singerName ?: "未知",
                 color = txtColor
             )
             Row {
-                if (song.vip == 1) {
+                if (params.startSong?.vip == 1) {
                     Image(
                         painter = painterResource(R.drawable.pay_icon_in_cell_old),
                         contentDescription = null,
@@ -416,7 +458,7 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                             .height(10.dp)
                     )
                 }
-                if (song.longAudioVip == 1) {
+                if (params.startSong?.longAudioVip == 1) {
                     Image(
                         painter = painterResource(R.drawable.ic_long_audio_vip_new),
                         contentDescription = null,
@@ -426,20 +468,27 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                             .height(10.dp)
                     )
                 }
-                if (song.hasQualityHQ()) {
+                if (params.startSong?.hasQualityHQ() == true) {
                     Image(
                         painter = painterResource(R.drawable.hq_icon), contentDescription = null, modifier = Modifier
                             .width(18.dp)
                             .height(10.dp)
                     )
+                }
+                if(params.startSong?.isFreeLimit() == true){
+                    Image(
+                        painter = painterResource(R.drawable.free_icon), contentDescription = null, modifier = Modifier
+                            .width(18.dp)
+                            .height(10.dp)
+                    )
 
-                } else if (OpenApiSDK.getPlayerApi().getSongHasQuality(song, Quality.WANOS)) {
+                } else if (params.startSong != null && OpenApiSDK.getPlayerApi().getSongHasQuality(params.startSong, Quality.WANOS)) {
                     Image(
                         painter = painterResource(R.drawable.acion_icon_quality_wanos), contentDescription = null, modifier = Modifier
                             .width(18.dp)
                             .height(10.dp)
                     )
-                } else if (OpenApiSDK.getPlayerApi().getSongHasQuality(song, Quality.VINYL)) {
+                } else if (params.startSong != null && OpenApiSDK.getPlayerApi().getSongHasQuality(params.startSong, Quality.VINYL)) {
                     Image(
                         painter = painterResource(R.drawable.action_icon_quality_vinyl), contentDescription = null,
                         contentScale = ContentScale.Crop,
@@ -451,7 +500,7 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
             }
         }
 
-        if (currentSong?.songId == song.songId) {
+        if (currentSong?.songId == params.startSong?.songId) {
             Image(
                 painter = painterResource(R.drawable.list_icon_playing), contentDescription = null, modifier = Modifier
                     .padding(start = 10.dp)
@@ -465,7 +514,7 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
             )
         }
 
-        if (song.mvVid?.isNotEmpty() == true) {
+        if (params.startSong?.mvVid?.isNotEmpty() == true) {
             Image(
                 painter = painterResource(R.drawable.mv_song_list_tip_icon),
                 contentDescription = null,
@@ -485,7 +534,7 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                                 activity,
                                 MVPlayerActivity::class.java
                             ).apply {
-                                putExtra(MV_ID, song.mvVid.toString())
+                                putExtra(MV_ID, params.startSong.mvVid.toString())
                             })
                     }
             )
@@ -502,9 +551,9 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                 .constrainAs(collect) {
                     top.linkTo(parent.top)
                     bottom.linkTo(parent.bottom)
-                    if (currentSong?.songId == song.songId) {
+                    if (currentSong?.songId == params.startSong?.songId) {
                         end.linkTo(playingIcon.start)
-                    } else if (displayOnly.not()) {
+                    } else if (params.displayOnly.not()) {
                         end.linkTo(next.start)
                     } else {
                         end.linkTo(parent.end)
@@ -514,11 +563,13 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                 .height(40.dp)
                 .padding(10.dp)
                 .clickable {
-                    collectSongs(listOf(song), collectState)
+                    params.startSong?.let {
+                        collectSongs(listOf(it), collectState)
+                    }
                 }
         )
 
-        if (displayOnly.not()) {
+        if (params.displayOnly.not()) {
             Column(modifier = Modifier
                 .fillMaxHeight()
                 .constrainAs(next) {
@@ -530,7 +581,7 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                     modifier = Modifier.height(20.dp),
                     contentPadding = PaddingValues(0.dp),
                     onClick = {
-                        val result = OpenApiSDK.getPlayerApi().addToNext(songInfo = song)
+                        val result = OpenApiSDK.getPlayerApi().addToNext(params.startSong, true)
                         coroutineScope.launch(Dispatchers.Main) {
                             Toast
                                 .makeText(
@@ -546,7 +597,8 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                 TextButton(modifier = Modifier.height(20.dp),
                     contentPadding = PaddingValues(0.dp),
                     onClick = {
-                        val result = OpenApiSDK.getPlayerApi().appendSongToPlaylist(listOf(song))
+                        params.startSong ?: return@TextButton
+                        val result = OpenApiSDK.getPlayerApi().appendSongToPlaylist(listOf(params.startSong))
                         coroutineScope.launch(Dispatchers.Main) {
                             Toast
                                 .makeText(
@@ -564,12 +616,12 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
                     contentPadding = PaddingValues(0.dp),
                     onClick = {
                         // 将文本放入剪贴板
-                        clipboardManager.setText(AnnotatedString(song.songId.toString()))
+                        clipboardManager.setText(AnnotatedString(params.startSong?.songId.toString()))
                         coroutineScope.launch(Dispatchers.Main) {
                             Toast
                                 .makeText(
                                     activity,
-                                    "songId:${song.songId},复制成功",
+                                    "songId:${params.startSong?.songId},复制成功",
                                     Toast.LENGTH_SHORT
                                 )
                                 .show()
@@ -585,9 +637,10 @@ fun itemUI(songs: List<SongInfo>, song: SongInfo, displayOnly: Boolean = false) 
 
 @Composable
 fun SongListPage(songs: List<SongInfo>, displayOnly: Boolean = false, needPlayer: Boolean = true) {
+    val activity = LocalContext.current as Activity
+    val coroutineScope = rememberCoroutineScope()
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
         val (folder, player) = createRefs()
-
         Box(modifier = Modifier.constrainAs(folder) {
             height = Dimension.fillToConstraints
             top.linkTo(parent.top)
@@ -598,7 +651,7 @@ fun SongListPage(songs: List<SongInfo>, displayOnly: Boolean = false, needPlayer
             LazyColumn(state = scrollState, modifier = Modifier.fillMaxSize()) {
                 this.items(songs.size) { index ->
                     val song = songs.elementAtOrNull(index) ?: return@items
-                    itemUI(songs = songs, song = song, displayOnly)
+                    itemUI(PlayListParams(songs, song, displayOnly = displayOnly))
                 }
             }
         }

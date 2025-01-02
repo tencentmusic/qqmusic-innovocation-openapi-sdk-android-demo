@@ -3,6 +3,7 @@ package com.tencent.qqmusic.qplayer.ui.activity.home.ai
 
 import android.graphics.Bitmap
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.Image
@@ -28,6 +29,7 @@ import androidx.compose.material.Card
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.IconButton
 import androidx.compose.material.LinearProgressIndicator
+import androidx.compose.material.Slider
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
@@ -45,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,10 +64,17 @@ import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine.PlayState
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.tryPauseFirst
+import com.tencent.qqmusic.qplayer.ui.activity.ui.QQMusicSlider
+import com.tencent.qqmusic.qplayer.ui.activity.ui.Segment
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.concurrent.thread
+import kotlin.math.ceil
 
 @Composable
 fun AISongRecordPage(backPrePage: () -> Unit) {
@@ -327,7 +337,7 @@ fun PublishDialog(taskInfo: AICreateTaskInfo, onDismissRequest: () -> Unit) {
                             if (payUrl.isNullOrEmpty()) {
                                 Text("支付链接为空！")
                             } else {
-                                val bitmap = Global.getQRCodeApi().createQRCodeByUrl(payUrl)?.asImageBitmap()
+                                val bitmap = UiUtils.generateQRCode(payUrl)?.asImageBitmap()
                                 if (bitmap != null) {
                                     Image(bitmap = bitmap, "")
                                     Button(
@@ -373,6 +383,8 @@ fun AICreateTaskInfoItem(record: AICreateTaskInfo, scene: String, onItemIconClic
     var playState by remember { mutableStateOf(PlayState.MEDIAPLAYER_STATE_IDLE) }
     var downloadTaskId by remember { mutableStateOf<Int?>(null) }
     val aiFunction = OpenApiSDK.getAIFunctionApi(IAIFunction::class.java)
+    var rememberPlayTime by remember { mutableStateOf(0F) }
+    var rememberDuration by remember { mutableStateOf(0) }
 
     Card(
         modifier = Modifier
@@ -430,10 +442,12 @@ fun AICreateTaskInfoItem(record: AICreateTaskInfo, scene: String, onItemIconClic
                             }
                         }
 
-                        Button(onClick = {
-                            onItemIconClick?.invoke(2)
-                        }) {
-                            Text(text = "删除")
+                        if (record.publishStatus != 3) {
+                            Button(onClick = {
+                                onItemIconClick?.invoke(2)
+                            }) {
+                                Text(text = "删除")
+                            }
                         }
 
                         record.taskId?.let { taskId ->
@@ -443,7 +457,7 @@ fun AICreateTaskInfoItem(record: AICreateTaskInfo, scene: String, onItemIconClic
                                         resp.data?.shareUrl?.let { url ->
                                             AppScope.launchIO {
                                                 val bitmap =
-                                                    Global.getQRCodeApi().createQRCodeByUrl(url)
+                                                    UiUtils.generateQRCode(url)
                                                 AppScope.launchUI {
                                                     if (bitmap != null) {
                                                         showDialog = bitmap
@@ -497,7 +511,15 @@ fun AICreateTaskInfoItem(record: AICreateTaskInfo, scene: String, onItemIconClic
                                             playStateRes = R.drawable.ic_state_paused
                                         }
 
-                                        override fun onQueryErr(msg: String) {
+                                    override fun onPlayProgressChange(
+                                        curPlayTime: Int,
+                                        duration: Int
+                                    ) {
+                                        rememberPlayTime = curPlayTime.toFloat()
+                                        rememberDuration = duration
+                                    }
+
+                                    override fun onQueryErr(msg: String) {
                                             UiUtils.showToast("播放失败：$msg")
                                         }
 
@@ -526,7 +548,7 @@ fun AICreateTaskInfoItem(record: AICreateTaskInfo, scene: String, onItemIconClic
                                 if (it.isSuccess()) {
                                     it.data?.let { url ->
                                         AppScope.launchIO {
-                                            val bitmap = Global.getQRCodeApi().createQRCodeByUrl(url)
+                                            val bitmap = UiUtils.generateQRCode(url)
                                             AppScope.launchUI {
                                                 if (bitmap != null) {
                                                     showDialog = bitmap
@@ -548,6 +570,40 @@ fun AICreateTaskInfoItem(record: AICreateTaskInfo, scene: String, onItemIconClic
                         }
                     }
                 }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            // 播放控制
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = PlayerObserver.convertTime(ceil(rememberPlayTime / 1000f).toLong()),
+                    fontFamily = FontFamily.Monospace
+                )
+
+                Slider(
+                    enabled = playStateRes == R.drawable.ic_state_playing,
+                    value = rememberPlayTime,
+                    valueRange = 0f..rememberDuration.toFloat(),
+                    onValueChange = { newValue ->
+                        rememberPlayTime = newValue
+                    },
+                    onValueChangeFinished = {
+                        aiFunction?.seek(rememberPlayTime.toInt())
+                    },
+                    modifier = Modifier
+                        .weight(1f, true)
+                        .padding(horizontal = 10.dp)
+                )
+
+                Text(
+                    text = PlayerObserver.convertTime(ceil(rememberDuration / 1000f).toLong()),
+                    fontFamily = FontFamily.Monospace
+                )
             }
         }
     }

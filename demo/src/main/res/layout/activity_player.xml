@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:orientation="vertical">
+
+    <FrameLayout
+        android:id="@+id/player_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <FrameLayout
+        android:id="@+id/player_song_middle_area"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="60dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:importantForAccessibility="no"
+        app:layout_constraintDimensionRatio="H,1:1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.6" />
+
+    <LinearLayout
+        android:id="@+id/lyric_container"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/dp200"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toTopOf="@+id/play_control"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/player_song_middle_area">
+
+        <com.tencent.qqmusic.openapisdk.core.view.lyric.MultiLineLyricView
+            android:id="@+id/scroll_lyric"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:focusable="false"
+            android:overScrollMode="never"
+            android:requiresFadingEdge="vertical"
+            android:scrollbars="none"
+            app:layout_constraintBottom_toTopOf="@+id/player_song_middle_area"
+            app:layout_goneMarginBottom="120dp"
+            app:lyric_color_h="#D37C90"
+            app:lyric_color_n="#A8DCE2"
+            app:lyric_color_tr="#DD9ABD"
+            app:lyric_font_bold_h="true"
+            app:lyric_font_size_h="20dp"
+            app:lyric_font_size_n="14.5dp"
+            app:lyric_font_size_tr="14dp"
+            app:lyric_horizontal_gravity="center"
+            app:lyric_horizontal_padding="15dp"
+            app:lyric_line_margin="0dp"
+            app:lyric_refresh_interval="50"
+            app:lyric_sentence_margin="10dp"
+            app:lyric_tr_margin="15dp"
+            app:lyric_vertical_gravity="top"
+            app:noLyricTips="暂无歌词"
+            tools:ignore="MissingConstraints" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/player_spectrum_bg"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/dp100"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <androidx.appcompat.widget.AppCompatSeekBar
+        android:id="@+id/seek_bar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/dp20"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        app:layout_constraintBottom_toTopOf="@+id/play_control" />
+
+    <TextView
+        android:id="@+id/song_name"
+        android:layout_width="wrap_content"
+        android:text="dddd"
+        android:textSize="@dimen/dp20"
+        android:layout_height="wrap_content"
+        app:layout_constraintEnd_toEndOf="@+id/player_song_middle_area"
+        app:layout_constraintStart_toStartOf="@+id/player_song_middle_area"
+        app:layout_constraintTop_toTopOf="@+id/player_song_middle_area" />
+
+    <androidx.constraintlayout.helper.widget.Flow
+        android:id="@+id/play_control"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/dp25"
+        app:constraint_referenced_ids="player_song_play_pre,player_song_play_btn,player_song_play_next"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageView
+        android:id="@+id/player_song_play_pre"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_previous" />
+
+    <ImageView
+        android:id="@+id/player_song_play_btn"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_state_playing" />
+
+    <ImageView
+        android:id="@+id/player_song_play_next"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_next" />
+
+    <ImageView
+        android:id="@+id/bnt_player_style"
+        android:layout_width="@dimen/dp50"
+        android:layout_height="@dimen/dp50"
+        android:layout_marginTop="60dp"
+        android:background="@color/colorAccent"
+        android:importantForAccessibility="no"
+        android:src="@drawable/exo_ic_settings"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/player_song_middle_area" />
+
+    <ImageView
+        android:id="@+id/bnt_old_player"
+        android:layout_width="@dimen/dp50"
+        android:layout_height="@dimen/dp50"
+        android:layout_marginTop="5dp"
+        android:background="@color/colorAccent"
+        android:importantForAccessibility="no"
+        android:src="@drawable/exo_ic_audiotrack"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/bnt_player_style" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

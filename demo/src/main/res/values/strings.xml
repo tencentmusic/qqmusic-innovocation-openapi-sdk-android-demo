@@ -5,4 +5,22 @@
     <string name="title_activity_player">PlayerActivity</string>
     <string name="title_activity_song_display">SongDisplayActivity</string>
     <string name="title_activity_folder">FolderActivity</string>
+    <!--  activity_gaode_test.xml  -->
+    <string name="btn_trans_play_first_time">地图测试-模拟地图首次起播</string>
+    <string name="btn_trans_play">地图测试-模拟地图切换歌单播放</string>
+    <string name="btn_map_test_songInfo">地图测试-歌曲数量准确且可播放</string>
+    <string name="btn_map_test_my_fav">地图测试-播放我喜欢</string>
+    <string name="btn_map_test_recently">地图测试-播放最近播放</string>
+    <string name="btn_map_test_daily30">地图测试-播放每日30首</string>
+    <string name="btn_map_test_login">登录</string>
+    <string name="btn_gaode_test_loginout">退出登录</string>
+    <string name="login_status">未登录</string>
+    <string name="headIcon_ImageView">用户头像</string>
+    <string name="vipIcon_ImageView">身份位图标</string>
+    <string name="textView2">需要登录态：</string>
+    <string name="textView3">无需登录态：</string>
+    <string name="btn_map_fav">收藏歌曲</string>
+    <string name="textViewSetting">其他设置:</string>
+    <string name="btn_map_test_clear_all_cache">清理缓存</string>
+    <string name="btn_map_test_rebuild">销毁SDK重新初始化</string>
 </resources>

@@ -29,9 +29,13 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
+import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.qplayer.core.player.playlist.MusicPlayList
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderActivity
 import com.tencent.qqmusic.qplayer.ui.activity.home.ai.AIFunctionPage
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVFunctionPage
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.isRadio
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import kotlinx.coroutines.Dispatchers
@@ -59,7 +63,7 @@ fun HomePage(homeViewModel: HomeViewModel) {
 @Composable
 fun homePageTabs(homeViewModel: HomeViewModel) {
     val pages = mutableListOf(
-        "分类歌单", "视频", "AI功能", "排行榜",
+        "分类歌单", "首页推荐", "视频", "AI功能", "排行榜",
         "专区", "长音频",
     )
 
@@ -98,27 +102,30 @@ fun homePageTabs(homeViewModel: HomeViewModel) {
         PerformanceHelper.monitorPageScroll("Home_${index}")
 
         when (index) {
+            1 -> {
+                HomeRecommendPage(homeViewModel)
+            }
             0 -> {
                 categoryFoldersPage(homeViewModel)
             }
 
-            1 -> {
+            2 -> {
                 MVFunctionPage()
             }
 
-            2 -> {
+            3 -> {
                 AIFunctionPage()
             }
 
-            3 -> {
+            4 -> {
                 rankPage(homeViewModel)
             }
 
-            4 -> {
+            5 -> {
                 AreaSectionPage(homeViewModel)
             }
 
-            5 -> {
+            6 -> {
                 LongAudioPage(homeViewModel = homeViewModel)
             }
         }
@@ -127,7 +134,7 @@ fun homePageTabs(homeViewModel: HomeViewModel) {
 
 
 @Composable
-fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolean = false) {
+fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolean = false,observer: PlayerObserver = PlayerObserver) {
     val activity = LocalContext.current as Activity
     if (fetchSceneSongList) {
         homeViewModel.fetchSceneCategory()
@@ -161,6 +168,12 @@ fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolea
                             .wrapContentWidth()
                             .padding(16.dp)
                             .clickable {
+                                if (subId == MusicPlayList.PLAY_LIST_RADIO_TYPE) {
+                                    OpenApiSDK
+                                        .getPlayerApi()
+                                        .playRadio(autoPlay = true)
+                                    return@clickable
+                                }
                                 val location = "CategoryFolderPage_" + if (fetchSceneSongList) {
                                     "SongListActivity"
                                 } else {
@@ -189,7 +202,7 @@ fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolea
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = sub.name,
+                            text = if (isRadio && subId == MusicPlayList.PLAY_LIST_RADIO_TYPE) "电台:${PlayerObserver.currentSong?.songName}" else sub.name,
                             fontSize = 18.sp
                         )
                     }

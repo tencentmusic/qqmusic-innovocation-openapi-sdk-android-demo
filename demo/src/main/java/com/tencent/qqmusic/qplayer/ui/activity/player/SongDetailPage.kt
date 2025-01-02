@@ -2,18 +2,22 @@ package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.app.Activity
 import android.content.Intent
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.Button
 import androidx.compose.material.Divider
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
@@ -29,12 +33,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
+import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.model.FreeStrategy
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.baselib.util.GsonHelper
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.convertTime
 import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPageActivity
 import com.tencent.qqmusic.qplayer.ui.activity.ui.theme.QPlayerTheme
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 
 private val plachImageID: Int = R.drawable.musicopensdk_icon_light
+
+private const val TAG = "SongDetailPage"
 
 @Composable
 fun SongDetailPage(observer: PlayerObserver) {
@@ -59,7 +69,7 @@ fun SongDetailPage(observer: PlayerObserver) {
 fun DetailPage(observer: PlayerObserver? = null) {
     val songInfo = observer?.currentSong
     val activity = LocalContext.current as Activity
-
+    val strategy = observer?.freeStrategy
 
     QPlayerTheme {
         Column(
@@ -179,6 +189,27 @@ fun DetailPage(observer: PlayerObserver? = null) {
                 Text(text = "试听位置 ： ${convertTime(songInfo?.tryBegin?.toLong()?.div(1000) ?: 0L)}~${convertTime(songInfo?.tryEnd?.toLong()?.div(1000) ?: 0L)}")
                 Text(text = "高潮位置 ： ${convertTime(songInfo?.chorusBegin?.toLong()?.div(1000) ?: 0L)}~${convertTime(songInfo?.chorusEnd?.toLong()?.div(1000) ?: 0L)}")
             }
+
+            Row(modifier = Modifier.padding(top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("点位id:${if ((observer?.freeScene ?: 0) == 0) "无" else observer?.freeScene}")
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(text = if (strategy == FreeStrategy.FREE_STRATEGY_DAILY_COUNT) {
+                    "次数限免"
+                } else if (strategy == FreeStrategy.FREE_STRATEGY_DAILY_DURATION) {
+                    "时间限免"
+                } else
+                    "未限免")
+                Spacer(modifier = Modifier.width(16.dp))
+                Button(onClick = {
+                    OpenApiSDK.getOpenApi().getAllFreeListenInfo {
+                        Log.i(TAG, "doGetString getAllFreeListenInfo:${GsonHelper.toJson(it)}")
+                        UiUtils.showToast(GsonHelper.toJson(it), true)
+                    }
+                }) {
+                    Text("限免详情")
+                }
+            }
+
             Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
         }
     }

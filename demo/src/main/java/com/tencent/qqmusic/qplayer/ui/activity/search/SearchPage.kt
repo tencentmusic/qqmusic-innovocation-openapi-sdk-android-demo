@@ -29,6 +29,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import android.widget.Button
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -40,6 +44,8 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.openapisdk.model.SearchType
+import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.openapisdk.model.SongListItemType
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderPage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumPage
@@ -114,6 +120,14 @@ fun SearchPage(homeViewModel: HomeViewModel) {
         }, modifier = Modifier.padding(16.dp)) {
             Text("发起搜索")
         }
+        Button(onClick = {
+            homeViewModel.searchInput = searchInput
+            homeViewModel.searchSong(source = SongListItemType.SONG_LIST_ITEM_TYPE_VOICE_SEARCH)
+            homeViewModel.searchFolder(source = SongListItemType.SONG_LIST_ITEM_TYPE_VOICE_SEARCH)
+            homeViewModel.searchAlbum()
+        }, modifier = Modifier.padding(10.dp)) {
+            Text("带点位搜索")
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -171,7 +185,7 @@ fun SearchResultTabs(viewModel: HomeViewModel) {
             }
 
             SearchType.FOLDER -> {
-                FolderPage(data?.folderList ?: emptyList())
+                FolderPage(data?.folderList ?: emptyList(), source = viewModel.sourceType)
             }
 
             SearchType.SINGER -> {

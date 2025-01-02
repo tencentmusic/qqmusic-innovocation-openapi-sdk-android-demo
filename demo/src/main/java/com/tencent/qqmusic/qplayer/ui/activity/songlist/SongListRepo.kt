@@ -19,12 +19,13 @@ class SongListRepo {
     fun fetchSongInfoByFolder(
         folderId: String,
         page: Int,
-        count: Int
+        count: Int,
+        source:Int?=null
     ): OpenApiResponse<List<SongInfo>> {
         val startTime = System.currentTimeMillis()
         Log.i(TAG, "[fetchSongInfoByFolder]: start time $startTime")
         val ret = OpenApiSDK.getOpenApi().blockingGet<List<SongInfo>> {
-            OpenApiSDK.getOpenApi().fetchSongOfFolder(folderId, page, count = count, callback = it)
+            OpenApiSDK.getOpenApi().fetchSongOfFolder(folderId, page, count = count, source = source, callback = it)
         }
         Log.i(TAG, "[fetchSongInfoByFolder]: duration ${System.currentTimeMillis() - startTime}")
         return ret

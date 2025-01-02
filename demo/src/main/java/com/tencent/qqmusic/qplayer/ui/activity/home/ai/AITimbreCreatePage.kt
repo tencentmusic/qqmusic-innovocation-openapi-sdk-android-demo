@@ -340,6 +340,10 @@ private fun playLinkPage(aiViewModel: AIViewModel, link: MutableState<String>, p
         override fun onPlayStateChange(state: Int) {
             playStatus.value = state
         }
+
+        override fun onPlayProgressChange(curPlayTime: Int, duration: Int) {
+
+        }
     })
 
 }

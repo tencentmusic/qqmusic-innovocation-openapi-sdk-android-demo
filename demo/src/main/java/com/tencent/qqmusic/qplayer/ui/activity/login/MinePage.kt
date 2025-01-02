@@ -54,6 +54,7 @@ import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
+import com.tencent.qqmusic.qplayer.BaseFunctionManager
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.PartnerLoginActivity
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
@@ -175,6 +176,7 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewMo
                         HomeViewModel.clearRequestState()
                         mineViewModel.updateData()
                     }
+                    activity.startActivity(Intent(activity, OpiQRCodeActivity::class.java))
                     info.value = "扫码登录结果:\n${OpenApiSDK.getLoginApi().hasLogin()}"
                 }, modifier = Modifier.padding(0.dp)) {
                     Text(text = "扫码登录")
@@ -188,7 +190,7 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewMo
             ) {
                 Button(
                     onClick = {
-                        OpenApiSDK.getLoginApi().wxLogin(activity, MustInitConfig.WX_APP_ID) { ret, msg ->
+                        OpenApiSDK.getLoginApi().wxLogin(activity, BaseFunctionManager.proxy.getWxAPPID()) { ret, msg ->
                             Log.i(TAG, "LoginPage: wechat ret $ret")
                             if (ret.not()) {
                                 Toast.makeText(activity, "微信登录失败: $msg", Toast.LENGTH_SHORT).show()
@@ -249,6 +251,7 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewMo
                         HomeViewModel.clearRequestState()
                         mineViewModel.updateData()
                     }
+                    activity.startActivity(Intent(activity, OpiQRCodeActivity::class.java))
                     info.value = "扫码登录结果:\n${OpenApiSDK.getLoginApi().hasLogin()}"
                 }, modifier = Modifier.padding(0.dp)) {
                     Text(text = "扫码登录")
@@ -274,7 +277,10 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewMo
             }
         }
 
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
             Button(
                 modifier = Modifier.padding(0.dp),
                 onClick = {
@@ -282,6 +288,15 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewMo
                 }
             ) {
                 Text(text = "第三方登录")
+            }
+
+            Button(
+                modifier = Modifier.padding(0.dp),
+                onClick = {
+                    activity.startActivity(Intent(activity, TokenLoginActivity::class.java))
+                }
+            ) {
+                Text(text = "token登录")
             }
         }
     }
@@ -660,9 +675,12 @@ fun PhoneLoginDialog(model: MineViewModel, showDialog: Boolean, setShowDialog: (
                 if (phoneNum.isEmpty()) return@OutlinedButton
                 if (verifyCode.isEmpty()) return@OutlinedButton
 
-                OpenApiSDK.getLoginApi().phoneLogin(phoneNum, verifyCode, activity, false) { code, msg, info ->
+                OpenApiSDK.getLoginApi().phoneLogin(phoneNum, verifyCode, activity) { code, msg, phoneLoginInfo ->
                     if (code == 1) {
                         UiUtils.showToast("需要绑定Q音账号")
+                        phoneLoginInfo?.apply {
+                            PhoneLoginQRCodeActivity.start(activity, phoneLoginInfo.phoneToken, phoneLoginInfo.authCode, phoneLoginInfo.qrCode)
+                        }
                     } else {
                         UiUtils.showToast("登录失败:$msg")
                     }

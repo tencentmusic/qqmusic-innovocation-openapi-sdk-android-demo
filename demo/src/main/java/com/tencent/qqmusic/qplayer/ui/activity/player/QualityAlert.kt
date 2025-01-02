@@ -26,6 +26,7 @@ object QualityAlert {
             PlayerEnums.Quality.STANDARD,
             PlayerEnums.Quality.HQ,
             PlayerEnums.Quality.SQ,
+            PlayerEnums.Quality.SQ_SR,
             PlayerEnums.Quality.DOLBY,
             PlayerEnums.Quality.HIRES,
             PlayerEnums.Quality.EXCELLENT,
@@ -42,6 +43,7 @@ object QualityAlert {
                 "STANDARD",
                 "HQ",
                 "SQ",
+                "SQ_SR",
                 "DOLBY",
                 "HIRES",
                 "EXCELLENT",
@@ -86,6 +88,9 @@ object QualityAlert {
                 }
                 "SQ" -> {
                     it + UiUtils.getFormatSize(curSong?.getSizeSQ()?.toLong()) + accessStr
+                }
+                "SQ_SR" -> {
+                    "SQ省流版"+ UiUtils.getFormatSize(curSong?.getSongQuality(Quality.SQ_SR)?.size?.toLong()) + accessStr + tryPlayQualityLabel
                 }
                 "DOLBY" -> {
                     it + UiUtils.getFormatSize(curSong?.getSizeDolby()?.toLong()) + accessStr + tryPlayQualityLabel

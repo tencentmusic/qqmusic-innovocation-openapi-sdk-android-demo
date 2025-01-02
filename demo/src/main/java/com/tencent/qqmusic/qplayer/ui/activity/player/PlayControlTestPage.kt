@@ -2,8 +2,10 @@ package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,12 +53,18 @@ import com.tencent.qqmusic.openapisdk.model.ProfitInfo
 import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
 import com.tencent.qqmusic.qplayer.core.supersound.GalaxyFileQualityManager
 import com.tencent.qqmusic.qplayer.core.supersound.MasterSRManager
+import com.tencent.qqmusic.qplayer.ui.activity.TrafficActivity
+import com.tencent.qqmusic.qplayer.ui.activity.SongCacheDemoActivity
+import com.tencent.qqmusic.qplayer.core.supersound.SQSRManager
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiListenTogetherActivity
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
 import com.tencent.qqmusic.qplayer.ui.activity.musictherapy.MusicTherapyActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.lang.StringBuilder
 import kotlin.concurrent.thread
+
 
 /**
  *
@@ -65,6 +74,7 @@ import kotlin.concurrent.thread
 
 private val TAG = "PlayControlTestPage"
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Preview
 @Composable
 fun PlayControlTestPage() {
@@ -82,14 +92,15 @@ fun PlayControlTestPage() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Preview
 @Composable
 fun PlayControlArea() {
     var usage by remember { mutableStateOf(TextFieldValue("4")) }
     var contentType by remember { mutableStateOf(TextFieldValue("3")) }
     val activity = LocalContext.current as Activity
-
-    var streamType by remember { mutableStateOf(TextFieldValue("2")) }
+    var volum by remember { mutableStateOf(TextFieldValue("0.8")) }
+    var volumTransient by remember { mutableStateOf(TextFieldValue("0.2")) }
 
     val padding = 5.dp
     Column(
@@ -102,6 +113,34 @@ fun PlayControlArea() {
         var canTryExcellentQuality by remember { mutableStateOf(false) }
         var canTryGalaxyQuality by remember { mutableStateOf(false) }
         var canTryDolbyQuality by remember { mutableStateOf(false) }
+
+        val scope = rememberCoroutineScope()
+        var trafficMb by remember { mutableStateOf(0f) }
+
+        Text(text = "今天已消耗流量：${trafficMb}MB")
+        Row {
+            Button(onClick = {
+                scope.launch(Dispatchers.IO) {
+                    val todayTs = UiUtils.getTodayTimestamps()
+                    trafficMb = OpenApiSDK.getTrafficApi().getSDKTrafficMB(todayTs.first, todayTs.second)
+                }
+            }) {
+                Text(text = "刷新")
+            }
+
+            Button(
+                onClick = {
+                    activity.startActivity(Intent(activity, TrafficActivity::class.java))
+                },
+                modifier = Modifier.padding(start = 10.dp)
+            ) {
+                Text(text = "前往流量查询页面")
+            }
+        }
+        Divider(modifier = Modifier
+            .padding(top = 9.dp)
+            .fillMaxWidth()
+            .height(3.dp))
 
         Text(
             text = "最大音量比例：${PlayerObserver.maxVolumeRatio}",
@@ -155,12 +194,22 @@ fun PlayControlArea() {
                 .height(3.dp)
         )
 
-        Button(
-            onClick = {
-                activity.startActivity(Intent(activity, DownloadActivity::class.java))
+        Row {
+            Button(
+                onClick = {
+                    activity.startActivity(Intent(activity, DownloadActivity::class.java))
+                }
+            ) {
+                Text(text = "前往下载管理页面")
             }
-        ) {
-            Text(text = "前往下载管理页面")
+
+            Button(
+                onClick = {
+                    activity.startActivity(Intent(activity, SongCacheDemoActivity::class.java))
+                }, modifier = Modifier.padding(start = 10.dp)
+            ) {
+                Text(text = "前往缓存管理页面")
+            }
         }
 
         Divider(
@@ -451,6 +500,7 @@ fun PlayControlArea() {
                     .fillMaxWidth()
             )
         }
+        val activity = LocalContext.current as Activity
 
         Button(
             onClick = {
@@ -467,9 +517,69 @@ fun PlayControlArea() {
         Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
 
         Text(
-            text = "是否支持MasterSR: ${MasterSRManager.isDeviceNotSupportMasterSRQuality()}",
+            text = "是否支持MasterSR: ${!MasterSRManager.isDeviceNotSupportMasterSRQuality()}, SQSR: ${!SQSRManager.isDeviceNotSupportSQSRQuality()}",
             fontFamily = FontFamily.Monospace
         )
+        Divider(modifier = Modifier
+            .padding(top = 9.dp)
+            .fillMaxWidth()
+            .height(3.dp))
+
+        Text(text = "设置音量", modifier = Modifier.padding(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            TextField(
+                value = volum,
+                label = {
+                    Text(text = "输入音量 float")
+                },
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Text),
+                onValueChange = {
+                    volum = it
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .wrapContentHeight()
+                    .fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.padding(10.dp))
+
+            TextField(
+                value = volumTransient,
+                label = {
+                    Text(text = "输入音量 float")
+                },
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Text),
+                onValueChange = {
+                    volumTransient = it
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .wrapContentHeight()
+                    .fillMaxWidth()
+            )
+        }
+
+        Button(
+            onClick = {
+                if (volum.text.toFloatOrNull() != null && volumTransient.text.toFloatOrNull() != null) {
+                    val ret = OpenApiSDK.getPlayerApi().setVolume(volum.text.toFloat(), volumTransient.text.toFloat())
+                    Log.d(TAG, "setVolume, ret: $ret")
+                } else {
+                    UiUtils.showToast("该参数必须输入float！")
+                }
+            }
+        ) {
+            Text("setVolume")
+        }
+
+        Divider(modifier = Modifier
+            .padding(top = 9.dp)
+            .fillMaxWidth()
+            .height(3.dp))
 
         val fileStrBuilder = StringBuilder()
         GalaxyFileQualityManager.getExcellentFile()?.forEach {
@@ -483,6 +593,12 @@ fun PlayControlArea() {
             text = "全景声配置: $fileStrBuilder",
             fontFamily = FontFamily.Monospace
         )
+
+        Button(onClick = {
+            OpenApiSDK.getPlayerApi().enableNotification(false)
+        }, modifier = Modifier.padding(padding)) {
+            Text(text = "关闭通知栏")
+        }
     }
 
 }

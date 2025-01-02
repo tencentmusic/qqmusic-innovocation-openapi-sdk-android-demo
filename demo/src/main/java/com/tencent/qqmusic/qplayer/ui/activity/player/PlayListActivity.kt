@@ -2,6 +2,7 @@ package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -11,18 +12,23 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Button
 import androidx.compose.material.Checkbox
 import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.IMediaEventListener
@@ -30,6 +36,7 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayerEvent
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.tryPauseFirst
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -82,6 +89,8 @@ class PlayListActivity : ComponentActivity() {
     fun SongListEdit(count: MutableState<Int>) {
         val countState = rememberUpdatedState(count.value)
         val constraintsScope = rememberCoroutineScope()
+        val clipboardManager = LocalClipboardManager.current
+
         var songList = remember {
             getSongStateList()
         }
@@ -181,7 +190,8 @@ class PlayListActivity : ComponentActivity() {
                 val listState = rememberLazyListState()
 
                 LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
-                    this.items(songList) { item ->
+                    this.itemsIndexed(songList) { index, item ->
+//                        val index = songList.indexOf(item)
                         Column(modifier = Modifier.clickable {
                             if (editFlag.value) {
                                 item.first.select = item.first.select.not()
@@ -199,7 +209,7 @@ class PlayListActivity : ComponentActivity() {
                                         count.value++
                                     })
                                 }
-                                Text(text = item.second.songName, modifier = Modifier.padding(start = 10.dp))
+                                Text(text = "$index" + item.second.songName, modifier = Modifier.padding(start = 10.dp))
                                 if (item.second.vip == 1) {
                                     Image(
                                         painter = painterResource(R.drawable.pay_icon_in_cell_old),
@@ -218,14 +228,41 @@ class PlayListActivity : ComponentActivity() {
                                             .height(10.dp)
                                     )
                                 }
+                                if (item.second.isFreeLimit()) {
+                                    Image(
+                                        painter = painterResource(R.drawable.free_icon), contentDescription = null, modifier = Modifier
+                                            .padding(start = 10.dp)
+                                            .width(18.dp)
+                                            .height(10.dp)
+                                    )
+                                }
                                 Text(text = item.second.singerName ?: "", modifier = Modifier.padding(start = 10.dp))
-                                if (observer.currentSong?.songId == item.second.songId) {
+                                Log.d(TAG, "index:${index} songName:${item.second.songName} key:${item.second.tmpPlayKey} curTempKey:${observer.currentSong?.tmpPlayKey}")
+                                if (index == observer.curPlayPos) {
                                     Image(
                                         painter = painterResource(R.drawable.list_icon_playing), contentDescription = null, modifier = Modifier
                                             .padding(start = 10.dp)
                                             .width(30.dp)
                                             .height(30.dp)
                                     )
+                                }
+                                TextButton(modifier = Modifier.height(20.dp),
+                                    contentPadding = PaddingValues(0.dp),
+                                    onClick = {
+                                        // 将文本放入剪贴板
+                                        clipboardManager.setText(AnnotatedString(item.second.songId.toString()))
+                                        constraintsScope.launch(Dispatchers.Main) {
+                                            Toast
+                                                .makeText(
+                                                    this@PlayListActivity,
+                                                    "songId:${item.second.songId},复制成功",
+                                                    Toast.LENGTH_SHORT
+                                                )
+                                                .show()
+                                        }
+                                    }
+                                ) {
+                                    Text(text = "复制歌曲Id", fontSize = 10.sp)
                                 }
                             }
                             Divider(color = Color.Gray, thickness = 1.dp)
