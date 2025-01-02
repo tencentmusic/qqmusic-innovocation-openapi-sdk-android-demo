@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -45,25 +46,21 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.google.gson.Gson
 import com.tencent.qqmusic.innovation.common.util.GsonHelper
 import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.innovation.common.util.UtilContext
-import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.network.NetworkTimeoutConfig
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.qplayer.baselib.util.sp.SpKeyConfig
 import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.report.report.LaunchReport
-import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.OpenApiDemoActivity
 import com.tencent.qqmusic.qplayer.ui.activity.SongCacheDemoActivity
 import com.tencent.qqmusic.qplayer.ui.activity.login.WebViewActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
+import com.tencent.qqmusic.qplayer.utils.SettingsUtil
 import com.tencent.qqmusic.qplayer.utils.UiUtils
-import com.tencent.qqmusiccommon.SimpleMMKV
 import okhttp3.internal.toLongOrDefault
 
 class OtherActivity : ComponentActivity() {
@@ -86,6 +83,8 @@ fun OtherScreen() {
         QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
         null
     }
+    val isUseNewPlayerPage = remember { mutableStateOf(UiUtils.getUseNewPlayPageValue()) }
+
     val padding = 5.dp
     Column(
         modifier = Modifier
@@ -93,6 +92,12 @@ fun OtherScreen() {
             .verticalScroll(state = rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        SingleItem(title = "是否启用新版本播放页面", item = if (isUseNewPlayerPage.value) "新版播放页面" else "旧版播放页面") {
+            val isNewPlayerPage: Boolean = UiUtils.getUseNewPlayPageValue()
+            sharedPreferences?.edit()?.putBoolean("newPlayerPage", isNewPlayerPage.not())?.apply()
+            isUseNewPlayerPage.value = isNewPlayerPage.not()
+        }
+
         SingleItem(title = "OpenApi测试界面", item = "") {
             activity.startActivity(Intent(activity, OpenApiDemoActivity::class.java))
         }
@@ -108,9 +113,11 @@ fun OtherScreen() {
         SingleItem(title = "试用/限免相关", item = "") {
             activity.startActivity(Intent(activity, FreeLimitedTimeActivity::class.java))
         }
-        SingleItem(title = "是否支持杜比",
+        SingleItem(
+            title = "是否支持杜比",
             item = if (OpenApiSDK.getPlayerApi().supportDolbyDecoder()) "支持"
-            else "不支持") {
+            else "不支持"
+        ) {
             val minBufSize = AudioTrack.getMinBufferSize(
                 48000,
                 1020,
@@ -166,28 +173,32 @@ fun OtherScreen() {
         }
 
         var showDialog by remember { mutableStateOf(false) }
-        if (showDialog){
+        if (showDialog) {
             Dialog(onDismissRequest = { showDialog = false }) {
                 // 对话框内容
                 Column(modifier = Modifier.padding(16.dp)) {
                     TextField(
                         value = autoPlayErrNum,
-                        onValueChange = { newText -> autoPlayErrNum = newText},
-                        label = { Text(
-                            text = "请输入重试次数或自定义值",
-                            style = MaterialTheme.typography.body1.merge()) },
+                        onValueChange = { newText -> autoPlayErrNum = newText },
+                        label = {
+                            Text(
+                                text = "请输入重试次数或自定义值",
+                                style = MaterialTheme.typography.body1.merge()
+                            )
+                        },
                         colors = TextFieldDefaults.textFieldColors(
                             backgroundColor = Color.White,
                             textColor = Color.Black,
-                            cursorColor = Color.Black),
+                            cursorColor = Color.Black
+                        ),
                         keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done)
                     )
                     Button(onClick = {
                         // 点击确认按钮时的处理逻辑
                         // 这里可以处理 text 变量，例如发送数据、更新UI等
-                        if (autoPlayErrNum.toIntOrNull() == null){
-                            Toast.makeText(activity,"请输入数字",Toast.LENGTH_SHORT).show()
-                        }else{
+                        if (autoPlayErrNum.toIntOrNull() == null) {
+                            Toast.makeText(activity, "请输入数字", Toast.LENGTH_SHORT).show()
+                        } else {
                             showDialog = false // 关闭对话框
                             sharedPreferences?.edit()?.putInt("restore_play_list_err_num", autoPlayErrNum.toInt())?.apply()
                             Toast.makeText(activity, "已设置为：${autoPlayErrNum},请重启应用", Toast.LENGTH_SHORT).show()
@@ -207,11 +218,10 @@ fun OtherScreen() {
                 options = listOf("列表重试", "不重试", "重试n次", "自定义"),
                 onOptionsSelected = { options ->
                     showSelectDialog = false
-                    if (options=="重试n次" || options=="自定义") {
+                    if (options == "重试n次" || options == "自定义") {
                         showDialog = true
-                    }
-                    else{
-                        number = if (options=="列表重试") 0 else -1
+                    } else {
+                        number = if (options == "列表重试") 0 else -1
                         sharedPreferences?.edit()?.putInt("restore_play_list_err_num", number)?.apply()
                         Toast.makeText(activity, "已设置为：${number},请重启应用", Toast.LENGTH_SHORT).show()
                     }
@@ -220,11 +230,13 @@ fun OtherScreen() {
             )
         }
 
-        SingleItem(title = "播放错误自动重试配置", item = when {
-            number < 0 -> "当前值:${number}->不重试"
-            number > 0 -> "当前值:${number}->重试${number}次"
-            else -> "当前值:0->列表重试"
-        }) {
+        SingleItem(
+            title = "播放错误自动重试配置", item = when {
+                number < 0 -> "当前值:${number}->不重试"
+                number > 0 -> "当前值:${number}->重试${number}次"
+                else -> "当前值:0->列表重试"
+            }
+        ) {
             showSelectDialog = true
         }
 
@@ -301,11 +313,33 @@ fun OtherScreen() {
         val useMediaPlayer: MutableState<Boolean> = remember {
             mutableStateOf(sharedPreferences?.getBoolean("useMediaPlayerWhenPlayDolby", false) ?: false)
         }
-        SingleItem(title = "是否用系统播放器来播放杜比", item = if(useMediaPlayer.value) "MediaPlayer" else "MediaCodec") {
+        SingleItem(title = "是否用系统播放器来播放杜比", item = if (useMediaPlayer.value) "MediaPlayer" else "MediaCodec") {
             val nextValue = useMediaPlayer.value.not()
             sharedPreferences?.edit()?.putBoolean("useMediaPlayerWhenPlayDolby", nextValue)?.apply()
             useMediaPlayer.value = nextValue
             Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
+        }
+
+        val useCustomNetworkCheck: MutableState<Boolean> = remember {
+            mutableStateOf(sharedPreferences?.getBoolean("useCustomNetworkCheck", false) ?: false)
+        }
+        SingleItem(title = "是否自定义判断网络连接状态", item = if(useCustomNetworkCheck.value) "打开" else "关闭") {
+            val nextValue = useCustomNetworkCheck.value.not()
+            sharedPreferences?.edit()?.putBoolean("useCustomNetworkCheck", nextValue)?.apply()
+            useCustomNetworkCheck.value = nextValue
+            Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
+        }
+        if (useCustomNetworkCheck.value) {
+            val networkAvailable: MutableState<Boolean> = remember {
+                mutableStateOf(sharedPreferences?.getBoolean("networkAvailable", true) ?: true)
+            }
+            SingleItem(title = "网络是否可用", item = if(networkAvailable.value) "可用" else "不可用") {
+                val nextValue = networkAvailable.value.not()
+                sharedPreferences?.edit()?.putBoolean("networkAvailable", nextValue)?.apply()
+                networkAvailable.value = nextValue
+                SettingsUtil.isNetworkAvailable = nextValue
+                Toast.makeText(activity, "设置成功，立即生效", Toast.LENGTH_SHORT).show()
+            }
         }
 
         Button(onClick = {
@@ -329,13 +363,14 @@ fun OtherScreen() {
             Text(text = "冷启动事件数据上报")
         }
         Row {
-            var text by remember { mutableStateOf(TextFieldValue("")) }
+            var text by remember { mutableStateOf(TextFieldValue("208")) }
             TextField(
                 value = text,
                 onValueChange = {
                     text = it
                 },
-                label = {Text(text = "阻断错误码")}
+                label = {Text(text = "阻断错误码")},
+                modifier = Modifier.width(120.dp)
             )
             Button(onClick = {
                 val value = try {
@@ -344,7 +379,7 @@ fun OtherScreen() {
                     ToastUtils.showLong("错误码请输入数字")
                     return@Button
                 }
-                OpenApiSDK.getOpenApi().getPayUrl("demoOrderId",value) {
+                OpenApiSDK.getOpenApi().getPayUrl("demoOrderId", value) {
                     val default = "https://developer.y.qq.com/docs/edge_android#/overview"
                     if (it.isSuccess()) {
                         WebViewActivity.start(activity, it.data ?: default)
@@ -369,9 +404,11 @@ private fun NetworkTimeoutDialog(activity: Activity, sp: SharedPreferences, show
     Dialog(onDismissRequest = {
         showDialog.value = false
     }) {
-        Column(modifier = Modifier
-            .background(Color.White)
-            .padding(5.dp)) {
+        Column(
+            modifier = Modifier
+                .background(Color.White)
+                .padding(5.dp)
+        ) {
             OutlinedTextField(
                 value = readTimeout,
                 onValueChange = {
@@ -409,10 +446,12 @@ private fun NetworkTimeoutDialog(activity: Activity, sp: SharedPreferences, show
                 placeholder = { Text(text = "请输入callTimeout") }
             )
             OutlinedButton(onClick = {
-                val config = NetworkTimeoutConfig(readTimeout.toLongOrDefault(10L),
+                val config = NetworkTimeoutConfig(
+                    readTimeout.toLongOrDefault(10L),
                     writeTimeout.toLongOrDefault(10L),
                     connectTimeout.toLongOrDefault(10L),
-                    callTimeout.toLongOrDefault(40L))
+                    callTimeout.toLongOrDefault(40L)
+                )
                 sp.edit().putString("NetworkTimeoutConfig", GsonHelper.toJson(config).toString()).apply()
                 Toast.makeText(activity, "设置成功，重启应用后生效", Toast.LENGTH_SHORT).show()
                 showDialog.value = false

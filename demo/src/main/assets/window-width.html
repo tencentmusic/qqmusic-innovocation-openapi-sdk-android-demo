@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+    <title>Get Device Width</title>
+    <script>
+        function displayDeviceWidth() {
+            // 获取视口宽度
+            var width = window.innerWidth;
+            // 显示宽度
+            document.getElementById("deviceWidth").innerText = "Device Width: " + width + " pixels";
+        }
+        // 页面加载完成后获取宽度
+        window.onload = displayDeviceWidth;
+    </script>
+</head>
+<body>
+<h1>Device Width Checker</h1>
+<p id="deviceWidth"></p>
+</body>
+</html>

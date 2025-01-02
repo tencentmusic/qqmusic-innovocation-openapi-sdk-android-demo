@@ -3,6 +3,7 @@ package com.tencent.qqmusic.qplayer.ui.activity.login
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.webkit.*
@@ -52,8 +53,18 @@ class WebViewActivity : Activity() {
 
             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                 Log.d(TAG, "shouldOverrideUrlLoading 1, url=$url")
+                if (url?.startsWith("weixin://wap/pay") == true) {  // 微信支付 deeplink
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setData(Uri.parse(url))
+                    }
+                    startActivity(intent)
+                    return true
+                }
                 return false
             }
+        }
+        webView?.post {
+            Log.i(TAG, "webview width : ${webView?.width}")
         }
 
     }

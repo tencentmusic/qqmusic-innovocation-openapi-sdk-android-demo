@@ -2,6 +2,7 @@ package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -11,6 +12,9 @@ import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.target.SimpleTarget
+import com.bumptech.glide.request.transition.Transition
 import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
@@ -22,11 +26,20 @@ import com.tencent.qqmusic.openapisdk.core.player.IMediaEventListener
 import com.tencent.qqmusic.openapisdk.core.player.IProgressChangeListener
 import com.tencent.qqmusic.openapisdk.core.player.OnVocalAccompanyStatusChangeListener
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
+import com.tencent.qqmusic.openapisdk.core.player.PlayLyricCallback
+import com.tencent.qqmusic.openapisdk.core.player.PlayProgressCallback
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEvent
 import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyConfig
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.qplayer.App
+import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiAccompanyHelper
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.WHAT_BUFFERING_TIMEOUT
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.currentSong
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.currentState
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.mCurrentQuality
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -41,11 +54,13 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
     private const val TAG = "PlayerObserver"
     private const val WHAT_BUFFERING_TIMEOUT = 1
 
-    var currentSong: SongInfo? by mutableStateOf<SongInfo?>(null)
+    var currentSong: SongInfo? by mutableStateOf<SongInfo?>(OpenApiSDK.getPlayerApi().getCurrentSongInfo())
     var currentState: Int? by mutableStateOf<Int?>(null)
     var currentMode: Int by mutableStateOf(OpenApiSDK.getPlayerApi().getPlayMode())
     var mCurrentQuality: Int? by mutableStateOf<Int?>(null)
     var curSongInfoChanged: Int by mutableStateOf(0)
+    var curSentence: String by mutableStateOf("")
+    var curPlayPos: Int? by mutableStateOf(null)
 
     var playStateText: String by mutableStateOf<String>("播放状态: Idle")
     var playPosition: Float by mutableStateOf(0f)
@@ -53,8 +68,22 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
     var playSpeed: Float by mutableStateOf(OpenApiSDK.getPlayerApi().getPlaySpeed())
     var maxVolumeRatio: Float by mutableStateOf(OpenApiSDK.getPlayerApi().getVolumeRatio())
     var vocalAccompanyConfig: VocalAccompanyConfig by mutableStateOf(OpenApiSDK.getVocalAccompanyApi().currentVocalAccompanyConfig())
+    var isRadio: Boolean by mutableStateOf(false)
+    var actualDuration: Long by mutableStateOf(0)
+    var playDuration: Long by mutableStateOf(0)
 
     var isSeekBarTracking by mutableStateOf(false)
+
+    /**
+     * 限免点位
+     */
+    var freeScene : Int? by mutableStateOf(null)
+
+    /**
+     * 限免策略类型
+     */
+    var freeStrategy : Int? by mutableStateOf(null)
+    var magicColor: Pair<Int?, Int?>? by mutableStateOf(null)
 
     private var doSomething:Pair<Int,()->Any?>? = null
     val sharedPreferences: SharedPreferences? = try {
@@ -74,7 +103,7 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                                          totalTime: Long,
                                          bufferLength: Long,
                                          totalLength: Long) {
-                MLog.i("PlayerPage", "curTime$curPlayTime,(${PlayerObserver.convertTime(curPlayTime / 1000)}),${convertTime(OpenApiSDK.getPlayerApi().getDuration()!!.toLong() / 1000)}, bufferLength = $bufferLength, totalLength = $totalLength")
+                MLog.i("PlayerPage", "curTime$curPlayTime,(${convertTime(curPlayTime / 1000)}),${convertTime(OpenApiSDK.getPlayerApi().getDuration()!!.toLong() / 1000)}, bufferLength = $bufferLength, totalLength = $totalLength")
 
                 doSomeThingOnEventStateChange(0, Pair(curPlayTime, totalTime))
                 if (isSeekBarTracking) {
@@ -89,7 +118,30 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                 Log.i(TAG, "$playPosition")
                 if (seekPosition in 0.0..playPosition.toDouble()) {
                     seekPosition = -1f
+                }}
+            })
+
+        OpenApiSDK.getPlayerApi().setPlayProgressCallback(object : PlayProgressCallback {
+            override fun progressChanged(curPlayTime: Long, totalTime: Long, actualEndTime: Long) {
+                if (currentSong != null){
+                    playPosition = curPlayTime.toFloat()
+                    actualDuration = actualEndTime
+                    playDuration = totalTime
+                } else{
+                    playPosition = 0f
+                    actualDuration = 0
+                    playDuration = 0
                 }
+                if (seekPosition in 0.0..playPosition.toDouble()) {
+                    seekPosition = -1f
+                }
+//                Log.d(TAG, "curPlayTime：$curPlayTime totalTime:$totalTime actualEndTime:$actualEndTime")
+            }
+
+        })
+        OpenApiSDK.getPlayerApi().setPlayLyricCallback(object : PlayLyricCallback {
+            override fun onSentenceStart(sentence: String) {
+                curSentence = sentence
             }
         })
 
@@ -161,20 +213,21 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                     if (arg.containsKey(PlayerEvent.Key.API_EVENT_KEY_PLAY_SONG)) {
                         val curr = arg.getParcelable(PlayerEvent.Key.API_EVENT_KEY_PLAY_SONG) as? SongInfo
                         if (currentSong?.songId != curr?.songId) {
-                            playPosition = -1F
+                            seekPosition = -1F
                         }
                         currentSong = curr
+                        curPlayPos = OpenApiSDK.getPlayerApi().getCurPlayPos()
                         AiAccompanyHelper.handleSongChangeAndPlayTransitionIntro(curr)
                         AiAccompanyHelper.handleSongChangeAndPlayVoice(curr)
                         val currentPlaySongQuality =
                             OpenApiSDK.getPlayerApi().getCurrentPlaySongQuality()
+                        Log.d(TAG, "[currentSong] play song changed: $curr, tmoKey:${curr?.tmpPlayKey}")
                         Log.d(TAG, "play song changed: $curr, filePath: ${curr?.filePath}")
                         Log.d(TAG, "play currentPlaySongQuality: $currentPlaySongQuality")
 
                         if (currentPlaySongQuality != null) {
                             mCurrentQuality = currentPlaySongQuality
                         }
-                        seekPosition = -1F
                         playSpeed = OpenApiSDK.getPlayerApi().getPlaySpeed()
                     }
                     if(AiAccompanyHelper.isListenTogetherOpen){
@@ -182,6 +235,9 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                             AiAccompanyHelper.fetchRec2AppendSongList()
                         }
                     }
+                    // 每次切歌时 清空歌词
+                    curSentence = ""
+                    currentSong?.let { loadMagicColor(it) }
                 }
                 PlayerEvent.Event.API_EVENT_SONG_PLAY_ERROR -> {
                     GlobalScope.launch(Dispatchers.Main) {
@@ -206,6 +262,7 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                 }
 
                 PlayerEvent.Event.API_EVENT_PLAY_LIST_CHANGED -> {
+                    isRadio = OpenApiSDK.getPlayerApi().isRadio()
                     val size = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_PLAY_LIST_SIZE, 0)
                     if (size == 0) {
                         currentSong = null
@@ -239,6 +296,7 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                         PlayDefine.PlayState.MEDIAPLAYER_STATE_STARTED -> {
                             setPlayState("播放中")
                             val currentSongInfo = OpenApiSDK.getPlayerApi().getCurrentSongInfo()
+                            Log.d(TAG, "play song 播放中: ${currentSong?.songName}, tmoKey:${currentSong?.tmpPlayKey}")
                             if (currentSongInfo?.canPlayTry() == true && !currentSongInfo.canPlayWhole()) {
                                 Toast.makeText(
                                     UtilContext.getApp(),
@@ -285,6 +343,11 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                     val pos = arg.getLong(PlayerEvent.Key.API_EVENT_KEY_SEEK)
                     Log.i(TAG, "seek pos=$pos")
                 }
+                PlayerEvent.Event.API_EVENT_FOCUS_CHANGE -> {
+                    val focus = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_FOCUS_CHANGE)
+                    Log.i(TAG, "API_EVENT_FOCUS_CHANGED focus=$focus")
+                }
+
 
                 PlayerEvent.Event.API_EVENT_PLAY_SPEED_CHANGED -> {
                     playSpeed = arg.getFloat(PlayerEvent.Key.API_EVENT_KEY_PLAY_SPEED, 1.0f)
@@ -292,9 +355,11 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                 PlayerEvent.Event.API_EVENT_PLAY_SERVICE_STATE_CHANGED -> {
                     val connect = arg.getBoolean(PlayerEvent.Key.API_EVENT_KEY_PLAY_SERVICE_CONNECTED)
                     Log.i(TAG, "API_EVENT_PLAY_SERVICE_STATE_CHANGED connect=$connect")
-                    if (connect) {
-                        initProgressChangeListener()
-                    }
+                }
+                PlayerEvent.Event.API_EVENT_PLAY_LIMIT_FREE -> {
+                    freeScene = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_PLAY_LIMIT_FREE_SCENE)
+                    freeStrategy = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_PLAY_LIMIT_FREE_STRATEGY)
+                    Log.d(TAG, "API_EVENT_PLAY_LIMIT_FREE: freeScene:$freeScene, freeStrategy: ${freeStrategy}")
                 }
                 else -> {
                 }
@@ -302,12 +367,13 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
         }
     }
 
-    private fun setPlayState(test: String) {
-        playStateText = "播放状态: $test"
+    internal fun setPlayState(test: String) {
+        playStateText = "播放状态: $test ${if (isRadio) "(个性电台)" else ""}"
     }
 
     fun registerSongEvent() {
         OpenApiSDK.getPlayerApi().registerEventListener(event)
+        initProgressChangeListener()
     }
 
     fun unregisterSongEvent() {
@@ -355,5 +421,15 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
             val result = OpenApiSDK.getPlayerApi().pause(needFade)
             Log.d(TAG, "[tryPauseFirst] pause needFade=$needFade ret=$result")
         }
+    }
+
+    private fun loadMagicColor(songInfo: SongInfo){
+        Glide.with(App.context).asBitmap().load(songInfo.albumPic150x150).into(object : SimpleTarget<Bitmap>() {
+            override fun onResourceReady(p0: Bitmap, p1: Transition<in Bitmap>?) {
+                AppScope.launchIO {
+                    magicColor = OpenApiSDK.getOtherApi().getMagicColor(p0)
+                }
+            }
+        })
     }
 }

@@ -41,6 +41,7 @@ class SongListActivity : ComponentActivity() {
         const val KEY_ALBUM_ID = "album_id"
         const val KEY_SONG = "song_id"
         const val KEY_RANK_ID = "rank_id"
+        const val KEY_SOURCE = "source"
 
         const val KEY_CATEGORY_IDS = "category_ids"
 
@@ -52,6 +53,10 @@ class SongListActivity : ComponentActivity() {
 
     private val folderId by lazy {
         intent.getStringExtra(KEY_FOLDER_ID) ?: ""
+    }
+
+    private val source: Int? by lazy {
+        intent.getIntExtra(KEY_SOURCE, 0).takeIf { it != 0 }
     }
 
     private val albumId by lazy {
@@ -96,7 +101,7 @@ class SongListActivity : ComponentActivity() {
 
                 DisposableEffect(Unit) {
                     val job = lifecycleScope.launch(Dispatchers.IO) {
-                        songListViewModel.pagingFolderSongs(folderId) { songInfos, isEnd ->
+                        songListViewModel.pagingFolderSongs(folderId, source) { songInfos, isEnd ->
                             delay(1)
                             loadingText.value = if (isEnd) {
                                 async {

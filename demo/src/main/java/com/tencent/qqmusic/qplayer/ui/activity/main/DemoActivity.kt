@@ -8,7 +8,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -59,23 +60,27 @@ import com.tencent.qqmusic.openapisdk.business_common.event.event.TransactionEve
 import com.tencent.qqmusic.openapisdk.business_common.event.event.TransactionPushData
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.ISDKSpecialNeedInterface
+import com.tencent.qqmusic.openapisdk.core.player.PlayRadioCallBack
 import com.tencent.qqmusic.openapisdk.core.player.PlayerModuleFunctionConfigParam
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.openapisdk.playerui.view.PlayerSpectrumViewWidget
+import com.tencent.qqmusic.openapisdk.playerui.view.PlayerSpectrumViewWidget.Companion.STYLE_SPECTRUM_BAR
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.player.proxy.QQMusicServiceProxyHelper
+import com.tencent.qqmusic.qplayer.ui.activity.BaseComposeActivity
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.home.VIPSuccessDialog
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
-import com.tencent.qqmusic.qplayer.ui.activity.player.LyricImageManager
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import com.tencent.qqmusic.qplayer.utils.PrivacyManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class DemoActivity : ComponentActivity() {
+class DemoActivity : BaseComposeActivity() {
     private val TAG = "DemoActivity"
 
     private var showVipDialog = mutableStateOf(false)
@@ -87,6 +92,7 @@ class DemoActivity : ComponentActivity() {
         PrivacyManager.init(this) {
             initView()
         }
+        bindWidget(PlayerSpectrumViewWidget(getViewModel(), STYLE_SPECTRUM_BAR, container = window.decorView as ViewGroup))
     }
 
     private fun initView() {
@@ -164,10 +170,10 @@ class DemoActivity : ComponentActivity() {
         OpenApiSDK.getPlayerApi().setSDKSpecialNeedInterface(object : ISDKSpecialNeedInterface {
 
             val title: String = try {
-                UtilContext.getApp().applicationInfo.loadLabel(UtilContext.getApp().packageManager).toString() + " 正在运行"
+                UtilContext.getApp().applicationInfo.loadLabel(UtilContext.getApp().packageManager).toString() + " 正在播放"
             } catch (e: Exception) {
                 MLog.e(TAG, "Application e :", e)
-                "音乐程序正在运行"
+                "音乐程序正在播放"
             }
 
             override fun getNotification(playSong: SongInfo?): Notification? {
@@ -230,7 +236,34 @@ class DemoActivity : ComponentActivity() {
         }
 
         PlayerObserver.registerSongEvent()
-        LyricImageManager
+
+        OpenApiSDK.getPlayerApi().setPlayRadioCallback(object : PlayRadioCallBack {
+            override fun onLoadingError(itemId: String, code: Int, e: Throwable) {
+                AppScope.launchUI {
+                    Toast.makeText(
+                        UtilContext.getApp(),
+                        "个性电台加载错误",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    PlayerObserver.setPlayState("个性电台加载错误！")
+                }
+            }
+
+            override fun onLoading(itemId: String) {
+                AppScope.launchUI {
+                    Toast.makeText(
+                        UtilContext.getApp(),
+                        "电台加载中",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    PlayerObserver.setPlayState("电台加载中")
+                }
+            }
+
+            override fun onLoaded(itemId: String) {
+                PlayerObserver.setPlayState("电台加载完成")
+            }
+        })
     }
 
 }
@@ -294,7 +327,9 @@ fun TopBarPreview() {
 fun BottomNavigationBar(navController: NavController) {
 
     val items = listOf(
-        NavigationItem.Home, NavigationItem.Books, NavigationItem.Profile, NavigationItem.Setting
+        NavigationItem.Home,
+        NavigationItem.Books,
+        NavigationItem.Profile, NavigationItem.Setting
     )
     BottomNavigation(
         contentColor = Color.White

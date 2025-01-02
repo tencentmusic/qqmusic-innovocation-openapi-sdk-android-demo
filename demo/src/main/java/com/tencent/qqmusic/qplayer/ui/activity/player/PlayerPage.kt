@@ -1,5 +1,6 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
+//import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricActivity
 import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
@@ -18,6 +19,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
+import androidx.compose.material.ButtonColors
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -51,6 +54,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricNewActivity
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.tryPauseFirst
 import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPageActivity
+import com.tencent.qqmusic.qplayer.ui.activity.ui.DefaultSliderColor
 import com.tencent.qqmusic.qplayer.ui.activity.ui.QQMusicSlider
 import com.tencent.qqmusic.qplayer.ui.activity.ui.Segment
 import com.tencent.qqmusic.qplayer.utils.UiUtils
@@ -83,9 +87,11 @@ fun PlayerPage(observer: PlayerObserver) {
     val collectState = remember {
         mutableStateOf(currSong?.hot == 1)
     }
+    val sentence = observer.curSentence
+
     val modeOrder =
         mutableListOf(PlayerEnums.Mode.LIST, PlayerEnums.Mode.ONE, PlayerEnums.Mode.SHUFFLE)
-    val lyricView = lyric() {
+    val lyricView = lyric(observer= observer) {
         activity.startActivity(Intent(activity, LyricNewActivity::class.java))
     }
 
@@ -128,6 +134,10 @@ fun PlayerPage(observer: PlayerObserver) {
             }
         )
 
+        Text(
+            text = sentence.ifBlank { "无歌词" },
+            fontSize = 16.sp
+        )
 
         AndroidView(
             factory = {
@@ -146,7 +156,7 @@ fun PlayerPage(observer: PlayerObserver) {
             Image(
                 painter = painterResource(id = UiUtils.getQualityIcon(quality)),
                 contentDescription = null,
-                colorFilter = if (quality == Quality.MASTER_SR) ColorFilter.tint(
+                colorFilter = if (quality == Quality.MASTER_SR || quality == Quality.SQ_SR) ColorFilter.tint(
                     Color.Blue,
                     BlendMode.SrcAtop
                 ) else null,
@@ -267,7 +277,7 @@ fun PlayerPage(observer: PlayerObserver) {
                 .padding(top = 0.dp),
             horizontalArrangement = Arrangement.Center
         ) {
-            Button(onClick = {
+            Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color(observer.magicColor?.second?:0)), onClick = {
                 activity.startActivity(Intent(activity, PlayerTestActivity::class.java).apply {
 
                 })
@@ -383,6 +393,9 @@ fun PlayerPage(observer: PlayerObserver) {
                     R.drawable.ic_play_mode_single
                 }
 
+                PlayerEnums.Mode.ONE_NOT_REPEAT -> {
+                    R.drawable.icon_play_bar_play_mode_single_light
+                }
                 PlayerEnums.Mode.SHUFFLE -> {
                     R.drawable.ic_play_mode_random
                 }
@@ -403,7 +416,12 @@ fun PlayerPage(observer: PlayerObserver) {
                         OpenApiSDK
                             .getPlayerApi()
                             .setPlayMode(
-                                modeOrder.getOrNull(currIndex + 1) ?: PlayerEnums.Mode.LIST
+                                if (OpenApiSDK.getPlayerApi().isRadio()) {
+                                    if (currIndex == 0) PlayerEnums.Mode.ONE_NOT_REPEAT else PlayerEnums.Mode.LIST
+                                } else {
+                                    modeOrder.getOrNull(currIndex + 1)
+                                        ?: PlayerEnums.Mode.LIST
+                                }
                             )
                     }
             )
@@ -501,6 +519,8 @@ fun PlayerPage(observer: PlayerObserver) {
 
         Text(text = playStateText, modifier = Modifier.padding(top = 10.dp))
 
+        Text(text = "A:${PlayerObserver.convertTime(PlayerObserver.actualDuration/1000L)}," +
+                "T:${PlayerObserver.convertTime(PlayerObserver.playDuration/1000L)}")
     }
 }
 

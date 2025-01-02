@@ -149,6 +149,10 @@ private fun AIHotPage(aiViewModel: AIViewModel = viewModel(), navController: Nav
         mutableStateOf<AITagData?>(null)
     }
 
+    val currentSubTag = remember {
+        mutableStateOf<AITagData?>(null)
+    }
+
     val currentPage = remember { mutableStateOf(0) } // 用于记录当前页码
 
     Column(modifier = Modifier.padding(top = 10.dp)) {
@@ -156,7 +160,11 @@ private fun AIHotPage(aiViewModel: AIViewModel = viewModel(), navController: Nav
             aiViewModel.aiCoverTagListData.forEach {
                 if (currentTag.value == null) {
                     currentTag.value = it
-                    aiViewModel.getAICoverSongByTag(it.tabId ?: 0,0)
+                    val subs = it.subTags
+                    if (subs?.isNotEmpty() == true) {
+                        currentSubTag.value = subs[0]
+                    }
+                    aiViewModel.getAICoverSongByTag(it.tabId ?: 0, it.subTags?.getOrNull(0)?.tabId, 0)
                 }
                 item {
                     Box(modifier = Modifier
@@ -164,9 +172,27 @@ private fun AIHotPage(aiViewModel: AIViewModel = viewModel(), navController: Nav
                         .clickable {
                             currentTag.value = it
                             currentPage.value = 0 // 重置页码
-                            aiViewModel.getAICoverSongByTag(currentTag.value?.tabId ?: 0, 0)
+                            val subID = if (it.subTags.isNullOrEmpty()) null else it.subTags?.getOrNull(0)?.tabId
+                            aiViewModel.getAICoverSongByTag(currentTag.value?.tabId ?: 0, subID, 0)
                         }) {
                         Text(text = it.tabName ?: "")
+                    }
+                }
+            }
+        }
+        if (currentTag.value != null) {
+            LazyRow {
+                currentTag.value?.subTags?.forEach {
+                    item {
+                        Box(modifier = Modifier
+                            .padding(start = 10.dp, end = 10.dp, top = 20.dp)
+                            .clickable {
+                                currentSubTag.value = it
+                                currentPage.value = 0 // 重置页码
+                                aiViewModel.getAICoverSongByTag(currentTag.value?.tabId ?: 0, it.tabId, 0)
+                            }) {
+                            Text(text = it.tabName ?: "")
+                        }
                     }
                 }
             }
@@ -182,15 +208,16 @@ private fun AIHotPage(aiViewModel: AIViewModel = viewModel(), navController: Nav
                 Box(modifier = Modifier
                     .padding(start = 20.dp, end = 20.dp)
                     .clickable {
-                        val page = (aiViewModel.passBackIndex["getAICoverSongByTag"]?:"0").ifBlank { "0" }
-                        currentPage.value = if(page.toInt()<0) 0 else page.toInt()
-                        aiViewModel.getAICoverSongByTag(currentTag.value?.tabId ?: 0, currentPage.value)
+                        val page = (aiViewModel.passBackIndex["getAICoverSongByTag"] ?: "0").ifBlank { "0" }
+                        currentPage.value = if (page.toInt() < 0) 0 else page.toInt()
+                        aiViewModel.getAICoverSongByTag(currentTag.value?.tabId ?: 0, currentSubTag.value?.tabId, currentPage.value)
                     }) {
                     val nextIndex = aiViewModel.passBackIndex["getAICoverSongByTag"]
-                    if(nextIndex.isNullOrEmpty()) {
+                    if (nextIndex.isNullOrEmpty()) {
                         Text(text = "已经是最后一页")
-                    }else {
-                        Text(text = "第${currentPage.value}页,点击翻页->", fontSize = 18.sp,
+                    } else {
+                        Text(
+                            text = "第${currentPage.value}页,点击翻页->", fontSize = 18.sp,
                             color = Color.Blue
                         )
                     }
@@ -220,7 +247,7 @@ fun AISearchPage(aiViewModel: AIViewModel = viewModel(), navController: NavHostC
     val searchWord = remember {
         mutableStateOf("")
     }
-    val currentPage = remember { mutableStateOf(0) } // 用于记录当前页码
+    val currentPage = remember { mutableStateOf("0") } // 用于记录当前页码
     Column(modifier = Modifier.fillMaxSize()) {
         TextField(value = searchWord.value, onValueChange = {
             searchWord.value = it
@@ -232,9 +259,9 @@ fun AISearchPage(aiViewModel: AIViewModel = viewModel(), navController: NavHostC
         }, modifier = Modifier.fillMaxWidth())
 
         LaunchedEffect(searchWord.value) {
-            currentPage.value=0
+            currentPage.value = "0"
             aiViewModel.passBackIndex.remove("getSearchSongList")
-            aiViewModel.getSearchResultByWord(searchWord.value,0)
+            aiViewModel.getSearchResultByWord(searchWord.value, "0")
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -248,12 +275,12 @@ fun AISearchPage(aiViewModel: AIViewModel = viewModel(), navController: NavHostC
                 Box(modifier = Modifier
                     .padding(start = 20.dp, end = 20.dp)
                     .clickable {
-                        currentPage.value++
+                        currentPage.value = aiViewModel.aiSearchNext ?: "0"
                         aiViewModel.getSearchResultByWord(searchWord.value, currentPage.value)
                     }) {
-                    if(aiViewModel.passBackIndex["getSearchSongList"]=="-1") {
+                    if (aiViewModel.passBackIndex["getSearchSongList"] == "-1") {
                         Text(text = "已经是最后一页")
-                    }else {
+                    } else {
                         Text(text = "点击翻页->", fontSize = 18.sp, color = Color.Blue)
                     }
                 }
@@ -272,7 +299,7 @@ fun AiSongItem(aiCoverDataInfo: AICoverDataInfo, isPersonal: Boolean = false, na
             .padding(top = 10.dp, start = 10.dp)
             .fillMaxSize()
     ) {
-        val (songCover, songTitle, singerName, createWork, userIcons, tryCreate, personalData) = createRefs()
+        val (songCover, songTitle, label, singerName, createWork, userIcons, tryCreate, personalData) = createRefs()
         Image(
             painter = rememberImagePainter(aiCoverDataInfo.accInfo?.cover),
             "",
@@ -300,6 +327,14 @@ fun AiSongItem(aiCoverDataInfo: AICoverDataInfo, isPersonal: Boolean = false, na
             modifier = Modifier.constrainAs(singerName) {
                 top.linkTo(songTitle.bottom)
                 start.linkTo(songTitle.start, margin = 2.dp)
+            })
+
+
+        Text(
+            text = aiCoverDataInfo.accInfo?.operationLabel ?: "",
+            modifier = Modifier.constrainAs(label) {
+                top.linkTo(singerName.bottom)
+                start.linkTo(singerName.start, margin = 2.dp)
             })
 
         if (isPersonal.not()) {
@@ -428,12 +463,12 @@ fun AIPersonalCreatePage(aiViewModel: AIViewModel = viewModel(), navController: 
             Box(modifier = Modifier
                 .padding(start = 20.dp, end = 20.dp)
                 .clickable {
-                    val page = aiViewModel.passBackIndex["getAICoverPersonalCreateData"]?:""
+                    val page = aiViewModel.passBackIndex["getAICoverPersonalCreateData"] ?: ""
                     aiViewModel.getPersonalCreateData(songMid ?: "", page)
                 }) {
-                if(aiViewModel.passBackIndex["getAICoverPersonalCreateData"].isNullOrEmpty()) {
+                if (aiViewModel.passBackIndex["getAICoverPersonalCreateData"].isNullOrEmpty()) {
                     Text(text = "已经是最后一页")
-                }else {
+                } else {
                     Text(text = "点击翻页->", fontSize = 18.sp, color = Color.Blue)
                 }
             }
@@ -510,7 +545,7 @@ fun TryAndGeneratePage(
                     if (resp.isSuccess()) {
                         resp.data?.shareUrl?.let { url ->
                             AppScope.launchIO {
-                                val bitmap = Global.getQRCodeApi().createQRCodeByUrl(url)
+                                val bitmap = UiUtils.generateQRCode(url)
                                 AppScope.launchUI {
                                     if (bitmap != null) {
                                         showDialog = bitmap

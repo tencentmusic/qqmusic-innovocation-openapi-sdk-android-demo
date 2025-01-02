@@ -11,6 +11,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import com.tencent.qqmusic.innovation.common.logging.MLog
+import com.tencent.qqmusic.innovation.common.util.DpPxUtil
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.view.lyric.LyricStateInterface
 import com.tencent.qqmusic.openapisdk.core.view.lyric.MultiLineLyricView
@@ -83,7 +84,7 @@ class BaseLyricFragment(val layoutId: Int = -1): Fragment(), LyricStateInterface
         loadStatusView = view.findViewById(R.id.loading_lyric_status)
         lyricView?.addLyricStateInterface(this)
         seekPlayButton = rootView!!.findViewById<Button>(R.id.seek_play)
-
+        lyricView?.setTopMargin(DpPxUtil.dip2px(context, 166f))
         lyricView?.setOnLyricScrollChangeListener(object : OnLyricScrollChangeListener {
             override fun onScrollChange(time: String) {
                 MLog.i(TAG, "onScrollChange $time")

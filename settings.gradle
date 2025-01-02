@@ -8,17 +8,20 @@ if (localPropertiesFile.exists()) {
     def localProperties = new Properties()
     localProperties.load(new FileInputStream(localPropertiesFile))
     useSdkSource = localProperties.getProperty("useSdkSource", "false").toBoolean()
+    ext.useDebugInfoSource = localProperties.getProperty("useDebugInfoSource", "false").toBoolean()
+} else {
+    ext.useDebugInfoSource = false
 }
 
 if (useSdkSource) {
     try {
-        includeBuild '../Android',{
-           dependencySubstitution {
-               substitute module('com.tencent.qqmusic.openapi:openapi-sdk') using project(':entry')
-               substitute module('com.tencent.qqmusic.openapi:openapi-sdk-gradle-plugin') using project(':sdk-gradle-plugin')
-           }
+        includeBuild '../Android', {
+            dependencySubstitution {
+                substitute module('com.tencent.qqmusic.openapi:openapi-sdk') using project(':entry')
+                substitute module('com.tencent.qqmusic.openapi:openapi-sdk-gradle-plugin') using project(':sdk-gradle-plugin')
+            }
         }
-        includeBuild '../module_playback_audio',{
+        includeBuild '../module_playback_audio', {
             dependencySubstitution {
                 substitute module('com.tencent.qqmusic.innovation:module-playback-audio') using project(':playback')
             }
@@ -26,4 +29,8 @@ if (useSdkSource) {
     } catch (ignored) {
         println("settings.gradle include failed. ignore:${ignored}")
     }
+}
+include ':base'
+if (ext.useDebugInfoSource) {
+    include ':debuginfo'
 }

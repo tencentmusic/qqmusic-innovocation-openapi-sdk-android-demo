@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
@@ -20,6 +22,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
+import com.tencent.qqmusic.qplayer.BaseFunctionManager
 import com.tencent.qqmusic.qplayer.BuildConfig
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.utils.UiUtils
@@ -31,7 +34,8 @@ import com.tencent.qqmusic.qplayer.utils.PrivacyManager.isGrant
 @Preview
 fun AppSetting() {
     val activity = LocalContext.current as Activity
-    Column {
+    val scrollState = rememberScrollState()
+    Column(modifier = Modifier.verticalScroll(scrollState)) {
         SingleItem(title = "其他设置页面", item = "") {
             activity.startActivity(Intent(activity, OtherActivity::class.java).apply {
                 flags = flags xor Intent.FLAG_ACTIVITY_NEW_TASK
@@ -43,7 +47,7 @@ fun AppSetting() {
                 UiUtils.showToast("请使用debug包")
                 return@SingleItem
             }
-            activity.startActivity(Intent(activity, DebugActivity::class.java))
+            BaseFunctionManager.proxy.gotoDebugActivity(activity = activity)
         }
         val privacyTips = if (!isGrant()) "-协议有更新！" else ""
         SingleItem(title = "关于${privacyTips}", item = "") {

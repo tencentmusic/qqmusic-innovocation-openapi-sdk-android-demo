@@ -10,6 +10,8 @@ import com.tencent.qqmusic.openapisdk.business_common.event.event.LoginEvent
 import com.tencent.qqmusic.openapisdk.business_common.login.OpenIdInfo
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
+import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
+import com.tencent.qqmusic.openapisdk.model.OperationsInfo
 import com.tencent.qqmusic.openapisdk.model.UserInfo
 import com.tencent.qqmusic.openapisdk.model.VipInfo
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
@@ -33,6 +35,9 @@ class MineViewModel : ViewModel() {
     val partnerAccountInfo: StateFlow<String?> = _partnerAccountInfo
     private var lastUserUpdateTime = 0L
 
+    private val _limitFree = MutableStateFlow<OpenApiResponse<OperationsInfo>?>(null)
+    val limitFree: StateFlow<OpenApiResponse<OperationsInfo>?> = _limitFree
+
 
     init {
         OpenApiSDK.registerBusinessEventHandler { event ->
@@ -45,6 +50,7 @@ class MineViewModel : ViewModel() {
                     _loginInfo.value = null
                     _userVipInfo.value = null
                     _partnerAccountInfo.value = null
+                    _limitFree.value = null
                 }
                 LoginEvent.UserVipInfoUpdate -> {
                     updateData()
@@ -79,6 +85,10 @@ class MineViewModel : ViewModel() {
                     _userVipInfo.value = it.data
                 }
             }
+
+            Global.getOpenApi().getOperationsInfo(callback = {
+                _limitFree.value = it
+            })
         }
     }
 
@@ -92,6 +102,8 @@ class MineViewModel : ViewModel() {
                 AuthType.PHONE -> "手机"
                 AuthType.PARTNER -> "三方帐号登录"
                 AuthType.OPEN_ID -> "OpenID登录"
+                AuthType.MUSIC_ID -> "MusicID登录"
+                AuthType.LOGIN_TOKEN -> "token登录"
                 else -> {
                     "未知"
                 }
@@ -132,6 +144,9 @@ class MineViewModel : ViewModel() {
                 ret.append("、")
             }
             ret.append("听书会员用户")
+        }
+        if (OpenApiSDK.getLoginApi().isQQMusicLoginUserSame()) {
+            ret.append("、Q音手机端登录相同账号")
         }
         if (ret.isEmpty()) {
             return "信息获取不明"
@@ -190,4 +205,31 @@ class MineViewModel : ViewModel() {
         }
     }
 
+    fun getLimitFreeInfo(operationsInfoResp: OpenApiResponse<OperationsInfo>?): String {
+        // 解析限免信息
+        return operationsInfoResp?.data?.let { operationsInfo ->
+            when (operationsInfo.newLoginFreeListenState) {
+                0 -> "未登录"
+                1 -> "未领取"
+                2 -> "生效中,${convertSecondsToTimeFormat(operationsInfo.newLoginFreeListenRemainSec)}"
+                3 -> "已过期"
+                else -> "${operationsInfo.newLoginFreeListenState}-未知状态"
+            }
+        } ?: "接口异常,${operationsInfoResp?.errorMsg}"
+    }
+
+    private fun convertSecondsToTimeFormat(sec: Long): String {
+        val days = sec / 86400
+        val hours = (sec % 86400) / 3600
+        val minutes = (sec % 3600) / 60
+        val seconds = sec % 60
+
+        val timeFormat = StringBuilder()
+        if (days > 0) timeFormat.append("%d天".format(days))
+        if (hours > 0) timeFormat.append("%02dh".format(hours))
+        if (minutes > 0) timeFormat.append("%02dm".format(minutes))
+        if (seconds > 0) timeFormat.append("%02ds".format(seconds))
+
+        return timeFormat.toString()
+    }
 }

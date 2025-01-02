@@ -1,6 +1,8 @@
 package com.tencent.qqmusic.qplayer.utils
 
 import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.widget.Toast
@@ -13,13 +15,26 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerNewActivity
 import java.math.BigDecimal
+import java.util.Calendar
 
 /**
  * Created by tannyli on 2022/10/25.
  * Copyright (c) 2022 TME. All rights reserved.
  */
 object UiUtils {
+
+
+    private val sharedPreferences: SharedPreferences? = try {
+        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+    } catch (e: Exception) {
+        QLog.e("DebugScreen", "getSharedPreferences error e = ${e.message}")
+        null
+    }
 
     fun getFormatAccessLabel(info: SongInfo?, quality: Int, isDownload: Boolean = false): String {
         info ?: return ""
@@ -59,13 +74,13 @@ object UiUtils {
     fun getFormatSize(sizeByte: Long?): String {
         if (sizeByte == null) return "(0MB)"
         val size = sizeByte.toDouble() / 1024 / 1024
-        val big = BigDecimal(size).setScale(2,BigDecimal.ROUND_HALF_UP).toDouble()
+        val big = BigDecimal(size).setScale(2, BigDecimal.ROUND_HALF_UP).toDouble()
         return "(${big}MB)"
     }
 
-    fun showToast(msg: String) {
+    fun showToast(msg: String, isLong: Boolean = false) {
         AppScope.launchUI {
-            Toast.makeText(UtilContext.getApp(), msg, Toast.LENGTH_SHORT).show()
+            Toast.makeText(UtilContext.getApp(), msg, if (isLong) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -107,36 +122,47 @@ object UiUtils {
             PlayerEnums.Quality.HQ -> {
                 R.drawable.action_icon_quality_hq
             }
-            PlayerEnums.Quality.SQ -> {
+
+            PlayerEnums.Quality.SQ, PlayerEnums.Quality.SQ_SR -> {
                 R.drawable.action_icon_quality_sq
             }
+
             PlayerEnums.Quality.STANDARD -> {
                 R.drawable.action_icon_quality_standard
             }
+
             PlayerEnums.Quality.DOLBY -> {
                 R.drawable.action_icon_dolby_quality
             }
+
             PlayerEnums.Quality.HIRES -> {
                 R.drawable.action_icon_quality_hires
             }
+
             PlayerEnums.Quality.EXCELLENT -> {
                 R.drawable.action_icon_excellent_quality
             }
+
             PlayerEnums.Quality.GALAXY -> {
                 R.drawable.action_icon_galaxy_quality
             }
+
             PlayerEnums.Quality.VOCAL_ACCOMPANY -> {
                 R.drawable.action_icon_quality_va
             }
+
             PlayerEnums.Quality.WANOS -> {
                 R.drawable.acion_icon_quality_wanos
             }
+
             PlayerEnums.Quality.VINYL -> {
                 R.drawable.action_icon_quality_vinyl
             }
+
             PlayerEnums.Quality.MASTER_TAPE, PlayerEnums.Quality.MASTER_SR -> {
                 R.drawable.master_tape_icon
             }
+
             else -> {
                 R.drawable.ic_lq
             }
@@ -145,10 +171,10 @@ object UiUtils {
     }
 
 
-     fun generateQRCode(content: String?): Bitmap? {
-         if (content.isNullOrEmpty()) {
-             return null
-         }
+    fun generateQRCode(content: String?): Bitmap? {
+        if (content.isNullOrEmpty()) {
+            return null
+        }
         val qrCodeWriter = QRCodeWriter()
         try {
             val bitMatrix: BitMatrix = qrCodeWriter.encode(content, BarcodeFormat.QR_CODE, 512, 512)
@@ -164,6 +190,59 @@ object UiUtils {
         } catch (e: Exception) {
             e.printStackTrace()
             return null
+        }
+    }
+
+    fun getTodayTimestamps(): Pair<Long, Long> {
+        val calendar = Calendar.getInstance()
+
+        // 获取今天的开始时间戳（00:00:00）
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startOfDayTimestamp = calendar.timeInMillis
+
+        // 获取今天的结束时间戳（23:59:59）
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999) // 也可以设置为 999 毫秒
+        val endOfDayTimestamp = calendar.timeInMillis
+
+        return Pair(startOfDayTimestamp, endOfDayTimestamp)
+    }
+
+    fun getTimestampsForDaysAgo(days: Int): Pair<Long, Long> {
+        val calendar = Calendar.getInstance()
+        // 获取今天的结束时间戳（23:59:59.999）
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endTimestamp = calendar.timeInMillis
+
+        // 获取指定天数前的起始时间戳（00:00:00）
+        calendar.add(Calendar.DAY_OF_YEAR, -days) // 回退指定天数
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startTimestamp = calendar.timeInMillis
+
+        return Pair(startTimestamp, endTimestamp)
+    }
+
+    fun getUseNewPlayPageValue(): Boolean {
+        return sharedPreferences?.getBoolean("newPlayerPage", true) ?: true
+    }
+
+    fun gotoPlayerPage() {
+        val newPage = getUseNewPlayPageValue()
+        if (newPage) {
+            UtilContext.getApp().startActivity(Intent(UtilContext.getApp(), PlayerNewActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } else {
+            UtilContext.getApp().startActivity(Intent(UtilContext.getApp(), PlayerActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
 }

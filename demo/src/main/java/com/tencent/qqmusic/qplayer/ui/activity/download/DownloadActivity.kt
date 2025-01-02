@@ -141,7 +141,7 @@ class DownloadActivity: ComponentActivity() {
                 .fillMaxWidth()
                 .padding(5.dp)
                 .height(70.dp)
-                .clickable(enabled = fromDownloadSongPage) {
+                .clickable() {
                     if (item.getStatus() == DownloadStatus.SUCCESS) {
                         onClick.invoke()
                     }

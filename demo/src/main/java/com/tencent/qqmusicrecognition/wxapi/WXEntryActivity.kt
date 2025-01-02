@@ -9,10 +9,9 @@ import com.tencent.mm.opensdk.modelbase.BaseResp
 import com.tencent.mm.opensdk.modelbiz.WXLaunchMiniProgram
 import com.tencent.mm.opensdk.openapi.IWXAPIEventHandler
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
-import com.tencent.qqmusic.qplayer.logininfo.LoginManagerImpl
+import com.tencent.qqmusic.openapisdk.hologram.WXLoginProvider
 
 
 //
@@ -27,7 +26,7 @@ class WXEntryActivity : Activity(), IWXAPIEventHandler {
     }
 
     private val wechat by lazy {
-        (Global.getLoginModuleApi().api as? LoginManagerImpl)?.wxInternal
+        OpenApiSDK.getProviderByClass(WXLoginProvider::class.java)?.wxInternal
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

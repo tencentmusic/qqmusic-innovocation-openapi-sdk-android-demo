@@ -6,10 +6,6 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-
 
     <application
         android:name=".App"
@@ -37,8 +33,16 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.QPlayerSDKAndroid.NoActionBar" />
         <activity
+            android:name=".ui.activity.player.PlayerNewActivity"
+            android:exported="true"
+            android:label="@string/title_activity_player"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|keyboardHidden"
+            android:theme="@style/Theme.QPlayerSDKAndroid.NoActionBar" />
+        <activity
             android:name=".ui.activity.main.DemoActivity"
             android:exported="true"
+            android:configChanges="orientation|keyboardHidden"
             android:theme="@style/Theme.QPlayerSDKAndroid.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -47,6 +51,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".ui.activity.OpenApiDemoActivity" />
+        <activity android:name=".ui.activity.player.PlayerStyleActivity" />
         <activity android:name=".ui.activity.SongCacheDemoActivity" />
         <activity android:name=".ui.activity.songlist.SongListActivity" />
         <activity
@@ -66,20 +71,23 @@
             android:taskAffinity="net.sourceforge.simcpux"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity
-            android:name=".ui.activity.main.PlayProcessReportTestActivity"
-            android:process=":QQPlayerProcess" />
+            android:name=".ui.activity.main.PlayProcessReportTestActivity"/>
         <activity android:name=".ui.activity.main.OtherActivity" />
-        <activity android:name=".ui.activity.main.DebugActivity" />
         <activity android:name=".ui.activity.main.AboutActivity" />
         <activity android:name=".ui.activity.area.AreaListActivity" />
         <activity android:name=".ui.activity.audio.LongAudioRankActivity" />
         <activity android:name=".ui.activity.audio.LongAudioCategoryActivity" />
         <activity android:name=".ui.activity.audio.LongAudioModuleContentActivity" />
         <activity android:name=".ui.activity.login.WebViewActivity" />
+        <activity android:name=".ui.activity.login.TokenLoginActivity" />
+        <activity android:name=".ui.activity.login.OpiQRCodeActivity"/>
+        <activity android:name=".ui.activity.login.PhoneLoginQRCodeActivity"/>
+        <activity android:name=".ui.activity.player.MapTestActivity"/>
         <activity android:name=".ui.activity.search.SearchPageActivity" />
         <activity android:name=".ui.activity.download.DownloadActivity" />
         <activity android:name=".ui.activity.aiaccompany.AiListenTogetherActivity" />
         <activity android:name=".ui.activity.musictherapy.MusicTherapyActivity" />
+        <activity android:name=".ui.activity.TrafficActivity"/>
     </application>
 
 </manifest>

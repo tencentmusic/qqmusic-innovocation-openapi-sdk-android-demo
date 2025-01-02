@@ -29,9 +29,46 @@
                 android:text="播放" />
         </FrameLayout>
 
+
+    <HorizontalScrollView
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
         <LinearLayout
+            android:orientation="horizontal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
+
+            <Button
+                android:id="@+id/btn_set_play_list"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="设置播放列表" />
+
+            <Button
+                android:id="@+id/btn_add_to_next"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="添加播放列表到下一首" />
+
+            <Button
+                android:id="@+id/btn_add_to_next_and_play"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:text="添加播放列表到下一首并播放" />
+        </LinearLayout>
+
+    </HorizontalScrollView>
+
+
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
 
             <Button
                 android:id="@+id/btn_change_quality"
@@ -163,61 +200,6 @@
             android:layout_height="wrap_content"
             android:text="播放控制:" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/fetchPlayDaily30"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="播放每日30首" />
-
-            <Button
-                android:id="@+id/fetchPlayRecNewSongs"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="播放新歌推荐" />
-
-            <Button
-                android:id="@+id/fetchPersonalRecommendSong"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="播放猜你喜欢歌曲" />
-
-        </LinearLayout>
-
-        <EditText
-            android:id="@+id/edt_Similar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="输入一个songId/mid,用于推荐相似单曲" />
-
-        <Button
-            android:id="@+id/fetchPlaySimilarSongs"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="播放相似单曲" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/fetchHomeRecSongList"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="播放首页推荐歌单" />
-
-            <Button
-                android:id="@+id/fetchHomeRecSongs"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="播放首页推荐单曲" />
-        </LinearLayout>
-
         <Button
             android:id="@+id/stopPlay"
             android:layout_width="wrap_content"
@@ -284,11 +266,94 @@
                     android:layout_height="wrap_content"
                     android:text="设置定时执行" />
 
-
             </LinearLayout>
 
         </FrameLayout>
 
+    <Button
+        android:id="@+id/btn_open_map_test"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="#84DFEF"
+        android:text="打开地图测试页"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/edt_Similar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="输入一个songId/mid,用于推荐相似单曲" />
+
+    <Button
+        android:id="@+id/fetchPlaySimilarSongs"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="相似单曲(播放中歌曲)" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="限免点位测试:" />
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/searchSong"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="歌曲搜索" />
+
+        <Button
+            android:id="@+id/fetchPersonalRecommendSong"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="猜你喜欢" />
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/fetchPlayDaily30"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="每日30首" />
+
+        <Button
+            android:id="@+id/fetchPlayRecNewSongs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="新歌推荐" />
+
+
+        <Button
+            android:id="@+id/fetchHomeRecSongs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="首页推荐单曲" />
+
+        <Button
+            android:id="@+id/fetchChannelDefaultPlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="电台" />
 
     </LinearLayout>
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/ipc_test"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="IPC测试" />
+
+
+    </LinearLayout>
+
+</LinearLayout>
 </ScrollView>

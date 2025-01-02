@@ -87,6 +87,20 @@
             android:visibility="gone" />
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_test2"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="设置校验token为过期状态" />
+    </LinearLayout>
+
+
     <HorizontalScrollView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content">
@@ -100,10 +114,10 @@
 
             <TextView
                 android:id="@+id/display"
-                android:textIsSelectable="true"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp" />
+                android:layout_marginTop="16dp"
+                android:textIsSelectable="true" />
         </ScrollView>
     </HorizontalScrollView>
 </LinearLayout>

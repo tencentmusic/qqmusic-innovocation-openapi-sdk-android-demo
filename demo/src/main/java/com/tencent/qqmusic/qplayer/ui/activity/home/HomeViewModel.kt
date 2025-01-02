@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -30,18 +31,23 @@ import com.tencent.qqmusic.openapisdk.model.AreaShelfType
 import com.tencent.qqmusic.openapisdk.model.BuyType
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.Folder
+import com.tencent.qqmusic.openapisdk.model.HomepageRecommendation
 import com.tencent.qqmusic.openapisdk.model.HotKey
 import com.tencent.qqmusic.openapisdk.model.OtherPlatListeningList
 import com.tencent.qqmusic.openapisdk.model.RankGroup
 import com.tencent.qqmusic.openapisdk.model.SearchResult
+import com.tencent.qqmusic.openapisdk.model.SearchType
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.model.SuperQualityType
+import com.tencent.qqmusic.openapisdk.model.UserInfo
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPagingSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 
 //
@@ -53,6 +59,7 @@ var currentNewAiPage = mutableStateOf(-1)
 class HomeViewModel : ViewModel() {
 
     var categories: List<Category> by mutableStateOf(emptyList())
+    var recommendation: HomepageRecommendation by mutableStateOf(HomepageRecommendation(emptyList(), emptyList()))
     var sceneCategories: List<Category> by mutableStateOf(emptyList())
     var rankGroups: List<RankGroup> by mutableStateOf(emptyList())
     var newAlbums: List<Album> by mutableStateOf(emptyList())
@@ -68,6 +75,14 @@ class HomeViewModel : ViewModel() {
     var albumOfRecord: List<Album> by mutableStateOf(emptyList())
     var songOfRecord: List<SongInfo> by mutableStateOf(emptyList())
     var songOfOther: OtherPlatListeningList by mutableStateOf(OtherPlatListeningList())
+    var searchInput: String by mutableStateOf("")
+    var searchSongs: List<SongInfo> by mutableStateOf(emptyList())
+    var searchFolders: List<Folder> by mutableStateOf(emptyList())
+    var searchAlbums: List<Album> by mutableStateOf(emptyList())
+
+    var sourceType: Int? = null
+    var loginState = MutableLiveData<Pair<Boolean, Boolean>>()
+    var userInfo = MutableLiveData<UserInfo?>()
 
     var longAudioCategoryPages: List<Category> by mutableStateOf(emptyList())
     private val _searchResult = MutableStateFlow<SearchResult?>(null)
@@ -105,6 +120,7 @@ class HomeViewModel : ViewModel() {
     }
 
     init {
+        fetchHomeRecommend()
         // 进来直接加载分类
         fetchCategory()
         //获取新碟的地区分类
@@ -115,6 +131,7 @@ class HomeViewModel : ViewModel() {
                 when (event) {
                     is LoginEvent -> {
                         viewModelScope.launch(Dispatchers.IO) {
+                            fetchHomeRecommend()
                             fetchCategory()
                             fetchCollectedAlbum()
                             fetchRecentAlbums()
@@ -160,6 +177,13 @@ class HomeViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             OpenApiSDK.getOpenApi().fetchCategoryOfFolder {
                 categories = if (it.isSuccess()) {
+                    val fixData = mutableListOf<Category>()
+                    fixData.addAll(it.data?.get(0)?.subCategory!!)
+                    fixData.add(Category().apply {
+                        name = "猜你喜欢(click)"
+                        id = 5
+                    })
+                    it.data?.get(0)?.subCategory = fixData
                     it.data ?: emptyList()
                 } else {
                     emptyList()
@@ -169,12 +193,27 @@ class HomeViewModel : ViewModel() {
         }
     }
 
+    fun fetchHomeRecommend() {
+        viewModelScope.launch(Dispatchers.IO) {
+            OpenApiSDK.getOpenApi().fetchHomepageRecommendation(listOf(200L, 500L)) {
+                if (it.isSuccess()) {
+                    it.data?.let { data ->
+                        recommendation = data
+                    }
+                }
+            }
+        }
+    }
+
     fun fetchSceneCategory() {
         if (mSceneCategoriesDisable) {
             return
         }
-        viewModelScope.launch(Dispatchers.IO) {
-            OpenApiSDK.getOpenApi().fetchCategoryOfSongListScene {
+        if (sceneCategories.isNotEmpty()) {
+            return
+        }
+        OpenApiSDK.getOpenApi().fetchCategoryOfSongListScene {
+            viewModelScope.launch(Dispatchers.Main) {
                 sceneCategories = if (it.isSuccess()) {
                     mSceneCategoriesDisable = true
                     it.data ?: emptyList()
@@ -387,15 +426,40 @@ class HomeViewModel : ViewModel() {
         return Pager(PagingConfig(pageSize = 50)) { RecentSongPagingSource() }.flow
     }
 
-
-    fun search(type: Int, key: String) {
-        OpenApiSDK.getOpenApi().search(key, type, 0, 10, callback = {
-            viewModelScope.launch(Dispatchers.IO) {
-                it.data?.let {
-                    Log.d(TAG, "search: ${it}")
-                    _searchResult.emit(it)
+        fun search(type: Int, key: String) {
+            OpenApiSDK.getOpenApi().search(key, type, 0, 10, callback = {
+                viewModelScope.launch(Dispatchers.IO) {
+                    it.data?.let {
+                        Log.d(TAG, "search: ${it}")
+                        _searchResult.emit(it)
+                    }
                 }
-            }
+            })
+        }
+
+
+    fun pagingSearchSong(): Flow<PagingData<SongInfo>> {
+        return Pager(PagingConfig(pageSize = 50)) { SongListPagingSource(searchSongs, emptyList()) }.flow
+    }
+
+    fun searchSong(source:Int? = null) {
+        OpenApiSDK.getOpenApi().search(searchInput, SearchType.SONG, 0, 10, source,
+            callback = {
+            searchSongs = it.data?.songList!!
+        })
+    }
+
+    fun searchFolder(source:Int?=null) {
+        OpenApiSDK.getOpenApi().search(searchInput, SearchType.FOLDER, 0, 10,
+            callback = {
+                searchFolders = it.data?.folderList!!
+                sourceType = source
+        })
+    }
+
+    fun searchAlbum() {
+        OpenApiSDK.getOpenApi().search(searchInput, SearchType.ALBUM, 0, 10, callback = {
+            searchAlbums = it.data?.albumList!!
         })
     }
 

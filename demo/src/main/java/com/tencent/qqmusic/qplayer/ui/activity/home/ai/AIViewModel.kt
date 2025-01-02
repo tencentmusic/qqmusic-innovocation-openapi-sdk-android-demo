@@ -51,7 +51,10 @@ class AIViewModel : ViewModel() {
     val aiCoverSongList = mutableStateListOf<AICoverDataInfo>()
     val aiSearchCoverSongList = mutableStateListOf<AICoverDataInfo>()
     val aiPersonalCoverSongList = mutableStateListOf<AICoverDataInfo>()
-    val passBackIndex = mutableMapOf<String,String?>()
+    val passBackIndex = mutableMapOf<String, String?>()
+
+
+    var aiSearchNext: String? = ""
 
     val aiPersonalCoverSongDataList = mutableStateListOf<AICoverDataInfo>()
 
@@ -96,15 +99,15 @@ class AIViewModel : ViewModel() {
     }
 
 
-    fun getAICoverSongByTag(tagId: Int, startIndex: Int) {
-        aiFunction?.getAICoverSongByTag(tagId, 10, startIndex.toString()) {
-            if (startIndex==0){
+    fun getAICoverSongByTag(tagId: Int, subtabId: Int?, startIndex: Int) {
+        aiFunction?.getAICoverSongByTag(tagId, subtabId, 10, startIndex.toString()) {
+            if (startIndex == 0) {
                 aiCoverSongList.clear()
             }
             aiCoverSongList.addAll(it.aiWorkSongInfo)
-            if (it.hasMore == true && !it.nextPassBack.isNullOrEmpty()){
+            if (it.hasMore == true && !it.nextPassBack.isNullOrEmpty()) {
                 passBackIndex["getAICoverSongByTag"] = it.nextPassBack
-            }else{
+            } else {
                 passBackIndex.remove("getAICoverSongByTag")
             }
         }
@@ -119,13 +122,14 @@ class AIViewModel : ViewModel() {
     }
 
 
-    fun getSearchResultByWord(keyWord: String, startIndex: Int) {
+    fun getSearchResultByWord(keyWord: String, startIndex: String) {
         aiFunction?.getSearchSongList(keyWord, 20, startIndex) {
-            if(startIndex==0){
+            if (startIndex == "0") {
                 aiSearchCoverSongList.clear()
             }
             aiSearchCoverSongList.addAll(it.aiWorkSongInfo)
-            if (it.aiWorkSongInfo.isEmpty()){
+            aiSearchNext = it.nextPassBack
+            if (it.aiWorkSongInfo.isEmpty()) {
                 passBackIndex["getSearchSongList"] = "-1"
             }
         }
@@ -134,13 +138,13 @@ class AIViewModel : ViewModel() {
 
     fun getPersonalCreateData(songMid: String, startIndex: String) {
         aiFunction?.getAICoverPersonalCreateData(songMid, 10, startIndex) {
-            if(startIndex.isEmpty()){
+            if (startIndex.isEmpty()) {
                 aiPersonalCoverSongList.clear()
             }
             aiPersonalCoverSongList.addAll(it.aiWorkSongInfo)
-            if (it.hasMore == true && !it.nextPassBack.isNullOrEmpty()){
+            if (it.hasMore == true && !it.nextPassBack.isNullOrEmpty()) {
                 passBackIndex["getAICoverPersonalCreateData"] = it.nextPassBack
-            }else{
+            } else {
                 passBackIndex.remove("getAICoverPersonalCreateData")
             }
         }
@@ -247,15 +251,15 @@ class AIViewModel : ViewModel() {
         }
     }
 
-    fun fetchAiCoverSongPersonalList(operaType: AICoverSongOperaType, startIndex: String="") {
+    fun fetchAiCoverSongPersonalList(operaType: AICoverSongOperaType, startIndex: String = "") {
         aiFunction?.fetchPersonalData(operaType, startIndex, 5) { resp ->
-            if(startIndex.isEmpty()){
+            if (startIndex.isEmpty()) {
                 aiPersonalCoverSongDataList.clear()
             }
             aiPersonalCoverSongDataList.addAll(resp.aiWorkSongInfo)
-            if (resp.hasMore == true && !resp.nextPassBack.isNullOrEmpty()){
+            if (resp.hasMore == true && !resp.nextPassBack.isNullOrEmpty()) {
                 passBackIndex["fetchPersonalData"] = resp.nextPassBack
-            }else{
+            } else {
                 passBackIndex.remove("fetchPersonalData")
             }
         }

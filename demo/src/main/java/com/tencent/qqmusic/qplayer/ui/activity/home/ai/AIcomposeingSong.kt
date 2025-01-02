@@ -57,6 +57,8 @@ import com.tencent.qqmusic.ai.entity.AIPayInfo
 import com.tencent.qqmusic.ai.entity.HotCreateWorkInfo
 import com.tencent.qqmusic.ai.entity.QueryEditWorkStatusResp
 import com.tencent.qqmusic.ai.entity.SongStyle
+import com.tencent.qqmusic.qplayer.utils.UiUtils
+import com.tencent.qqmusictvsdk.internal.lyric.LyricManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -268,6 +270,7 @@ fun EditAiCreateSongWorkPage(taskId: String) {
     var payInfo: AIPayInfo? by remember { mutableStateOf(null) }
     var songName: String? by remember { mutableStateOf(null) }
     var editNewSongName: String? by remember { mutableStateOf("") }
+    var hasLyric: Boolean by remember { mutableStateOf(false) }
     var editNewLyric: AILyricInfo? by remember {
         mutableStateOf(null)
     }
@@ -282,6 +285,7 @@ fun EditAiCreateSongWorkPage(taskId: String) {
             oldLyricStr= taskInfo?.lyricInfo?.lyricList?.map {
                 it.lyricStr
             }?.joinToString(separator = "\n")
+            hasLyric = taskInfo?.aiPlayInfo?.lyrics?.isNotEmpty() == true
         }
     }
 
@@ -324,6 +328,7 @@ fun EditAiCreateSongWorkPage(taskId: String) {
             .fillMaxSize()
             .verticalScroll(scrollState)) {
             Text(text = ("歌曲名：" + taskInfo?.songName))
+            Text(text = "是否有QRC歌词：$hasLyric，QRC歌词是\n ${LyricManager.instance.getStrWithBase64Safely(taskInfo?.aiPlayInfo?.lyrics)}")
             Text(text = ("当前歌词：\n$oldLyricStr"))
 
             Button(onClick = {
@@ -455,7 +460,7 @@ fun SaveEditDialog(taskInfo: AICreateTaskInfo?, payInfo: AIPayInfo?, onDismissRe
                     Text(text = "保存编辑作品")
                     val text = "订单号：${payInfo?.orderId}\n价格：${payInfo?.price}"
                     Text(text = text)
-                        val bitmap = Global.getQRCodeApi().createQRCodeByUrl(payInfo?.payUrl)?.asImageBitmap()
+                        val bitmap = UiUtils.generateQRCode(payInfo?.payUrl)?.asImageBitmap()
                         if (bitmap != null) {
                             Image(bitmap = bitmap, "")
                             Button(

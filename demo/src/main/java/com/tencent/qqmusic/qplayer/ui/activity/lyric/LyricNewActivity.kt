@@ -7,6 +7,7 @@ import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.AppCompatSeekBar
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
@@ -76,6 +77,7 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
                 onVocalAccompanyStatusChange(OpenApiSDK.getVocalAccompanyApi().currentVocalRadio().value, !isVocalAccompanyOpened)
             }
         }
+        queryTryVocalAccompany()
         var closeVocalPercent = OpenApiSDK.getVocalAccompanyApi().currentVocalRadio()
         vocalAccompanySeekbar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
             override fun onProgressChanged(seekbar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -91,7 +93,39 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
                 Toast.makeText(this@LyricNewActivity, "切换比例: ${closeVocalPercent.value}", Toast.LENGTH_SHORT).show()
             }
         })
-        onVocalAccompanyStatusChange(OpenApiSDK.getVocalAccompanyApi().currentVocalRadio().value, OpenApiSDK.getVocalAccompanyApi().isCurrentSongPlayWithVocalAccompany())
+        onVocalAccompanyStatusChange(
+            OpenApiSDK.getVocalAccompanyApi().currentVocalRadio().value,
+            OpenApiSDK.getVocalAccompanyApi().isCurrentSongPlayWithVocalAccompany()
+        )
+        OpenApiSDK.getVocalAccompanyApi().canTryVocalAccompany { canTry ->
+            if (canTry) {
+                runOnUiThread {
+                    AlertDialog.Builder(this).setTitle("提示").setMessage("恭喜您，可以领取伴唱试用权益")
+                        .setNegativeButton(
+                            "取消"
+                        ) { dialog, _ ->
+                            dialog.dismiss()
+                        }.setPositiveButton("确认") { dialog, _ ->
+                            dialog.dismiss()
+                            OpenApiSDK.getVocalAccompanyApi().fetchVocalAccompanyTrialBenefits { tryResult ->
+                                if (tryResult == VocalAccompanyErrorStatus.SUCCESS) {
+                                    Toast.makeText(this, "领取伴唱试用权益成功", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(this, "领取伴唱试用权益失败：${tryResult.msg}", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }.show()
+                }
+            }
+        }
+    }
+
+    private fun queryTryVocalAccompany() {
+        if (OpenApiSDK.getPlayerApi().getCurrentSongInfo()?.canTryVocalAccompany() == true) {
+            Toast.makeText(this, "当前歌曲拥有伴唱试用权益", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(this, "当前歌曲没有伴唱试用权益", Toast.LENGTH_LONG).show()
+        }
     }
 
     override fun onVocalAccompanyStatusChange(vocalScale: Int, enable: Boolean) {
