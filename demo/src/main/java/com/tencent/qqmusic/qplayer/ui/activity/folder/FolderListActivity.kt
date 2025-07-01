@@ -3,15 +3,15 @@ package com.tencent.qqmusic.qplayer.ui.activity.folder
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
-import com.tencent.qqmusic.openapisdk.model.Folder
+import androidx.compose.runtime.collectAsState
+import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
 
 /**
  * 歌单列表页面
  * 支持传入category_ids，获取分类歌单
  * 支持传入folder_id，获取单个歌单
  */
-class FolderActivity : ComponentActivity() {
+class FolderListActivity : ComponentActivity() {
 
     companion object {
         const val KEY_CATEGORY_IDS = "category_ids"
@@ -37,10 +37,14 @@ class FolderActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             if (categoryIds.isNotEmpty()) {
-                FolderScreen(folderViewModel.folders)
+                val folderListState = folderViewModel.folderState.collectAsState()
+                val loadMoreState = folderViewModel.loadMoreState.collectAsState()
+                FolderListScreen(folderListState.value, LoadMoreItem(loadMoreState, onLoadMore = {
+                    folderViewModel.fetchFolderByCategory(categoryIds)
+                }))
             }
             else if (folderId.isNotEmpty()) {
-                FolderScreen(listOf(folderViewModel.folder))
+                FolderListScreen(listOf(folderViewModel.folder))
             }
             else if (folderIds.isNotEmpty()) {
                 // 需要批量获取歌单详情接口

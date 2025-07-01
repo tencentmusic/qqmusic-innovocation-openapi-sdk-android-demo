@@ -1,12 +1,15 @@
 package com.tencent.qqmusic.qplayer.ui.activity.lyric
 
+import android.annotation.SuppressLint
+import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
+import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.AppCompatSeekBar
 import androidx.core.view.isVisible
@@ -17,7 +20,9 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.OnVocalAccompanyStatusChangeListener
 import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyErrorStatus
+import com.tencent.qqmusic.openapisdk.core.player.VocalPercent
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 
 /**
  * 使用MultiLineLyricView歌词组件。推荐使用
@@ -26,6 +31,7 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
     companion object {
         private const val TAG = "LyricActivity"
     }
+
     private val vocalAccompanyButton: Button by lazy { findViewById(R.id.vocalAccompany) }
     private val vocalAccompanySeekbar: AppCompatSeekBar by lazy { findViewById(R.id.seekbar) }
 
@@ -72,25 +78,68 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
                 OpenApiSDK.getVocalAccompanyApi().enableVocalAccompany()
             }
             if (result != VocalAccompanyErrorStatus.SUCCESS) {
-                Toast.makeText(this, result.msg, Toast.LENGTH_SHORT).show()
+                UiUtils.showToast(result.msg)
             } else {
-                onVocalAccompanyStatusChange(OpenApiSDK.getVocalAccompanyApi().currentVocalRadio().value, !isVocalAccompanyOpened)
+                onVocalAccompanyStatusChange(
+                    OpenApiSDK.getVocalAccompanyApi().currentVocalRadio().value,
+                    !isVocalAccompanyOpened
+                )
             }
         }
         queryTryVocalAccompany()
+        // 创建进度显示TextView
+        val progressTextView = TextView(this).apply {
+            setTextColor(Color.WHITE)
+            textSize = 14f
+            visibility = View.GONE
+            setTypeface(Typeface.DEFAULT_BOLD)
+            setBackgroundColor(Color.parseColor("#80000000"))
+            setPadding(8, 4, 8, 4)
+        }
+        (vocalAccompanySeekbar.parent as? ViewGroup)?.addView(progressTextView)
+
         var closeVocalPercent = OpenApiSDK.getVocalAccompanyApi().currentVocalRadio()
+        var realVocalPercent = OpenApiSDK.getVocalAccompanyApi().currentVocalValue()
         vocalAccompanySeekbar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
+            @SuppressLint("SetTextI18n")
             override fun onProgressChanged(seekbar: SeekBar?, progress: Int, fromUser: Boolean) {
-                closeVocalPercent = OpenApiSDK.getVocalAccompanyApi().convertToCloseVocalRadio(progress)
+                closeVocalPercent =
+                    OpenApiSDK.getVocalAccompanyApi().convertToCloseVocalRadio(progress)
+
+                // 更新进度显示
+                realVocalPercent = progress
+                progressTextView.text =
+                    when(progress){
+                        VocalPercent.min.value -> "纯人声"
+                        VocalPercent.max.value -> "纯伴奏"
+                        VocalPercent.eighty.value -> "原声"
+                        in 1..79 -> "${(progress / 80f * 100).toInt()}%伴奏"
+                        else -> "${100 - ((progress - 80) / 80f * 100).toInt()}%人声"
+                    }
+                progressTextView.visibility = View.VISIBLE
+                // 计算并更新文本位置（跟随滑块）
+                seekbar?.let { sb ->
+                    val thumbOffset = sb.thumbOffset
+                    val pos = sb.x + (sb.width * progress / sb.max.toFloat()) - thumbOffset
+                    progressTextView.x = pos - progressTextView.width / 2
+                    progressTextView.y = sb.y - progressTextView.height - 16
+                }
             }
 
             override fun onStartTrackingTouch(seekbar: SeekBar?) {
-                // do nothing
+                progressTextView.visibility = View.VISIBLE
             }
 
             override fun onStopTrackingTouch(seekbar: SeekBar?) {
-                OpenApiSDK.getVocalAccompanyApi().adjustVocalRadio(closeVocalPercent)
-                Toast.makeText(this@LyricNewActivity, "切换比例: ${closeVocalPercent.value}", Toast.LENGTH_SHORT).show()
+                val result = OpenApiSDK.getVocalAccompanyApi().adjustVocalRadio(realVocalPercent)
+                UiUtils.showToast("code=${result.code},msg=${result.msg}", isLong = true)
+                if (!result.isSuccess()) {
+                    seekbar?.progress = (OpenApiSDK.getVocalAccompanyApi().currentVocalValue())
+                }
+                // 延迟隐藏进度文本
+                progressTextView.postDelayed({
+                    progressTextView.visibility = View.GONE
+                }, 1000)
             }
         })
         onVocalAccompanyStatusChange(
@@ -100,20 +149,22 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
         OpenApiSDK.getVocalAccompanyApi().canTryVocalAccompany { canTry ->
             if (canTry) {
                 runOnUiThread {
-                    AlertDialog.Builder(this).setTitle("提示").setMessage("恭喜您，可以领取伴唱试用权益")
+                    AlertDialog.Builder(this).setTitle("提示")
+                        .setMessage("恭喜您，可以领取伴唱试用权益")
                         .setNegativeButton(
                             "取消"
                         ) { dialog, _ ->
                             dialog.dismiss()
                         }.setPositiveButton("确认") { dialog, _ ->
                             dialog.dismiss()
-                            OpenApiSDK.getVocalAccompanyApi().fetchVocalAccompanyTrialBenefits { tryResult ->
-                                if (tryResult == VocalAccompanyErrorStatus.SUCCESS) {
-                                    Toast.makeText(this, "领取伴唱试用权益成功", Toast.LENGTH_LONG).show()
-                                } else {
-                                    Toast.makeText(this, "领取伴唱试用权益失败：${tryResult.msg}", Toast.LENGTH_LONG).show()
+                            OpenApiSDK.getVocalAccompanyApi()
+                                .fetchVocalAccompanyTrialBenefits { tryResult ->
+                                    if (tryResult == VocalAccompanyErrorStatus.SUCCESS) {
+                                        UiUtils.showToast("领取伴唱试用权益成功")
+                                    } else {
+                                        UiUtils.showToast("领取伴唱试用权益失败：${tryResult.msg}")
+                                    }
                                 }
-                            }
                         }.show()
                 }
             }
@@ -122,9 +173,9 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
 
     private fun queryTryVocalAccompany() {
         if (OpenApiSDK.getPlayerApi().getCurrentSongInfo()?.canTryVocalAccompany() == true) {
-            Toast.makeText(this, "当前歌曲拥有伴唱试用权益", Toast.LENGTH_LONG).show()
+            UiUtils.showToast("当前歌曲拥有伴唱试用权益")
         } else {
-            Toast.makeText(this, "当前歌曲没有伴唱试用权益", Toast.LENGTH_LONG).show()
+            UiUtils.showToast("当前歌曲没有伴唱试用权益")
         }
     }
 

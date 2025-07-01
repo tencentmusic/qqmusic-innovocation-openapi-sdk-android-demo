@@ -275,6 +275,8 @@ fun lyric(
                 lyricView.stopTimer()
                 LyricManager.instance.stopLoadLyric(0)
             }
+
+            else -> {}
         }
     }
 

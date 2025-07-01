@@ -39,6 +39,8 @@ object AppLifeCycleManager : LifecycleEventObserver {
                     Lifecycle.Event.ON_STOP -> {
                         appState.getAndSet(STATE_STOPPED)
                     }
+
+                    else -> {}
                 }
                 observerList.map { it.onStateChanged(pair.first.get(), pair.second) }
             }

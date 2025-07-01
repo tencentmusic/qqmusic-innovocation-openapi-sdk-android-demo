@@ -9,54 +9,74 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.Button
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.AlertDialog
+import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Divider
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import com.tencent.qqmusic.ai.entity.VocalItem
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberImagePainter
-import com.tencent.qqmusic.openapisdk.business_common.Global
-import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
-import com.tencent.qqmusic.ai.function.base.IAIFunction
-import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.ai.entity.AICreateSongRequest
+import com.tencent.qqmusic.ai.entity.AICreateSongResponse
 import com.tencent.qqmusic.ai.entity.AICreateTaskInfo
 import com.tencent.qqmusic.ai.entity.AILyricInfo
 import com.tencent.qqmusic.ai.entity.AIPayInfo
+import com.tencent.qqmusic.ai.entity.AIPayOrderRequest
+import com.tencent.qqmusic.ai.entity.AIPayOrderResp
+import com.tencent.qqmusic.ai.entity.AIQueryStatusReq
 import com.tencent.qqmusic.ai.entity.HotCreateWorkInfo
 import com.tencent.qqmusic.ai.entity.QueryEditWorkStatusResp
 import com.tencent.qqmusic.ai.entity.SongStyle
+import com.tencent.qqmusic.ai.entity.VocalItem
+import com.tencent.qqmusic.ai.function.base.AISceneType
+import com.tencent.qqmusic.ai.function.base.IAIFunction
+import com.tencent.qqmusic.innovation.common.logging.MLog
+import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
+import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.ui.activity.home.ai.cover.AITimbreTAG
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusictvsdk.internal.lyric.LyricManager
 import kotlinx.coroutines.Dispatchers
@@ -89,11 +109,20 @@ fun AIComposingSongPage(backPrePage: () -> Unit) {
             callback.remove() // 移除回调
         }
     }
-    composeSongPage(aiViewModel)
+
+    val navController = rememberNavController()
+    NavHost(navController = navController, startDestination = "home") {
+        composable("home") { composeSongPage(aiViewModel, navController) }
+        composable(AITimbreTAG) {
+            AITimbreCreatePage {
+                navController.popBackStack()
+            }
+        }
+    }
 }
 
 @Composable
-private fun composeSongPage(viewModel: AIViewModel) {
+private fun composeSongPage(viewModel: AIViewModel, navController: NavController) {
 
     val activity = LocalContext.current as Activity
 
@@ -112,10 +141,58 @@ private fun composeSongPage(viewModel: AIViewModel) {
         mutableStateOf("")
     }
 
-    LazyColumn(modifier = Modifier
-        .fillMaxSize()
-        .padding(5.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    var taskId by remember { mutableStateOf("") }
+    var polling by remember { mutableStateOf(-1L) }
+    var taskInfo by remember { mutableStateOf<AICreateTaskInfo?>(null) }
+    var taskStatus by remember { mutableStateOf(0) }
+    val image = remember { mutableStateOf(ImageBitmap(1, 1)) }
+
+    var consoleMessage by remember { mutableStateOf("") }
+    var createSongResp by remember { mutableStateOf<AICreateSongResponse?>(null) }
+    var payOrderResp by remember { mutableStateOf<AIPayOrderResp?>(null) }
+    val qrCodeImage = remember { mutableStateOf<ImageBitmap?>(null) }
+    var selectedIndex by remember { mutableStateOf(0) }
+    var showExpanded by remember { mutableStateOf(false) }
+    var showDropdownMenu by remember { mutableStateOf(false) }
+
+    LaunchedEffect(polling) {
+        if (taskId.isNotBlank()) {
+            delay(5000L)
+            OpenApiSDK.getAIFunctionApi(IAIFunction::class.java)?.queryCreateTaskStatus(
+                AIQueryStatusReq(
+                    AISceneType.AI_SCENE_TYPE_CREATE_SONG,
+                    taskId
+                )
+            ) { info ->
+                if (info.isSuccess()) {
+                    if (info.data == 2) {
+                        OpenApiSDK.getAIFunctionApi(IAIFunction::class.java)
+                            ?.queryAICreateSongTaskInfo(listOf(taskId)) { taskInfoList ->
+                                if (taskInfoList.isSuccess()) {
+                                    if (taskInfoList.data != null && taskInfoList.data!!.isNotEmpty()) {
+                                        taskInfo = taskInfoList.data!![0]
+                                    }
+                                    taskId = ""
+                                }
+                            }
+                    }
+                    taskStatus = info.data ?: 0
+                    if ((info.data ?: 0) == 1) {
+                        polling++
+                    }
+                } else {
+                    UiUtils.showToast("查询失败：${info.errorMsg}")
+                }
+            }
+        }
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(5.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         item {
             TextField(
                 value = keyWord,
@@ -130,12 +207,14 @@ private fun composeSongPage(viewModel: AIViewModel) {
                     .fillMaxWidth()
             )
 
-            Button(onClick = {
-                aiFunction?.getAIRandomPrompt {
-                    keyWord = TextFieldValue((it.data?.randomOrNull() ?: "") as String)
+            Row {
+                Button(onClick = {
+                    aiFunction?.getAIRandomPrompt {
+                        keyWord = TextFieldValue((it.data?.randomOrNull() ?: "") as String)
+                    }
+                }) {
+                    Text(text = "AI随机灵感")
                 }
-            }) {
-                Text(text = "AI随机灵感")
             }
         }
 
@@ -149,43 +228,200 @@ private fun composeSongPage(viewModel: AIViewModel) {
                         selectedSongStyleId = it.styleMid ?: ""
                     }
                 }
+                Image(
+                    bitmap = image.value,
+                    null,
+                    modifier = Modifier.size(80.dp)
+                )
             }
         }
 
         item {
             Text(text = "选择音色")
-            AITimbrePage() {
+            AITimbrePage(navController = navController) {
                 vocal.value = it
             }
         }
 
         item {
-            Button(onClick = {
-                if (selectedSongStyleId.isEmpty() ||   vocal.value == null) {
-                    Toast.makeText(activity, "请先选择歌曲风格和音色", Toast.LENGTH_SHORT).show()
-                } else {
-                    vocal.value?.let { vocalItem ->
-                        aiFunction?.createSong(
-                            AICreateSongRequest(
-                            prompt = keyWord.text,
-                            songStyleId = selectedSongStyleId,
-                            timbreItem = vocalItem,
-                            sameStyleTaskId = sameStyleTaskId
-                        )
-                        ) {
-                            val createResult = if (it.isSuccess()) {
-                                "生成成功！任务id为${it.data}"
-                            } else {
-                                "生成失败！错误信息：${it.errorMsg}"
+            ScrollableTextArea(consoleMessage)
+            Row {
+                Button(onClick = {
+                    if (selectedSongStyleId.isEmpty() || vocal.value == null) {
+                        Toast.makeText(activity, "请先选择歌曲风格和音色", Toast.LENGTH_SHORT)
+                            .show()
+                    } else {
+                        vocal.value?.let { vocalItem ->
+                            aiFunction?.createSong(
+                                AICreateSongRequest(
+                                    prompt = keyWord.text,
+                                    songStyleId = selectedSongStyleId,
+                                    timbreItem = vocalItem,
+                                    sameStyleTaskId = sameStyleTaskId
+                                )
+                            ) {
+                                val createResult = if (it.isSuccess() && it.taskId != null) {
+                                    taskId = it.taskId!!
+                                    createSongResp = it
+                                    showDropdownMenu = createSongResp?.produceInfoList.isNullOrEmpty().not()
+                                    "生成成功！任务id为${it.taskId}"
+                                } else {
+                                    showDropdownMenu = false
+                                    "生成失败！错误信息：${it.errorMsg}"
+                                }
+                                val consoleMessageNew = StringBuilder(consoleMessage)
+                                consoleMessageNew.appendLine(createResult)
+                                consoleMessage = consoleMessageNew.toString()
+                                sameStyleTaskId = null
+                                AppScope.launchUI {
+                                    Toast.makeText(activity, createResult, Toast.LENGTH_SHORT)
+                                        .show()
+                                }
                             }
-                            sameStyleTaskId = null
-                            Toast.makeText(activity, createResult, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }) {
+                    Text(text = "1.一键生成")
+                }
+                Spacer(modifier = Modifier.width(2.dp))
+
+            }
+        }
+
+        item {
+            if (showDropdownMenu){
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()) {
+                    TextField(
+                        value = createSongResp?.produceInfoList?.get(selectedIndex)?.produceName
+                            ?: "无",
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                modifier = Modifier.clickable { showExpanded = true }
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    // 下拉菜单
+                    DropdownMenu(
+                        expanded = showExpanded,
+                        onDismissRequest = { showExpanded = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        createSongResp?.produceInfoList?.forEachIndexed { index, option ->
+                            DropdownMenuItem(
+                                onClick = {
+                                    selectedIndex = index
+                                    showExpanded = false
+                                }
+                            ) {
+                                Text(option.produceName?:"null-$index")
+                            }
                         }
                     }
                 }
-            }) {
-                Text(text = "一键生成")
+                createSongResp?.produceInfoList?.get(selectedIndex)?.let { produceInfo ->
+                    Text(
+                        "商品信息:\n" +
+                                "Id:${produceInfo.produceId}\n" +
+                                "Name:${produceInfo.produceName}\n" +
+                                "Price:${(produceInfo.producePrice?.toFloat() ?: 0f) / 100}元"
+                    )
+                }
             }
+        }
+
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = {
+                    if (selectedSongStyleId.isEmpty() || vocal.value == null) {
+                        Toast.makeText(activity, "请先选择歌曲风格和音色", Toast.LENGTH_SHORT)
+                            .show()
+                        return@Button
+                    }
+                    if (createSongResp?.payment != true) {
+                        val consoleMessageNew = StringBuilder(consoleMessage)
+                        consoleMessageNew.appendLine("无需付费")
+                        consoleMessage = consoleMessageNew.toString()
+                        return@Button
+                    }
+                    val produceInfo = createSongResp?.produceInfoList?.get(selectedIndex)
+                    aiFunction?.createSongPayOrder(
+                        AIPayOrderRequest(
+                            scene = AISceneType.AI_SCENE_TYPE_CREATE_SONG,
+                            produceId = produceInfo?.produceId,
+                            taskId = createSongResp?.taskId,
+                            orderInfo = produceInfo?.orderInfo
+                        )
+                    ) { resp ->
+                        val uploadMessage = if (resp.isSuccess()) {
+                            val asImageBitmap =
+                                UiUtils.generateQRCode(resp.paymentURL)?.asImageBitmap()
+                            asImageBitmap?.let {
+                                qrCodeImage.value = asImageBitmap
+                            }
+                            payOrderResp = resp
+                            MLog.i(TAG, "createSongPayOrder: ${resp.paymentURL}")
+                            "createSongPayOrder: ${resp}"
+                        } else {
+                            "createSongPayOrder: ${resp.errorMsg}"
+                        }
+
+                        val consoleMessageNew = StringBuilder(consoleMessage)
+                        consoleMessageNew.appendLine(uploadMessage)
+                        consoleMessage = consoleMessageNew.toString()
+                    }
+                }) {
+                    Text(text = "2.创建支付订单")
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Image(
+                    bitmap = qrCodeImage.value ?: ImageBitmap(1, 1),
+                    null,
+                    modifier = Modifier.size(100.dp)
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = {
+                    val orderId = payOrderResp?.orderId
+                    if (orderId != null) {
+                        aiFunction?.fetchAIPayStatus(orderId) { resp ->
+                            val uploadMessage = if (resp.isSuccess()) {
+                                val msg = if (resp.state == 3) {
+                                    polling++
+                                    "已支付"
+                                } else "等待支付"
+                                "fetchAIPayStatus: $msg"
+                            } else {
+                                "fetchAIPayStatus: ${resp.errorMsg}"
+                            }
+                            val consoleMessageNew = StringBuilder(consoleMessage)
+                            consoleMessageNew.appendLine(uploadMessage)
+                            consoleMessage = consoleMessageNew.toString()
+                        }
+                    }
+                }) {
+                    Text(text = "3.查询支付状态")
+                }
+                if (taskId.isNotBlank()) {
+                    when (taskStatus) {
+                        0 -> Text(text = "等待中")
+                        1 -> Text(text = "进行中")
+                        2 -> Text(text = "已完成")
+                        3 -> Text(text = "生成失败")
+                    }
+                }
+            }
+        }
+
+        item {
+            taskInfo?.let { AICreateTaskInfoItem(it, scene = "1") }
         }
 
         item {
@@ -206,17 +442,18 @@ private fun composeSongPage(viewModel: AIViewModel) {
 }
 
 @Composable
-private fun SongStyleItem(songStyle: SongStyle, selectedId: String, onClick: () -> Unit) {
+fun SongStyleItem(songStyle: SongStyle, selectedId: String, onClick: () -> Unit) {
     val textColor = if (selectedId == songStyle.styleMid) {
         Color.Green
     } else {
         Color.Black
     }
-    Column(modifier = Modifier
-        .padding(8.dp)
-        .clickable {
-            onClick.invoke()
-        }) {
+    Column(
+        modifier = Modifier
+            .padding(8.dp)
+            .clickable {
+                onClick.invoke()
+            }) {
         Image(painter = rememberImagePainter(songStyle.iconUrl ?: ""), "")
         Text(text = songStyle.styleName ?: "", color = textColor)
         Text(text = songStyle.title ?: "", color = textColor)
@@ -224,19 +461,21 @@ private fun SongStyleItem(songStyle: SongStyle, selectedId: String, onClick: () 
 }
 
 @Composable
-private fun HotCreateSongItem(item: HotCreateWorkInfo, onClick: () -> Unit) {
+fun HotCreateSongItem(item: HotCreateWorkInfo, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.clickable {
-        onClick.invoke()
-    }) {
-        Image(painter = rememberImagePainter(item.coverUrl ?: ""),
+            onClick.invoke()
+        }) {
+        Image(
+            painter = rememberImagePainter(item.coverUrl ?: ""),
             "",
             modifier = Modifier.size(50.dp)
         )
         Column(modifier = Modifier.widthIn(max = 200.dp)) {
             Text(text = item.songName ?: "", maxLines = 1)
             Text(text = item.userInfo?.userName ?: "", maxLines = 1)
+            Text(text = "tag:${item.tag?.type}", maxLines = 1)
             Text(text = "灵感词：${item.prompt}", maxLines = 1)
             Text(text = "播放量：" + item.playCount?.toString(), maxLines = 1)
         }
@@ -251,7 +490,7 @@ private fun HotCreateSongItem(item: HotCreateWorkInfo, onClick: () -> Unit) {
 }
 
 @Composable
-fun EditAiCreateSongWorkPage(taskId: String) {
+fun EditAiCreateSongWorkPage(taskId: String, scene: Int) {
     val activity = LocalContext.current as Activity
     val aiFunction = OpenApiSDK.getAIFunctionApi(IAIFunction::class.java)
 
@@ -278,11 +517,11 @@ fun EditAiCreateSongWorkPage(taskId: String) {
     if (firstLoading) {
         firstLoading = false
         loading = true
-        aiFunction?.queryAICreateSongTaskInfo(listOf(taskId)) {
+        aiFunction?.queryTaskInfo(listOf(taskId).associateWith { scene.toString() }) {
             loading = false
             taskInfo = it.data?.getOrNull(0)
             songName = taskInfo?.songName
-            oldLyricStr= taskInfo?.lyricInfo?.lyricList?.map {
+            oldLyricStr = taskInfo?.lyricInfo?.lyricList?.map {
                 it.lyricStr
             }?.joinToString(separator = "\n")
             hasLyric = taskInfo?.aiPlayInfo?.lyrics?.isNotEmpty() == true
@@ -301,9 +540,11 @@ fun EditAiCreateSongWorkPage(taskId: String) {
                     }
                 }
 
-                "生成状态：${it.data?.state}，歌词：\n${it.data?.Lyrics?.lyricList?.map {
-                    it.lyricStr
-                }?.joinToString(separator = "\n")}"
+                "生成状态：${it.data?.state}，歌词：\n${
+                    it.data?.Lyrics?.lyricList?.map {
+                        it.lyricStr
+                    }?.joinToString(separator = "\n")
+                }"
             } else {
                 "查询失败"
             }
@@ -323,12 +564,20 @@ fun EditAiCreateSongWorkPage(taskId: String) {
             showPublishDialog = false
         }
     } else {
-        Column(modifier = Modifier
-            .padding(10.dp)
-            .fillMaxSize()
-            .verticalScroll(scrollState)) {
+        Column(
+            modifier = Modifier
+                .padding(10.dp)
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+        ) {
             Text(text = ("歌曲名：" + taskInfo?.songName))
-            Text(text = "是否有QRC歌词：$hasLyric，QRC歌词是\n ${LyricManager.instance.getStrWithBase64Safely(taskInfo?.aiPlayInfo?.lyrics)}")
+            Text(
+                text = "是否有QRC歌词：$hasLyric，QRC歌词是\n ${
+                    LyricManager.instance.getStrWithBase64Safely(
+                        taskInfo?.aiPlayInfo?.lyrics
+                    )
+                }"
+            )
             Text(text = ("当前歌词：\n$oldLyricStr"))
 
             Button(onClick = {
@@ -341,7 +590,7 @@ fun EditAiCreateSongWorkPage(taskId: String) {
                     }
                 }
             }) {
-                Text(text = "AI重新填词")
+                Text(text = "AI重新填词(图片做歌不支持)")
             }
 
             Text(text = "重新填词请求结果：$reEditLyricResult")
@@ -460,18 +709,18 @@ fun SaveEditDialog(taskInfo: AICreateTaskInfo?, payInfo: AIPayInfo?, onDismissRe
                     Text(text = "保存编辑作品")
                     val text = "订单号：${payInfo?.orderId}\n价格：${payInfo?.price}"
                     Text(text = text)
-                        val bitmap = UiUtils.generateQRCode(payInfo?.payUrl)?.asImageBitmap()
-                        if (bitmap != null) {
-                            Image(bitmap = bitmap, "")
-                            Button(
-                                onClick = {
-                                    queryOrderState()
-                                }
-                            ) {
-                                Text("轮询订单状态")
+                    val bitmap = UiUtils.generateQRCode(payInfo?.payUrl)?.asImageBitmap()
+                    if (bitmap != null) {
+                        Image(bitmap = bitmap, "")
+                        Button(
+                            onClick = {
+                                queryOrderState()
                             }
-                            Text(text = queryOrderStatus)
+                        ) {
+                            Text("轮询订单状态")
                         }
+                        Text(text = queryOrderStatus)
+                    }
 
                 }
             },

@@ -224,6 +224,7 @@ fun PartnerLoginPage(impl: IPartnerLogin? = null, sharedPreferences: SharedPrefe
 
         Button(onClick = {
             result.value = execute
+            impl?.enableRestoreLogin(true)
             impl?.thirdPartyAccountLogin(appId.value, token.value, accountId.value
             ) { response -> result.value = "ret: ${response?.ret} msg : ${response?.errorMsg}" }
         }, modifier = Modifier

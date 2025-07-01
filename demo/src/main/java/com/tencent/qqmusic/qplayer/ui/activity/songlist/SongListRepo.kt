@@ -31,6 +31,21 @@ class SongListRepo {
         return ret
     }
 
+    fun fetchSongInfoByFolder(
+        folderId: String,
+        passBack: String,
+        count: Int,
+        source:Int?=null
+    ): OpenApiResponse<List<SongInfo>> {
+        val startTime = System.currentTimeMillis()
+        Log.i(TAG, "[fetchSongInfoByFolder]: start time $startTime")
+        val ret = OpenApiSDK.getOpenApi().blockingGet<List<SongInfo>> {
+            OpenApiSDK.getOpenApi().fetchSongOfFolder(folderId, passBack, count = count, source = source, callback = it)
+        }
+        Log.i(TAG, "[fetchSongInfoByFolder]: duration ${System.currentTimeMillis() - startTime}")
+        return ret
+    }
+
     fun fetchSongByRecent(): OpenApiResponse<List<SongInfo>> {
         val ret = OpenApiSDK.getOpenApi().blockingGet<List<SongInfo>> {
             OpenApiSDK.getOpenApi().fetchRecentPlaySong(callback = it)
@@ -45,7 +60,7 @@ class SongListRepo {
         return ret
     }
 
-    fun fetchSongInfoByALbum(
+    fun fetchSongInfoByAlbum(
         albumId: String,
         page: Int,
         count: Int

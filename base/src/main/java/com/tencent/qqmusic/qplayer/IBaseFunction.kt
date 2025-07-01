@@ -4,8 +4,9 @@ import android.app.Activity
 
 interface IBaseFunction {
     fun getAccount(): Account
-    fun getAppCheckMode(): Boolean
-    fun setAppCheckMode(strick: Boolean)
+    fun getAppCheckMode(): @AppCheckMode Int
+    fun setAppCheckMode(@AppCheckMode appCheckMode: Int)
+    fun setAppIdAndAppKey(appId: String, appKey: String)
     fun getWxAPPID(): String
     fun getMatchID(): String
     fun getQQAPPID(): String

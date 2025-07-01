@@ -6,27 +6,53 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.Scaffold
+import androidx.compose.material.ScrollableTabRow
+import androidx.compose.material.Tab
+import androidx.compose.material.TabRowDefaults
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.accompanist.pager.*
-import com.tencent.qqmusic.openapisdk.business_common.Global
+import com.google.accompanist.pager.ExperimentalPagerApi
+import com.google.accompanist.pager.HorizontalPager
+import com.google.accompanist.pager.pagerTabIndicatorOffset
+import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.JumpInfo
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumPage
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -108,6 +134,7 @@ class LongAudioCategoryActivity : ComponentActivity() {
                         onClick = {
                             composableScope.launch(Dispatchers.Main) {
                                 pagerState1.scrollToPage(index)
+                                vm.albums = emptyList() // 切换tab，默认清空二级列表
                             }
                         },
                         selectedContentColor = Color.White,
@@ -129,13 +156,30 @@ class LongAudioCategoryActivity : ComponentActivity() {
     @Composable
     fun LongAudioSecondPage(categorys: List<Category>, index: Int, vm: LongAudioViewModel) {
         val categorys2 = categorys.getOrNull(index)?.subCategory
-        if (categorys2 == null || categorys2.isEmpty()) {
+        if (categorys2.isNullOrEmpty()) {
             return
         }
+        var selectType by remember { mutableIntStateOf(vm.getCurSortType()) }
         val pagerState = rememberPagerState(vm.initSid)
         val stateAdd = pagerState.hashCode()
         Log.i(TAG, "new secondPage: hash:$stateAdd")
         val composableScope = rememberCoroutineScope()
+        // 获取当前的 fid 和 sid
+        val fid = categorys.getOrNull(index)?.id ?: 0
+        val sid = categorys2.getOrNull(pagerState.currentPage)?.id ?: 0
+        // 使用 LaunchedEffect 和 debounce 来控制 fetchCategoryDetail 的调用
+        LaunchedEffect(Pair(fid, sid)) {
+            // 延迟 500ms
+            delay(500)
+            // 检查 fid 和 sid 是否仍然是当前的值
+            if (fid == (categorys.getOrNull(index)?.id ?: 0) &&
+                sid == (categorys2.getOrNull(pagerState.currentPage)?.id ?: 0)) {
+                if ((vm.albums.isEmpty() && pagerState.currentPage == 0) || (fid != 0 && sid != 0)) {
+                    vm.fetchCategoryDetail(fid, sid)
+                    selectType = 0
+                }
+            }
+        }
         Column(Modifier.fillMaxSize()) {
             // 二级TAB
             // 二级筛选
@@ -163,21 +207,39 @@ class LongAudioCategoryActivity : ComponentActivity() {
                     )
                 }
             }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                listOf("最新", "最热").forEachIndexed { index, mode ->
+                    Button(
+                        onClick = { // 切换形态后刷新页面
+                            selectType = index
+                            composableScope.launch {
+                                vm.fetchCategoryDetail(cateId = vm.getCurCateId(),
+                                    subCateId = vm.getCurSucCateId(),
+                                    sortType = index,
+                                )
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = if (selectType == index) Color.Blue else Color.LightGray
+                        )
+                    ) {
+                        Text(text = mode, color = Color.White)
+                    }
+                }
+            }
             HorizontalPager(count = categorys2.size,
                 state = pagerState,
                 modifier = Modifier.fillMaxSize()) {
-                val fid = categorys.getOrNull(index)?.id ?: 0
-                val sid = categorys2.getOrNull(pagerState.currentPage)?.id ?: 0
-                LaunchedEffect(Pair(fid, sid)){
-                    vm.fetchCategoryDetail(fid, sid)
-                }
-                Log.i(
-                    TAG,
-                    "first tab index:${index}, second tab index:${pagerState.currentPage} hash:${pagerState.hashCode()}"
-                )
+                val loadMoreState = vm.hasMoreState.collectAsState()
                 Column(Modifier.fillMaxSize()) {
                     Text(text = "first tab index:${index}, second tab index:${pagerState.currentPage}")
-                    AlbumPage(albums = vm.albums)
+                    AlbumPage(albums = vm.albums, loadMoreItem = LoadMoreItem(loadMoreState, onLoadMore = {
+                        vm.fetchCategoryDetail(fid, sid) // 翻页
+                    }))
                 }
             }
         }
@@ -187,13 +249,23 @@ class LongAudioCategoryActivity : ComponentActivity() {
 
     class LongAudioViewModel : ViewModel() {
         var albums: List<Album> by mutableStateOf(emptyList())
+        val _hasMoreStateFlow = MutableStateFlow(false)
+        var hasMoreState: StateFlow<Boolean> = _hasMoreStateFlow.asStateFlow()
         private var curCateId = -1
         private var curSucCateId = -1
+        private var curSortType:Int = 0
+        var nextPage: Int = 0
 
         var initFid = 0
         var initSid = 0
 
         var categories: List<Category> by mutableStateOf(emptyList())
+
+        fun getCurCateId(): Int = curCateId
+
+        fun getCurSucCateId(): Int = curSucCateId
+
+        fun getCurSortType(): Int = curSortType
 
         fun initTab(tag: String, jumpInfo: JumpInfo?) {
             if (categories.isEmpty()) return
@@ -233,15 +305,24 @@ class LongAudioCategoryActivity : ComponentActivity() {
             }
         }
 
-        fun fetchCategoryDetail(cateId: Int, subCateId: Int) {
-            if (curCateId == cateId && curSucCateId == subCateId) return
+        fun fetchCategoryDetail(cateId: Int, subCateId: Int, sortType:Int=0) {
+            if (curCateId != cateId || curSucCateId != subCateId || sortType!=curSortType) {
+                nextPage = 0
+                _hasMoreStateFlow.update { false }
+                albums = emptyList()
+            }
             viewModelScope.launch(Dispatchers.IO) {
                 OpenApiSDK.getOpenApi()
-                    .fetchAlbumListOfLongAudioByCategory(listOf(cateId, subCateId), listOf(-1), count = 60) {
-                        albums = it.data ?: emptyList()
+                    .fetchAlbumListOfLongAudioByCategory(listOf(cateId, subCateId), listOf(-1), page = nextPage, count = 60, sortType=sortType) {
+                        albums = ArrayList<Album>(albums).also { newList->
+                            newList.addAll(it.data ?: emptyList())
+                        }
                         if (it.isSuccess()) {
                             curCateId = cateId
                             curSucCateId = subCateId
+                            curSortType = sortType
+                            _hasMoreStateFlow.update {_-> it.hasMore }
+                            nextPage++
                         }
                     }
             }

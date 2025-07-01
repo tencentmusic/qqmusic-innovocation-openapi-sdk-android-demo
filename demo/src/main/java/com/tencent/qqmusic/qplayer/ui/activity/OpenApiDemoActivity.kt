@@ -3,7 +3,6 @@ package com.tencent.qqmusic.qplayer.ui.activity
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.text.Editable
-import android.text.SpannableStringBuilder
 import android.text.TextWatcher
 import android.util.Log
 import android.view.View
@@ -11,17 +10,16 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
-import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.ai.function.base.IAIFunction
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
-import com.tencent.qqmusic.openapisdk.model.Rank
 import com.tencent.qqmusic.openapisdk.model.SearchType
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.openapisdk.model.vip.CashierCreateOrderItem
+import com.tencent.qqmusic.openapisdk.model.vip.CashierCreateOrderParams
 import com.tencent.qqmusic.qplayer.BaseFunctionManager
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.GsonHelper
@@ -463,6 +461,33 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 paramStr1!!, paramStr2!!, commonCallback
             )
         }
+        methodNameToBlock["fetchCashierGears"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.fetchCashierGears(commonCallback)
+        }
+        methodNameToBlock["fetchCashierPayUrl"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            val param = CashierCreateOrderParams(
+                cOrder = paramStr1!!,
+                offerId = paramStr2!!,
+                totalAmount = paramStr3!!.toLong(),
+                items = listOf(
+                    CashierCreateOrderItem(
+                        productId = paramStr4!!,
+                        skuId = paramStr5!!,
+                        quantity = 1,
+                    )
+                )
+            )
+            openApi.fetchCashierPayUrl(param, commonCallback)
+        }
+        methodNameToBlock["pollCashierOrderStatus"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.pollCashierOrderStatus(orderId=paramStr1!!, commonCallback)
+        }
         methodNameToBlock["fetchAllRankGroup"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
@@ -518,6 +543,15 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 paramStr1!!, SearchType.MV, paramStr2?.toInt() ?: 0, paramStr3?.toInt() ?: 10, callback = commonCallback
             )
         }
+
+        methodNameToBlock["searchSinger"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.search(
+                paramStr1!!, SearchType.SINGER, paramStr2?.toInt() ?: 0, paramStr3?.toInt() ?: 10, callback = commonCallback
+            )
+        }
+
         methodNameToBlock["searchSmart"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
@@ -585,7 +619,15 @@ class OpenApiDemoActivity : AppCompatActivity() {
             fillDefaultParamIfNull(it)
             // 3805603854: 和周杰伦走过的21年，无与伦比
             openApi.fetchSongOfFolder(
-                paramStr1!!, paramStr2?.toInt() ?: 0, paramStr3?.toInt() ?: 20, callback = commonCallback
+                paramStr1!!, paramStr2?.toInt() ?: 0, paramStr3?.toInt() ?: 200, callback = commonCallback
+            )
+        }
+        methodNameToBlock["fetchSongOfFolder-新翻页方式"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            // 3805603854: 和周杰伦走过的21年，无与伦比
+            openApi.fetchSongOfFolder(
+                paramStr1!!, paramStr2 ?: "", paramStr3?.toInt() ?: 20, callback = commonCallback
             )
         }
         methodNameToBlock["fetchPersonalFolder"] = {
@@ -730,7 +772,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
             fillDefaultParamIfNull(it)
             // 飙升榜
             openApi.fetchSongOfRank(
-                paramStr1!!.toInt(), paramStr2?.toInt() ?: 0, paramStr2?.toInt() ?: 20, callback = commonCallback
+                paramStr1!!.toInt(), paramStr2?.toInt() ?: 0, paramStr2?.toInt() ?: 200, callback = commonCallback
             )
         }
         methodNameToBlock["fetchAlbumDetail"] = {
@@ -744,7 +786,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
             fillDefaultParamIfNull(it)
             // 4805991: 追梦人
             openApi.fetchSongOfAlbum(
-                paramStr1, paramStr2, paramStr3?.toInt() ?: 0, paramStr4?.toInt() ?: 20, callback = commonCallback
+                paramStr1, paramStr2, paramStr3?.toInt() ?: 0, paramStr4?.toInt() ?: 20,  orderBy = paramStr5?.toInt() ?: 0, callback = commonCallback
             )
         }
         methodNameToBlock["fetchSongOfSinger"] = {
@@ -755,7 +797,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 paramStr1!!.toInt(),
                 paramStr2.toString(),
                 paramStr3?.toInt() ?: 0,
-                paramStr4?.toInt() ?: 20,
+                paramStr4?.toInt() ?: 200,
                 paramStr5?.toInt() ?: 0,
                 callback = commonCallback
             )
@@ -774,6 +816,13 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 paramStr1?.toInt() ?: -100, paramStr2?.toInt() ?: -100, paramStr3?.toInt() ?: -100, callback = commonCallback
             )
         }
+        methodNameToBlock["fetchHotSingerListWithFilter"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            openApi.fetchHotSingerListWithFilter(
+                paramStr1?.toInt() ?: -100, paramStr2?.toInt() ?: -100, paramStr3?.toInt() ?: -100, paramStr4 ?: "hot", callback = commonCallback
+            )
+        }
         methodNameToBlock["fetchAlbumOfSinger"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
@@ -790,12 +839,12 @@ class OpenApiDemoActivity : AppCompatActivity() {
         methodNameToBlock["fetchDailyRecommendSong"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
-            openApi.fetchDailyRecommendSong(commonCallback)
+            openApi.fetchDailyRecommendSong(paramStr1?.toInt(), commonCallback)
         }
         methodNameToBlock["fetchPersonalRecommendSong"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
-            openApi.fetchPersonalRecommendSong(commonCallback)
+            openApi.fetchPersonalRecommendSong(paramStr1?.toInt(), commonCallback)
         }
         methodNameToBlock["fetchSimilarSong"] = {
             val commonCallback = CallbackWithName(it)
@@ -1270,6 +1319,22 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
+                "fetchCashierGears", listOf(), listOf()
+            )
+        )
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchCashierPayUrl", listOf("cOrder", "offerID(套餐ID)", "totalAmount(订单总金额)", "productId(商品ID)", "skuId"), listOf("", "", "", "", "")
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "pollCashierOrderStatus", listOf("订单ID"), listOf("")
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
                 "searchAlbum", listOf("关键字", "页码（可不传）", "每页返回数量（可不传）"), listOf("周杰伦", null, null)
             )
         )
@@ -1296,6 +1361,11 @@ class OpenApiDemoActivity : AppCompatActivity() {
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "searchMV", listOf("关键字", "页码（可不传）", "每页返回数量（可不传）"), listOf("周杰伦", null, null)
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "searchSinger", listOf("关键字", "页码（可不传）", "每页返回数量（可不传）"), listOf("周杰伦", null, null)
             )
         )
         methodNameWithParamList.add(
@@ -1336,6 +1406,11 @@ class OpenApiDemoActivity : AppCompatActivity() {
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "fetchSongOfFolder", listOf("歌单id", "页码（可不传）", "每页返回数量（可不传）"), listOf("3805603854", null, null)
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchSongOfFolder-新翻页方式", listOf("歌单id", "passback（可不传）", "每页返回数量（可不传）"), listOf("3805603854", null, null)
             )
         )
         methodNameWithParamList.add(
@@ -1469,7 +1544,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "fetchSongOfAlbum", listOf("专辑id", "专辑mid", "页码（可不传）", "每页返回数量（可不传）"), listOf("4805991", null, null, null)
+                "fetchSongOfAlbum", listOf("专辑id", "专辑mid", "页码（可不传）", "每页返回数量（可不传）", "排序(0,1,2)"), listOf("4805991", null, null, null, "0")
             )
         )
         methodNameWithParamList.add(
@@ -1488,6 +1563,11 @@ class OpenApiDemoActivity : AppCompatActivity() {
         methodNameWithParamList.add(
             MethodNameWidthParam(
                 "fetchHotSingerList", listOf("区域", "性别", "流派"), listOf("-100", "-100", "-100")
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "fetchHotSingerListWithFilter", listOf("区域", "性别", "流派", "字母筛选"), listOf("-100", "-100", "-100", "hot")
             )
         )
 
@@ -1516,12 +1596,12 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "fetchDailyRecommendSong", listOf(), listOf()
+                "fetchDailyRecommendSong", listOf("请求数量"), listOf("1")
             )
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "fetchPersonalRecommendSong", listOf(), listOf()
+                "fetchPersonalRecommendSong", listOf("请求数量"), listOf("1")
             )
         )
         methodNameWithParamList.add(

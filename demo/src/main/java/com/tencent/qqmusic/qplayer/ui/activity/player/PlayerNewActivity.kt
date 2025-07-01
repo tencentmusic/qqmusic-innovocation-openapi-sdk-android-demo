@@ -12,6 +12,7 @@ import com.tencent.qqmusic.openapisdk.playerui.viewmode.ViewportSize
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.BaseActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.widget.PlayerNewViewWidget
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 
 
 /**
@@ -34,6 +35,7 @@ class PlayerNewActivity : BaseActivity() {
             startActivity(Intent(this, PlayerStyleActivity::class.java))
         }
         findViewById<ImageView>(R.id.bnt_old_player).setOnClickListener {
+            UiUtils.setUseNewPlayPage(false)
             startActivity(Intent(this, PlayerActivity::class.java))
         }
     }

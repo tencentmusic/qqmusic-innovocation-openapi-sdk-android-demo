@@ -67,7 +67,7 @@ class CustomPlayerAlbumMagicColorViewModel(
                         MagicColor.KEY_HIGHLIGHT_COLOR to highlightColor,
                         MagicColor.KEY_FOREGROUND_COLOR to foregroundColor,
                         MagicColor.KEY_PROGRESSBAR_COLOR to highlightColor,
-                        MagicColor.KEY_FILL_BACKGROUND to magicColor,
+                        MagicColor.KEY_FILL_BACKGROUND to magicColor
                     )
                 )
             } else {
@@ -81,8 +81,8 @@ class CustomPlayerAlbumMagicColorViewModel(
         playerRepository.observableAlbumDrawable.observeForever(playAlbumObserver)
     }
 
-    override fun clear() {
-        super.clear()
+    override fun unbind() {
+        super.unbind()
         playerRepository.observableAlbumDrawable.removeObserver(playAlbumObserver)
     }
 }

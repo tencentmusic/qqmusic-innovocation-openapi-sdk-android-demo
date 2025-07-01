@@ -34,7 +34,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -54,6 +58,8 @@ import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricNewActivity
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.tryPauseFirst
 import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPageActivity
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.CommonProfileActivity
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.ui.activity.ui.DefaultSliderColor
 import com.tencent.qqmusic.qplayer.ui.activity.ui.QQMusicSlider
 import com.tencent.qqmusic.qplayer.ui.activity.ui.Segment
@@ -90,7 +96,7 @@ fun PlayerPage(observer: PlayerObserver) {
     val sentence = observer.curSentence
 
     val modeOrder =
-        mutableListOf(PlayerEnums.Mode.LIST, PlayerEnums.Mode.ONE, PlayerEnums.Mode.SHUFFLE)
+        mutableListOf(PlayerEnums.Mode.LIST, PlayerEnums.Mode.ONE, PlayerEnums.Mode.SHUFFLE, PlayerEnums.Mode.ONE_NOT_REPEAT)
     val lyricView = lyric(observer= observer) {
         activity.startActivity(Intent(activity, LyricNewActivity::class.java))
     }
@@ -108,7 +114,7 @@ fun PlayerPage(observer: PlayerObserver) {
     ) {
         // 封面图
         Image(
-            painter = rememberImagePainter(currSong?.bigCoverUrl()),
+            painter = rememberImagePainter(currSong?.getAlbumPicUrlBySize("1500")),
             contentDescription = null,
             modifier = Modifier
                 .size(300.dp)
@@ -118,17 +124,17 @@ fun PlayerPage(observer: PlayerObserver) {
         // 歌曲信息
         Text(
             text = currSong?.songName ?: "未知",
-            fontSize = 20.sp
+            fontSize = 20.sp,
+            modifier = Modifier.padding(top = 8.dp)
         )
         Text(
             text = currSong?.singerName ?: "未知",
             fontSize = 20.sp,
-            modifier = Modifier.clickable {
+            modifier = Modifier.padding(top = 8.dp).clickable {
                 currSong?.singerId?.let {
                     activity.startActivity(
-                        Intent(activity, SearchPageActivity::class.java)
-                            .putExtra(SearchPageActivity.searchType, SearchPageActivity.singerIntentTag)
-                            .putExtra(SearchPageActivity.singerIntentTag, it)
+                        Intent(activity, CommonProfileActivity::class.java)
+                            .putExtra(SongListActivity.KEY_SINGER_ID, it)
                     )
                 }
             }
@@ -136,13 +142,14 @@ fun PlayerPage(observer: PlayerObserver) {
 
         Text(
             text = sentence.ifBlank { "无歌词" },
-            fontSize = 16.sp
+            fontSize = 16.sp,
+            modifier = Modifier.padding(top = 8.dp)
         )
 
         AndroidView(
             factory = {
                 lyricView
-            }, modifier = Modifier.size(width = 400.dp, height = 40.dp)
+            }, modifier = Modifier.padding(top = 40.dp).size(width = 400.dp, height = 16.dp)
         )
 
         Row(
@@ -296,6 +303,12 @@ fun PlayerPage(observer: PlayerObserver) {
                 }
             }) {
                 Text(text = "播放MV")
+            }
+            Button(modifier = Modifier.padding(start = 10.dp), onClick = {
+                UiUtils.setUseNewPlayPage(true)
+                UiUtils.gotoPlayerPage()
+            }) {
+                Text(text = "新版播放页")
             }
         }
         // 播放控制

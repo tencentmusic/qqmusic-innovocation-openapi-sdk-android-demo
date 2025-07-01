@@ -188,10 +188,11 @@ class MusicTherapyActivity : ComponentActivity(), OnMusicTherapyStateListener {
 
     @Composable
     private fun ConstraintLayoutScope.PlayButton() {
+        val (playButton, stopButton) = createRefs()
         Button(shape = RoundedCornerShape(40.dp),
             modifier = Modifier
                 .size(80.dp)
-                .constrainAs(createRef()) {
+                .constrainAs(playButton) {
                     bottom.linkTo(parent.bottom, margin = 10.dp)
                     start.linkTo(parent.start)
                     end.linkTo(parent.end)
@@ -221,6 +222,15 @@ class MusicTherapyActivity : ComponentActivity(), OnMusicTherapyStateListener {
             }) {
             Text(text = if (musicTherapyViewModel.playState.value == PlayState.MEDIAPLAYER_STATE_STARTED) "暂停" else if (musicTherapyViewModel.playState.value == PlayState.MEDIAPLAYER_STATE_PAUSED) "继续" else "播放")
         }
+        Button(shape = RoundedCornerShape(40.dp),
+            modifier = Modifier
+                .size(80.dp)
+                .constrainAs(stopButton) {
+                    bottom.linkTo(parent.bottom, margin = 10.dp)
+                    start.linkTo(parent.start, margin = 10.dp)
+                },onClick = {
+                OpenApiSDK.getMusicTherapyApi().stop()
+            }) {   Text(text = "停止播放") }
     }
 
     @Composable

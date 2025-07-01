@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import android.widget.EditText
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,9 +26,11 @@ import androidx.compose.material.Slider
 import androidx.compose.material.Switch
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
+import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -53,9 +57,9 @@ import com.tencent.qqmusic.openapisdk.model.ProfitInfo
 import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
 import com.tencent.qqmusic.qplayer.core.supersound.GalaxyFileQualityManager
 import com.tencent.qqmusic.qplayer.core.supersound.MasterSRManager
-import com.tencent.qqmusic.qplayer.ui.activity.TrafficActivity
-import com.tencent.qqmusic.qplayer.ui.activity.SongCacheDemoActivity
 import com.tencent.qqmusic.qplayer.core.supersound.SQSRManager
+import com.tencent.qqmusic.qplayer.ui.activity.SongCacheDemoActivity
+import com.tencent.qqmusic.qplayer.ui.activity.TrafficActivity
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiListenTogetherActivity
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
 import com.tencent.qqmusic.qplayer.ui.activity.musictherapy.MusicTherapyActivity
@@ -64,6 +68,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.lang.StringBuilder
 import kotlin.concurrent.thread
+import kotlin.math.sin
 
 
 /**
@@ -240,16 +245,20 @@ fun PlayControlArea() {
 
         Button(onClick = {
             val curValue = OpenApiSDK.getPlayerApi().getEnableReplayGain()
-            OpenApiSDK.getPlayerApi().setEnableReplayGain(curValue.not())
-            enableReplayGain = curValue.not()
+            val ret = OpenApiSDK.getPlayerApi().setEnableReplayGain(curValue.not())
+            if(ret == PlayDefine.PlayError.PLAY_ERR_NONE){
+                enableReplayGain = curValue.not()
+            }else{
+                UiUtils.showToast("开启失败:code=${ret}")
+            }
         }, modifier = Modifier.padding(padding)) {
             Text(text = "开启音量均衡 ${if (enableReplayGain) "开启" else "关闭"}")
         }
 
         Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
         Text(
-            text = "能否试听臻品音质：$canTryExcellentQuality, 是否试听过：${vipInfo?.excellentQualityTried}," +
-                    "试听剩余时间：${vipInfo?.excellentQualityTryTimeLeft}"
+            text = "能否试听臻品音质：$canTryExcellentQuality, 是否试听过：${vipInfo?.isProfitTriedByType(ProfitInfo.QUALITY_TYPE_EXCELLENT)}," +
+                    "试听剩余时间：${vipInfo?.getProfitInfoByType(ProfitInfo.QUALITY_TYPE_EXCELLENT)?.remainTime}"
         )
 
         Button(
@@ -282,8 +291,8 @@ fun PlayControlArea() {
         Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
 
         Text(
-            text = "能否试听臻品全景声：$canTryGalaxyQuality, 是否试听过：${vipInfo?.galaxyQualityTried}," +
-                    "试听剩余时间：${vipInfo?.galaxyQualityTryTimeLeft}"
+            text = "能否试听臻品全景声：$canTryGalaxyQuality, 是否试听过：${vipInfo?.isProfitTriedByType(ProfitInfo.QUALITY_TYPE_GALAXY)}," +
+                    "试听剩余时间：${vipInfo?.getProfitInfoByType(ProfitInfo.QUALITY_TYPE_GALAXY)?.remainTime}"
         )
 
         Button(
@@ -430,7 +439,26 @@ fun PlayControlArea() {
             Switch(
                 checked = PlayerObserver.vocalAccompanyConfig.replay,
                 onCheckedChange = {
-                    val vocalAccompanyConfig = VocalAccompanyConfig(PlayerObserver.vocalAccompanyConfig.defaultVocalPercent, it)
+                    val vocalAccompanyConfig = VocalAccompanyConfig(PlayerObserver.vocalAccompanyConfig.defaultVocalPercent, it, PlayerObserver.vocalAccompanyConfig.keepPlayStateWhenVocalStateChange)
+                    PlayerObserver.vocalAccompanyConfig = vocalAccompanyConfig
+                    OpenApiSDK.getVocalAccompanyApi().saveDefaultVocalAccompanyConfig(vocalAccompanyConfig)
+                })
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "进入退出伴唱的时候，保持当前歌曲播放状态",
+                fontFamily = FontFamily.Monospace
+            )
+            Switch(
+                checked = PlayerObserver.vocalAccompanyConfig.keepPlayStateWhenVocalStateChange,
+                onCheckedChange = {
+                    val vocalAccompanyConfig = VocalAccompanyConfig(PlayerObserver.vocalAccompanyConfig.defaultVocalPercent, PlayerObserver.vocalAccompanyConfig.replay, it)
                     PlayerObserver.vocalAccompanyConfig = vocalAccompanyConfig
                     OpenApiSDK.getVocalAccompanyApi().saveDefaultVocalAccompanyConfig(vocalAccompanyConfig)
                 })
@@ -446,7 +474,8 @@ fun PlayControlArea() {
                 value = PlayerObserver.vocalAccompanyConfig.defaultVocalPercent.value.toFloat(),
                 valueRange = VocalPercent.min.value.toFloat()..VocalPercent.max.value.toFloat(),
                 onValueChange = {
-                    val vocalAccompanyConfig = VocalAccompanyConfig(OpenApiSDK.getVocalAccompanyApi().convertToCloseVocalRadio(it.toInt()), PlayerObserver.vocalAccompanyConfig.replay)
+                    val vocalAccompanyConfig = VocalAccompanyConfig(OpenApiSDK.getVocalAccompanyApi().convertToCloseVocalRadio(it.toInt()), PlayerObserver.vocalAccompanyConfig.replay,
+                        PlayerObserver.vocalAccompanyConfig.keepPlayStateWhenVocalStateChange)
                     PlayerObserver.vocalAccompanyConfig = vocalAccompanyConfig
                     OpenApiSDK.getVocalAccompanyApi().saveDefaultVocalAccompanyConfig(PlayerObserver.vocalAccompanyConfig)
                 },
@@ -599,6 +628,38 @@ fun PlayControlArea() {
         }, modifier = Modifier.padding(padding)) {
             Text(text = "关闭通知栏")
         }
+
+        Divider(modifier = Modifier
+            .padding(top = 9.dp)
+            .fillMaxWidth()
+            .height(3.dp))
+
+        Row(modifier = Modifier, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            val currentLimitedSize = remember {
+                mutableIntStateOf(OpenApiSDK.getPlayerApi().getLastPlayListLimitedSize())
+            }
+            Text(text = "限制恢复列表大小 ")
+            TextField(value = "${currentLimitedSize.intValue}", singleLine = true, keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number), onValueChange = {
+                currentLimitedSize.intValue = it.toIntOrNull() ?: -1
+            }, colors = TextFieldDefaults.textFieldColors(
+                backgroundColor = Color.Transparent,
+                cursorColor = Color.Black,
+                disabledLabelColor = Color.Gray,
+                focusedIndicatorColor = Color.Blue,
+                unfocusedIndicatorColor = Color.Blue
+            ), modifier = Modifier.width(100.dp))
+            Button(onClick = {
+                val ret = OpenApiSDK.getPlayerApi().setLastPlayListLimitedSize(currentLimitedSize.intValue)
+                if (ret == 0) {
+                    Toast.makeText(UtilContext.getApp(), "限制恢复${currentLimitedSize.intValue}首", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(UtilContext.getApp(), "输入限制范围 0, >=100", Toast.LENGTH_SHORT).show()
+                }
+            }) {
+                Text("设置")
+            }
+        }
+
     }
 
 }

@@ -10,11 +10,13 @@ import com.tencent.qqmusic.edgemv.data.MediaGroupRes
 import com.tencent.qqmusic.edgemv.data.MediaResDetail
 import com.tencent.qqmusic.edgemv.data.MediaSimpleRes
 import com.tencent.qqmusic.edgemv.impl.AreaID
+import com.tencent.qqmusic.edgemv.impl.CategoryType
 import com.tencent.qqmusic.edgemv.impl.GetMVRecommendCmd
 import com.tencent.qqmusic.edgemv.impl.SpecialArea
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.hologram.EdgeMvProvider
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -30,8 +32,8 @@ class PlayerViewModel : ViewModel() {
     var areaDetail: State<List<MediaGroupRes?>> = _areaDetail
 
 
-    private val _dolbyContent: MutableState<MediaArea?> = mutableStateOf(null)
-    var dolbyContent: State<MediaArea?> = _dolbyContent
+    private val _mvContent: MutableState<MediaArea?> = mutableStateOf(null)
+    var mvContent: State<MediaArea?> = _mvContent
 
     fun updateMedia(mediaResDetail: MediaResDetail?) {
         AppScope.launchIO {
@@ -44,8 +46,8 @@ class PlayerViewModel : ViewModel() {
     }
 
 
-    fun getRecommendMvList(type: GetMVRecommendCmd, areaID: AreaID) {
-        provider?.getMediaNetWorkImpl()?.getRecommendMVList(type, areaID) {
+    fun getRecommendMvList(type: GetMVRecommendCmd, areaID: AreaID, type2: CategoryType = CategoryType.ALL) {
+        provider?.getMediaNetWorkImpl()?.getRecommendMVList(type, areaID, type2) {
             if (it.isSuccess()) {
                 AppScope.launchIO {
                     it.data?.let {
@@ -55,6 +57,8 @@ class PlayerViewModel : ViewModel() {
                         }
                     }
                 }
+            }else{
+                UiUtils.showToast("接口报错：${it.errorMsg}")
             }
         }
     }
@@ -63,7 +67,20 @@ class PlayerViewModel : ViewModel() {
     fun getDolbyContent() {
         provider?.getMediaNetWorkImpl()?.getContentArea(SpecialArea.Dolby) {
             if (it.isSuccess()) {
-                _dolbyContent.value = it.data
+                _mvContent.value = it.data
+            }else{
+                UiUtils.showToast("接口报错：${it.errorMsg}")
+            }
+        }
+    }
+
+
+    fun getExcellentContent() {
+        provider?.getMediaNetWorkImpl()?.getContentArea(SpecialArea.Excellent) {
+            if (it.isSuccess()) {
+                _mvContent.value = it.data
+            }else{
+                UiUtils.showToast("接口报错：${it.errorMsg}")
             }
         }
     }
@@ -76,6 +93,8 @@ class PlayerViewModel : ViewModel() {
                 }
                 val list = _areaDetail.value.toMutableList().apply { add(it.data) }
                 _areaDetail.value = list
+            }else{
+                UiUtils.showToast("接口报错：${it.errorMsg}")
             }
         }
     }
@@ -86,7 +105,7 @@ class PlayerViewModel : ViewModel() {
         mPlayer?.destroy()
         _currentData.value = null
         _recommendList.value = emptyList()
-        _dolbyContent.value = null
+        _mvContent.value = null
     }
 
 }

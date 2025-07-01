@@ -1,6 +1,7 @@
 package com.tencent.qqmusic.qplayer.ui.activity
 
 import android.text.TextUtils
+import com.tencent.qqmusic.qplayer.AppCheckMode
 import com.tencent.qqmusic.qplayer.BaseFunctionManager
 import com.tencent.qqmusic.qplayer.BuildConfig
 
@@ -24,12 +25,12 @@ object MustInitConfig {
         } else proxy.getAccount().appKey
 
 
-    fun getAppCheckMode(): Boolean {
+    fun getAppCheckMode(): @AppCheckMode Int {
         return proxy.getAppCheckMode()
     }
 
-    fun setAppCheckMode(strick: Boolean) {
-        proxy.setAppCheckMode(strick)
+    fun setAppCheckMode(@AppCheckMode appCheckMode: Int) {
+        proxy.setAppCheckMode(appCheckMode)
     }
 
 }

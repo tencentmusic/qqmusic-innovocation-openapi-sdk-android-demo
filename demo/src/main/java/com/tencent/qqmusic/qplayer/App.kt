@@ -7,13 +7,11 @@ import android.os.Build
 import android.os.StrictMode
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.Keep
+import androidx.lifecycle.Observer
 import com.tencent.config.ProcessUtil
 import com.tencent.qqmusic.innovation.common.logging.MLog
-import androidx.lifecycle.Observer
-import com.tencent.qqmusic.innovation.common.util.DeviceUtils
-import com.tencent.qqmusic.innovation.common.util.ProcessUtils
 import com.tencent.qqmusic.innovation.common.util.ToastUtils
-import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LogEvent
 import com.tencent.qqmusic.openapisdk.core.DeviceType
@@ -22,28 +20,30 @@ import com.tencent.qqmusic.openapisdk.core.InitConfig
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.network.INetworkCheckInterface
 import com.tencent.qqmusic.openapisdk.core.network.NetworkTimeoutConfig
+import com.tencent.qqmusic.openapisdk.hologram.PlayerUIProvider
 import com.tencent.qqmusic.openapisdk.playerui.PlayerStyleManager
-import com.tencent.qqmusic.qplayer.ui.activity.player.DefaultImageLoader
 import com.tencent.qqmusic.playerinsight.CustomInsightConfig
 import com.tencent.qqmusic.qplayer.baselib.util.GsonHelper
-import com.tencent.qqmusic.qplayer.utils.AppLifeCycleManager
-import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.Md5Utils
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.qplayer.baselib.util.deviceid.DeviceInfoManager
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
+import com.tencent.qqmusic.qplayer.ui.activity.player.DefaultImageLoader
 import com.tencent.qqmusic.qplayer.utils.FireEyeMonitorConfigImpl
 import com.tencent.qqmusic.qplayer.utils.PrivacyManager
 import com.tencent.qqmusic.qplayer.utils.SettingsUtil
+import com.tencent.qqmusiccommon.SimpleMMKV
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+import kotlin.random.Random
+
 /**
  * Created by tannyli on 2021/8/31.
  * Copyright (c) 2021 TME. All rights reserved.
  */
+@Keep
 class App : Application() {
 
     override fun attachBaseContext(base: Context?) {
@@ -53,7 +53,6 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
 
         if (!ProcessUtil.inMainProcess(this)) {
 //            Debug.waitForDebugger()
@@ -93,6 +92,8 @@ class App : Application() {
         @JvmStatic
         fun init(context: Context) {
             Log.i(TAG, "init Application")
+
+            //按需初始化playerKit 播放器模块
             PlayerStyleManager.observeForever(Observer {
                 if (it.from == PlayerStyleManager.SET_STYLE_PERMISSION_DENIED) {
                     ToastUtils.showLong("播放器样式权益已失效")
@@ -102,6 +103,9 @@ class App : Application() {
                 MLog.i("PlayerStyleManager", "updatePlayerStyle $it， ")
             })
             PlayerStyleManager.setImageLoader(DefaultImageLoader())
+            if (!BuildConfig.isLiteSDK) {
+                OpenApiSDK.addProvider(PlayerUIProvider())
+            }
             OpenApiSDK.registerBusinessEventHandler {
                 when (it.code) {
                     LogEvent.LogFileCanNotWrite -> {
@@ -130,27 +134,29 @@ class App : Application() {
             val timeoutConfig = GsonHelper.safeFromJson(savedTimeoutConfig, NetworkTimeoutConfig::class.java) ?: NetworkTimeoutConfig.DEFAULT()
             val isMutiChannel = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S_V2
             MLog.i(TAG, "isMutiChannel:$isMutiChannel ,${Build.VERSION.SDK_INT}")
+            val demoHardwareInfo = sharedPreferences?.getString("demoHardwareInfo", "L9") ?: "L9"
+            val demoBrand = sharedPreferences?.getString("demoBrand", "Xiaomi") ?: "Xiaomi"
+            val demoOpiDeviceId = sharedPreferences?.getString("demoOpiDeviceId", "123456789") ?: "123456789"
             val initConfig = InitConfig(
                 context.applicationContext,
                 MustInitConfig.APP_ID,
                 MustInitConfig.APP_KEY,
-                "123456789", //合作方请自行获取唯一设备ID并传入
+                demoOpiDeviceId, //合作方请自行获取唯一设备ID并传入
             ).apply {
                 this.appForeground = true
                 this.isUseForegroundService = isUseForegroundService
                 this.crashConfig = InitConfig.CrashConfig(enableNativeCrashReport = true, enableAnrReport = true)
                 this.deviceConfigInfo.apply {
-                    hardwareInfo = "L9"
-                    brand = "Xiaomi"
+                    this.brand = demoBrand
+                    this.hardwareInfo = demoHardwareInfo
                     this.lowMemoryMode = lowMemoryMode
                     // 设置设备类型
                     this.deviceType = when (Md5Utils.getMD5String(MustInitConfig.APP_ID)) {
                         "a3ef4dd61511b86a1e288ed3df6223fb" -> DeviceType.PHONE
                         else -> DeviceType.CAR
                     }
-
                 }
-                this.insightConfig = CustomInsightConfig(true, true)
+                this.insightConfig = CustomInsightConfig(true, true, false)
                 this.enableBluetoothListener = false
                 this.useMediaPlayerWhenPlayDolby = sharedPreferences?.getBoolean("useMediaPlayerWhenPlayDolby", false) ?: false
                 this.logFileDir = logFileDir
@@ -176,10 +182,11 @@ class App : Application() {
                         return "{\"tags\":[\"chinoiserie\",\"china_chic\",\"folk\",\"electronica\"],\"cityLevel\":\"first_tier_city\"}"
                     }
                 }
+
+                needWnsPushService = sharedPreferences?.getBoolean("enableWns", true) ?: true
             }
             Global.setMonitorConfigApi(FireEyeMonitorConfigImpl())
             val start = System.currentTimeMillis()
-            Global.isDebug = BuildConfig.IS_DEBUG
             OpenApiSDK.init(initConfig)
             OpenApiSDK.setAppForeground(true)
             GlobalScope.launch(Dispatchers.Default) {

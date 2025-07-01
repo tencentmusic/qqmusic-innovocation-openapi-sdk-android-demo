@@ -30,10 +30,12 @@ import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.openapisdk.model.SearchMVInfo
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
+import com.tencent.qqmusic.qplayer.ui.activity.loadMoreItemUI
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 
 @Composable
-fun MVPage(list: List<SearchMVInfo>) {
+fun MVPage(list: List<SearchMVInfo>, loadMoreItem: LoadMoreItem? = null) {
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
         val (folder) = createRefs()
         Box(modifier = Modifier.constrainAs(folder) {
@@ -46,6 +48,7 @@ fun MVPage(list: List<SearchMVInfo>) {
                     val mvInfo = list.elementAtOrNull(index) ?: return@items
                     MVSearchItem(data = mvInfo)
                 }
+                loadMoreItemUI(list.size, loadMoreItem = loadMoreItem)
             }
         }
 

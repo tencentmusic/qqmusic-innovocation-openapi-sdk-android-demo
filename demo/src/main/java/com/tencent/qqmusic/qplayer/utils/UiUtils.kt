@@ -13,6 +13,7 @@ import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
@@ -30,7 +31,7 @@ object UiUtils {
 
 
     private val sharedPreferences: SharedPreferences? = try {
-        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+        App.context.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
     } catch (e: Exception) {
         QLog.e("DebugScreen", "getSharedPreferences error e = ${e.message}")
         null
@@ -51,6 +52,9 @@ object UiUtils {
         val sb = StringBuilder()
         if (access.vip) {
             sb.append("vip").append("•")
+        }
+        if (access.iotVip) {
+            sb.append("iotVip").append("•")
         }
         if (!access.vip && access.hugeVip) {
             sb.append("SuperVip").append("•")
@@ -162,7 +166,8 @@ object UiUtils {
             PlayerEnums.Quality.MASTER_TAPE, PlayerEnums.Quality.MASTER_SR -> {
                 R.drawable.master_tape_icon
             }
-
+            PlayerEnums.Quality.DTSC -> R.drawable.action_icon_dtsc
+            PlayerEnums.Quality.DTSX -> R.drawable.action_icon_dtsx
             else -> {
                 R.drawable.ic_lq
             }
@@ -234,7 +239,11 @@ object UiUtils {
     }
 
     fun getUseNewPlayPageValue(): Boolean {
-        return sharedPreferences?.getBoolean("newPlayerPage", true) ?: true
+        return sharedPreferences?.getBoolean("newPlayerPage", false) ?: false
+    }
+
+    fun setUseNewPlayPage(new: Boolean) {
+        sharedPreferences?.edit()?.putBoolean("newPlayerPage", new)?.apply()
     }
 
     fun gotoPlayerPage() {
@@ -245,4 +254,10 @@ object UiUtils {
             UtilContext.getApp().startActivity(Intent(UtilContext.getApp(), PlayerActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
+
+    fun setCurSoundEffectIsAI(isAI: Boolean) {
+        sharedPreferences?.edit()?.putBoolean("curSoundEffectIsAI", isAI)?.apply()
+    }
+
+    fun getCurSoundEffectIsAI() = sharedPreferences?.getBoolean("curSoundEffectIsAI", false) ?: false
 }

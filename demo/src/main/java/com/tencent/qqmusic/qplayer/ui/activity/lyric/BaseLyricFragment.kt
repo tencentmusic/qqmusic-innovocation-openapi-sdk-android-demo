@@ -144,6 +144,7 @@ class BaseLyricFragment(val layoutId: Int = -1): Fragment(), LyricStateInterface
                 loadStatusView?.visibility = View.GONE
                 lyricView?.visibility = View.VISIBLE
             }
+            lyricView?.setTopMargin(DpPxUtil.dip2px(context, 300f))
             QLog.i(TAG, "hasLyric: $hasLyric, hasTransLyric: $hasTransLyric, hasRomaLyric: $hasRomaLyric")
         }
     }

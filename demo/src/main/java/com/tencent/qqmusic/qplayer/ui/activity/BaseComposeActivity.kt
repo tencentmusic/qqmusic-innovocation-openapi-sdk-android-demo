@@ -1,13 +1,13 @@
 package com.tencent.qqmusic.qplayer.ui.activity
 
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import com.tencent.qqmusic.openapisdk.playerui.view.IViewWidgetOwner
 import com.tencent.qqmusic.openapisdk.playerui.view.ViewWidgetOwner
 
 /**
  * Created by silverfu on 2024/11/26.
  */
-open class BaseComposeActivity(private val widgetOwner: IViewWidgetOwner = ViewWidgetOwner()) : ComponentActivity(),
+open class BaseComposeActivity(private val widgetOwner: IViewWidgetOwner = ViewWidgetOwner()) : AppCompatActivity(),
     IViewWidgetOwner by widgetOwner {
 
     override fun onWidgetResume() {

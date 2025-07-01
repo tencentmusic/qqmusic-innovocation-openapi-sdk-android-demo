@@ -11,7 +11,6 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
@@ -34,7 +33,6 @@ import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.utils.UiUtils
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -200,6 +198,7 @@ class MapTestActivity : ComponentActivity() {
         // 循环切歌单+songInfo序列化+HQ+根据type设置列表循环和随机
         btnMapTransPlay.setOnClickListener {
             thread {
+                if (PlayerTestObj.customSongListSquare == null) return@thread
                 updateCustomSongListSquare()
                 val songListItem =
                     PlayerTestObj.customSongListSquare!![PlayerTestObj.currentItemIndex]
@@ -688,8 +687,8 @@ class MapTestActivity : ComponentActivity() {
     }
 
     // 更新地图自定义歌单列表
-    private fun updateCustomSongListSquare() {
-        if (PlayerTestObj.customSongListSquare.isNullOrEmpty()) {
+    private fun updateCustomSongListSquare(force:Boolean=false) {
+        if (PlayerTestObj.customSongListSquare.isNullOrEmpty() || force) {
             val resp = OpenApiSDK.getOpenApi().blockingGet<List<SongListItem>> {
                 OpenApiSDK.getOpenApi().fetchCustomSongListSquare(it)
             }
@@ -715,6 +714,13 @@ class MapTestActivity : ComponentActivity() {
             } ?: return@thread
             PlayerTestObj.currentItemIndex =
                 if (PlayerTestObj.currentItemIndex >= songItemList.size) 0 else PlayerTestObj.currentItemIndex
+            if (songItemList.isEmpty()||PlayerTestObj.currentItemIndex > songItemList.lastIndex) {
+                runOnUiThread{
+                    UiUtils.showToast("没有找到该类型的歌单")
+                }
+                updateCustomSongListSquare(force = true)
+                return@thread
+            }
             val songItem = songItemList[PlayerTestObj.currentItemIndex]
             PlayerTestObj.currentItemIndex += 1
             OpenApiSDK.getOpenApi().fetchCustomSceneSongList(
@@ -723,21 +729,30 @@ class MapTestActivity : ComponentActivity() {
                 "", 0, 20
             ) {
                 if (it.isSuccess()) {
-                    val songInfoList = it.data!!.second
-                    handler.postDelayed({
-                        OpenApiSDK.getPlayerApi()
-                            .setPlayMode(if (songListItemType == SongListItemType.SONG_LIST_ITEM_TYPE_RANK) PlayerEnums.Mode.SHUFFLE else PlayerEnums.Mode.LIST) // 设置列表循环
-                        OpenApiSDK.getPlayerApi()
-                            .setPreferSongQuality(PlayerEnums.Quality.HQ) // 设置HQ
-                        OpenApiSDK.getReportApi()
-                            .setPlaySongsFrom(PageFromBean(songItem.type!!, songItem.itemId))
-                        OpenApiSDK.getPlayerApi()
-                            .playSongs(songInfoList)
-                    }, 200)
-                    UiUtils.showToast("播放歌单:${songItem.title},type:${it.data!!.first.type}")
-                    returnPlayPage()
-                } else {
-                    UiUtils.showToast("${songItem.title},报错:${it.errorMsg}")
+                    val songItemInfo = it.data?.first
+                    if (songItemInfo?.type != songItem.type){
+                        UiUtils.showToast("歌单类型不匹配,可能走到了兜底歌单:type=${songItemInfo?.type}")
+                    }
+                    val songInfoList = it.data?.second
+                    songInfoList?.let { songList ->
+                        handler.postDelayed({
+                            OpenApiSDK.getPlayerApi()
+                                .setPlayMode(if (songListItemType == SongListItemType.SONG_LIST_ITEM_TYPE_RANK) PlayerEnums.Mode.SHUFFLE else PlayerEnums.Mode.LIST) // 设置列表循环
+                            OpenApiSDK.getPlayerApi()
+                                .setPreferSongQuality(PlayerEnums.Quality.HQ) // 设置HQ
+                            OpenApiSDK.getReportApi()
+                                .setPlaySongsFrom(PageFromBean(songItemInfo?.type!!, songItemInfo.itemId))
+                            OpenApiSDK.getPlayerApi()
+                                .playSongs(songList)
+                        }, 200)
+                        UiUtils.showToast("播放歌单:${songItem.title},type:${it.data!!.first.type}")
+                        returnPlayPage()
+                        return@fetchCustomSceneSongList
+                    }
+                }
+                updateCustomSongListSquare(force = true)
+                runOnUiThread {
+                    UiUtils.showToast("报错:${it.errorMsg},type=${songItem.type}")
                 }
             }
         }

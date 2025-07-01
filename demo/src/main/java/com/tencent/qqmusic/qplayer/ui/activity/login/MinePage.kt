@@ -8,7 +8,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +30,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,10 +55,11 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.qplayer.BaseFunctionManager
+import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.PartnerLoginActivity
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
-import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderPage
+import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderListPage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVResDetailPage
 import com.tencent.qqmusic.qplayer.ui.activity.person.MinePageNew
@@ -90,6 +91,8 @@ fun MinePage(homeViewModel: HomeViewModel) {
                 Lifecycle.Event.ON_RESUME -> {
                     mineViewModel.updateData()
                 }
+
+                else -> {}
             }
         }
 
@@ -118,7 +121,12 @@ fun MinePage(homeViewModel: HomeViewModel) {
 }
 
 @Composable
-fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewModel, info: MutableState<String>) {
+fun LoginButton(
+    activity: Activity,
+    vm: HomeViewModel,
+    mineViewModel: MineViewModel,
+    info: MutableState<String>
+) {
     var isLogin by remember {
         mutableStateOf(false)
     }
@@ -150,7 +158,8 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewMo
                         activity.runOnUiThread {
                             Log.i(TAG, "LoginPage: qq ret $ret, msg: $msg")
                             if (ret.not()) {
-                                Toast.makeText(activity, "QQ登录失败: $msg", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(activity, "QQ登录失败: $msg", Toast.LENGTH_SHORT)
+                                    .show()
                             }
                             HomeViewModel.clearRequestState()
                             mineViewModel.updateData()
@@ -190,16 +199,21 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewMo
             ) {
                 Button(
                     onClick = {
-                        OpenApiSDK.getLoginApi().wxLogin(activity, BaseFunctionManager.proxy.getWxAPPID()) { ret, msg ->
-                            Log.i(TAG, "LoginPage: wechat ret $ret")
-                            if (ret.not()) {
-                                Toast.makeText(activity, "微信登录失败: $msg", Toast.LENGTH_SHORT).show()
-                            }
+                        OpenApiSDK.getLoginApi()
+                            .wxLogin(activity, BaseFunctionManager.proxy.getWxAPPID()) { ret, msg ->
+                                Log.i(TAG, "LoginPage: wechat ret $ret")
+                                if (ret.not()) {
+                                    Toast.makeText(
+                                        activity,
+                                        "微信登录失败: $msg",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
 
-                            info.value = "微信已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                            mineViewModel.updateData()
-                            HomeViewModel.clearRequestState()
-                        }
+                                info.value = "微信已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                                mineViewModel.updateData()
+                                HomeViewModel.clearRequestState()
+                            }
                     },
                     modifier = Modifier.padding(0.dp)
                 ) {
@@ -210,7 +224,8 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewMo
                         activity.runOnUiThread {
                             Log.i(TAG, "LoginPage: qq ret $ret, msg: $msg")
                             if (ret.not()) {
-                                Toast.makeText(activity, "QQ登录失败: $msg", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(activity, "QQ登录失败: $msg", Toast.LENGTH_SHORT)
+                                    .show()
                             }
                             HomeViewModel.clearRequestState()
                             mineViewModel.updateData()
@@ -258,7 +273,11 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewMo
                 }
 
                 val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
-                PhoneLoginDialog(mineViewModel, showDialog = showDialog, setShowDialog = setShowDialog)
+                PhoneLoginDialog(
+                    mineViewModel,
+                    showDialog = showDialog,
+                    setShowDialog = setShowDialog
+                )
                 Button(onClick = {
                     setShowDialog(true)
                 }, modifier = Modifier.padding(0.dp)) {
@@ -305,180 +324,239 @@ fun LoginButton(activity: Activity, vm: HomeViewModel, mineViewModel: MineViewMo
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
-    val pages = mutableListOf(
-        "收藏的MV",
-        "收藏歌单",
-        "收藏专辑",
-        "最近播放单曲",
-        "最近播放专辑",
-        "最近播放歌单",
-        "最近播放长音频",
-        "已购专辑",
-        "已购单曲",
-        "收藏有声单曲",
-        "收藏播客单曲",
-        "收藏有声专辑",
-        "收藏有声播客",
-//        "已购有声书"
-        "订阅歌手",
-        "自建歌单",
-        "已下载歌曲",
-        "其他端播放列表"
+    // 定义分类
+    val categories = mapOf(
+        "自建歌单" to listOf(
+            "我喜欢",
+            "自建歌单列表"
+        ),
+        "收藏" to listOf(
+            "收藏歌单",
+            "收藏专辑",
+            "收藏的MV",
+            "收藏有声单曲",
+            "收藏播客单曲",
+            "收藏有声专辑",
+            "收藏有声播客"
+        ),
+        "最近播放" to listOf(
+            "最近播放单曲",
+            "最近播放专辑",
+            "最近播放歌单",
+            "最近播放长音频"
+        ),
+        "本地" to listOf(
+            "已下载歌曲"
+        ),
+        "已购内容" to listOf(
+            "已购数专",
+            "已购单曲"
+        ),
+        "其他" to listOf(
+            "订阅歌手",
+            "其他端播放列表"
+        )
     )
+
+    // 当前选中的分类
+    var selectedCategory by remember { mutableStateOf("自建歌单") }
+    // 当前显示的页面列表
+    val currentPages by remember(selectedCategory) {
+        derivedStateOf { categories[selectedCategory] ?: emptyList() }
+    }
+    // 避免多次创建PagingSource
+    val orderedSingerPagingSource by lazy { viewModel.pagingCollectedSinger() }
 
     val pagerState = rememberPagerState()
     val composableScope = rememberCoroutineScope()
 
-    ScrollableTabRow(
-        // Our selected tab is our current page
-        selectedTabIndex = pagerState.currentPage,
-        // Override the indicator, using the provided pagerTabIndicatorOffset modifier
-        indicator = { tabPositions ->
-            TabRowDefaults.Indicator(
-                Modifier.pagerTabIndicatorOffset(pagerState, tabPositions)
-            )
+    Column {
+        // 分类选择行
+        ScrollableTabRow(
+            selectedTabIndex = categories.keys.indexOf(selectedCategory),
+            indicator = { tabPositions ->
+                TabRowDefaults.Indicator(
+                    Modifier.pagerTabIndicatorOffset(
+                        pagerState = pagerState, // 使用同一个pagerState实例
+                        tabPositions = tabPositions
+                    )
+                )
+            }
+        ) {
+            categories.keys.forEachIndexed { index, category ->
+                Tab(
+                    text = { Text(text = category) },
+                    selected = selectedCategory == category,
+                    onClick = {
+                        selectedCategory = category
+                        composableScope.launch {
+                            pagerState.scrollToPage(0)
+                        }
+                    },
+                    selectedContentColor = Color.White,
+                    unselectedContentColor = Color.Gray
+                )
+            }
         }
-    ) {
-        // Add tabs for all of our pages
-        pages.forEachIndexed { index, title ->
-            Tab(
-                text = { Text(text = title) },
-                selected = pagerState.currentPage == index,
-                onClick = {
-                    composableScope.launch(Dispatchers.Main) {
-                        pagerState.scrollToPage(index)
-                    }
-                },
-                selectedContentColor = Color.White,
-                unselectedContentColor = Color.Gray
-            )
+
+        // 页面内容Tab
+        ScrollableTabRow(
+            selectedTabIndex = pagerState.currentPage,
+            indicator = { tabPositions ->
+                TabRowDefaults.Indicator(
+                    Modifier.pagerTabIndicatorOffset(pagerState, tabPositions)
+                )
+            }
+        ) {
+            currentPages.forEachIndexed { index, title ->
+                Tab(
+                    text = { Text(text = title) },
+                    selected = pagerState.currentPage == index,
+                    onClick = {
+                        composableScope.launch {
+                            pagerState.scrollToPage(index)
+                        }
+                    },
+                    selectedContentColor = Color.White,
+                    unselectedContentColor = Color.Gray
+                )
+            }
         }
-    }
 
-    // 避免多次创建PagingSource
-    val orderedSingerPagingSource by lazy { viewModel.pagingCollectedSinger() }
-
-    HorizontalPager(
-        count = pages.size,
-        state = pagerState
-    ) { page ->
-        val index = pagerState.currentPage
-        Log.i(TAG, "MineSongList: current index $index")
-
-        PerformanceHelper.monitorPageScroll("Mine_$index")
-
-        when (index) {
-            0 -> {
-                viewModel.fetchFavMVList()
-                MVResDetailPage(viewModel.mvFavList)
-            }
-
-            1 -> {
-                // 收藏歌单
-                viewModel.fetchCollectedFolder()
-                FolderPage(viewModel.favFolders)
-            }
-
-            2 -> {
-                // 收藏专辑
-                viewModel.fetchCollectedAlbum()
-                AlbumPage(viewModel.favAlbums)
-            }
-
-            3 -> {
-                // 最近播放（单曲）
-                SongListPage(viewModel.pagingRecentSong())
-            }
-
-            4 -> {
-                // 最近播放（专辑）
-                viewModel.fetchRecentAlbums()
-                AlbumPage(albums = viewModel.recentAlbums)
-            }
-
-            5 -> {
-                // 最近播放（歌单）
-                viewModel.fetchRecentFolders()
-                FolderPage(folders = viewModel.recentFolders)
-            }
-
-            6 -> {
-                // 最近播放（长音频）
-                viewModel.fetchRecentLongRadios()
-                AlbumPage(albums = viewModel.recentLongRadio)
-            }
-
-            7 -> {
-                // 已购数字专辑
-                LaunchedEffect(Unit) {
-                    viewModel.fetchBuyRecordOfAlbum()
-                }
-                BuyAlbumPage(albums = viewModel.albumOfRecord)
-            }
-
-            8 -> {
-                // 已购单曲
-                LaunchedEffect(Unit) {
-                    viewModel.fetchBuyRecordOfSong()
-                }
-                SongListPage(songs = viewModel.songOfRecord, needPlayer = false)
-            }
-
-            9 -> {
-                // 收藏有声单曲
-                SongListPage(viewModel.pagingLongAudioSong(1))
-            }
-
-            10 -> {
-                // 收藏播客单曲
-                SongListPage(viewModel.pagingLongAudioSong(2))
-            }
-
-            11 -> {
-                // 收藏有声专辑
-                viewModel.fetchCollectedAlbum(1)
-                AlbumPage(viewModel.favAlbums)
-            }
-
-            12 -> {
-                // 收藏有声播客
-                viewModel.fetchCollectedAlbum(2)
-                AlbumPage(viewModel.favAlbums)
-            }
-            13 -> {
-                // 订阅歌手
-                singerPage(orderedSingerPagingSource)
-            }
-
-            14 -> {
-                // 自建歌单
-                viewModel.fetchMineFolder()
-                Column(modifier = Modifier.fillMaxSize()) {
-                    NewFolder(viewModel)
-                    FolderPage(viewModel.mineFolders)
-                }
-            }
-
-            15 -> {
-                TextButton(onClick = { activity.startActivity(Intent(activity, DownloadActivity::class.java).apply {
-                    putExtra(DownloadActivity.FROM_DOWNLOAD_SONG_PAGE, true)
-                }) }) {
-                    Text(text = "前往已下载歌曲")
-                }
-            }
-
-            16 -> {
-                //其他端播放列表
-                viewModel.fetchOtherFlatPlayList()
-                Column {
-                    val songOfOther = viewModel.songOfOther
-                    if(songOfOther.playList.isNullOrEmpty()) {
-                        Text(text = "未获取到其他平台的数据")
-                    } else {
-                        Text(text = "来自${songOfOther.getPlatformString()}平台的${songOfOther.playList?.size}首歌(${songOfOther.suggestShowText})")
+        HorizontalPager(
+            count = currentPages.size,
+            state = pagerState
+        ) { page ->
+            // 原有页面内容保持不变...
+            when (currentPages[page]) {
+                "我喜欢" -> {
+                    LaunchedEffect(Unit) {
+                        viewModel.fetchMyLikeSong()
                     }
-                    songOfOther.playList?.let {
-                        SongListPage(songs = it, needPlayer = false)
+                    val songs = remember { viewModel.songOfMyLike }
+                    val loadMoreItem = LoadMoreItem(viewModel.songOfMyLikeHasMore) {
+                        viewModel.fetchMyLikeSong()
+                    }
+                    SongListPage(
+                        songs = songs.value,
+                        needPlayer = false,
+                        loadMoreItem = loadMoreItem
+                    )
+                }
+
+                "自建歌单列表" -> {
+                    viewModel.fetchMineFolder()
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        NewFolder(viewModel)
+                        FolderListPage(viewModel.mineFolders)
+                    }
+                }
+
+                "收藏的MV" -> {
+                    viewModel.fetchFavMVList()
+                    MVResDetailPage(viewModel.mvFavList)
+                }
+
+                "收藏专辑" -> {
+                    viewModel.fetchCollectedAlbum()
+                    AlbumPage(viewModel.favAlbums)
+                }
+
+                "收藏歌单" -> {
+                    viewModel.fetchCollectedFolder()
+                    FolderListPage(viewModel.favFolders)
+                }
+
+                "最近播放单曲" -> {
+                    SongListPage(viewModel.pagingRecentSong())
+                }
+
+                "最近播放专辑" -> {
+                    viewModel.fetchRecentAlbums()
+                    AlbumPage(albums = viewModel.recentAlbums)
+                }
+
+                "最近播放歌单" -> {
+                    // 最近播放（歌单）
+                    viewModel.fetchRecentFolders()
+                    FolderListPage(folders = viewModel.recentFolders)
+                }
+
+                "最近播放长音频" -> {
+                    viewModel.fetchRecentLongRadios()
+                    AlbumPage(albums = viewModel.recentLongRadio)
+                }
+
+                "已购数专" -> {
+                    LaunchedEffect(Unit) {
+                        viewModel.fetchBuyRecordOfAlbum()
+                    }
+                    val payedAlbums = remember { viewModel.albumOfRecord }
+                    val loadMoreItem = LoadMoreItem(viewModel.albumOfRecordHasMore) {
+                        viewModel.fetchBuyRecordOfAlbum()
+                    }
+                    BuyAlbumPage(albums = payedAlbums.value, loadMoreItem = loadMoreItem)
+                }
+
+                "已购单曲" -> {
+                    LaunchedEffect(Unit) {
+                        viewModel.fetchBuyRecordOfSong()
+                    }
+                    val payedSong = remember { viewModel.songOfRecord }
+                    val loadMoreItem = LoadMoreItem(viewModel.songOfRecordHasMore) {
+                        viewModel.fetchBuyRecordOfSong()
+                    }
+                    SongListPage(songs = payedSong.value, needPlayer = false, loadMoreItem = loadMoreItem)
+                }
+
+                "收藏有声单曲" -> {
+                    SongListPage(viewModel.pagingLongAudioSong(1))
+                }
+
+                "收藏播客单曲" -> {
+                    SongListPage(viewModel.pagingLongAudioSong(2))
+                }
+
+                "收藏有声专辑" -> {
+                    viewModel.fetchCollectedAlbum(1)
+                    AlbumPage(viewModel.favAlbums)
+                }
+
+                "收藏有声播客" -> {
+                    viewModel.fetchCollectedAlbum(2)
+                    AlbumPage(viewModel.favAlbums)
+                }
+
+                "订阅歌手" -> {
+                    singerPage(orderedSingerPagingSource)
+                }
+
+                "已下载歌曲" -> {
+                    TextButton(onClick = {
+                        activity.startActivity(
+                            Intent(
+                                activity,
+                                DownloadActivity::class.java
+                            ).apply {
+                                putExtra(DownloadActivity.FROM_DOWNLOAD_SONG_PAGE, true)
+                            })
+                    }) {
+                        Text(text = "前往已下载歌曲")
+                    }
+                }
+
+                "其他端播放列表" -> {
+                    viewModel.fetchOtherFlatPlayList()
+                    Column {
+                        val songOfOther = viewModel.songOfOther
+                        if (songOfOther.playList.isNullOrEmpty()) {
+                            Text(text = "未获取到其他平台的数据")
+                        } else {
+                            Text(text = "来自${songOfOther.getPlatformString()}平台的${songOfOther.playList?.size}首歌(${songOfOther.suggestShowText})")
+                        }
+                        songOfOther.playList?.let {
+                            SongListPage(songs = it, needPlayer = false)
+                        }
                     }
                 }
             }
@@ -607,12 +685,13 @@ fun OpenIdLoginDialog(mineViewModel: MineViewModel, showDialog: MutableState<Boo
                 placeholder = { Text(text = "请输入AccessToken") }
             )
             OutlinedButton(onClick = {
-                OpenApiSDK.getLoginApi().openIdLogin(MustInitConfig.APP_ID, openId, accessToken) { suc, msg ->
-                    UiUtils.showToast("登录结果：$suc $msg")
-                    if (suc) {
-                        mineViewModel.updateData()
+                OpenApiSDK.getLoginApi()
+                    .openIdLogin(MustInitConfig.APP_ID, openId, accessToken) { suc, msg ->
+                        UiUtils.showToast("登录结果：$suc $msg")
+                        if (suc) {
+                            mineViewModel.updateData()
+                        }
                     }
-                }
                 showDialog.value = false
             }) {
                 Text(text = "登录")
@@ -675,11 +754,20 @@ fun PhoneLoginDialog(model: MineViewModel, showDialog: Boolean, setShowDialog: (
                 if (phoneNum.isEmpty()) return@OutlinedButton
                 if (verifyCode.isEmpty()) return@OutlinedButton
 
-                OpenApiSDK.getLoginApi().phoneLogin(phoneNum, verifyCode, activity) { code, msg, phoneLoginInfo ->
+                OpenApiSDK.getLoginApi().phoneLogin(
+                    phoneNum,
+                    verifyCode,
+                    activity
+                ) { code, msg, phoneLoginInfo ->
                     if (code == 1) {
                         UiUtils.showToast("需要绑定Q音账号")
                         phoneLoginInfo?.apply {
-                            PhoneLoginQRCodeActivity.start(activity, phoneLoginInfo.phoneToken, phoneLoginInfo.authCode, phoneLoginInfo.qrCode)
+                            PhoneLoginQRCodeActivity.start(
+                                activity,
+                                phoneLoginInfo.phoneToken,
+                                phoneLoginInfo.authCode,
+                                phoneLoginInfo.qrCode
+                            )
                         }
                     } else {
                         UiUtils.showToast("登录失败:$msg")

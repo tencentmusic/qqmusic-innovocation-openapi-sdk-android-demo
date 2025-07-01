@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -44,9 +46,11 @@ import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 @OptIn(ExperimentalCoilApi::class)
 @Composable
 fun rankPage(homeViewModel: HomeViewModel){
-    homeViewModel.fetchRankGroup()
+    LaunchedEffect(Unit) {
+        homeViewModel.fetchRankGroup()
+    }
     val activity = LocalContext.current as Activity
-    var groups = homeViewModel.rankGroups
+    val groups by remember { homeViewModel.rankGroups }
     val listState = rememberLazyListState()
     PerformanceHelper.MonitorListScroll(scrollState = listState, location = "rankPage")
     LazyColumn(

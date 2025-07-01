@@ -27,17 +27,17 @@ class SongListViewModel : ViewModel() {
     var albumDetail: Album? by mutableStateOf(null)
 
    suspend fun pagingFolderSongs(folderId: String, source:Int?=null, block: suspend (List<SongInfo>, Boolean) -> Unit) {
-        var nextPage = 0
-        while (nextPage >= 0) {
-            val list = SongListRepo().fetchSongInfoByFolder(folderId, nextPage, 50, source).data
-                ?: emptyList()
-            if (list.isEmpty()) {
-                nextPage = -1
-                block(list, true)
+        var passback = ""
+        while (passback != "-1") {
+            val ret = SongListRepo().fetchSongInfoByFolder(folderId, passback, 50, source)
+            val list = ret.data ?: emptyList()
+            passback = if (ret.isSuccess() && ret.hasMore && ret.passBack != null) {
+                ret.passBack ?: "-1"
             } else {
-                nextPage++
-                block(list, false)
+                "-1"
             }
+
+            block(list, passback == "-1")
         }
     }
 

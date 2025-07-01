@@ -1,7 +1,9 @@
 package com.tencent.qqmusic.qplayer.ui.activity.home
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
@@ -19,6 +22,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.constraintlayout.compose.ConstraintLayout
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.openapisdk.business_common.event.event.TransactionPushData
+import com.tencent.qqmusic.openapisdk.model.vip.CheckNeedRenewalInfo
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -106,6 +110,41 @@ fun VIPSuccessDialog(
                 bottom.linkTo(parent.bottom)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
+            }) {
+                Text(text = "知道了")
+            }
+        }
+    }
+}
+
+@Composable
+fun RemindRenewalDialog(renewalInfo: CheckNeedRenewalInfo, setShowDialog: () -> Unit) {
+    val renewalType = when (renewalInfo.renewalNoticeType) {
+        1 -> {
+            "临期"
+        }
+        2 -> {
+            "过期"
+        }
+        else -> {
+            ""
+        }
+    }
+    val textToShow = "续费提醒类型：$renewalType \n" +
+            "绿钻需要续费：${renewalInfo.isGreenVipNeedNotice == 1} \n" +
+            "超会需要续费：${renewalInfo.isSuperVipNeedNotice == 1}"
+    Dialog(onDismissRequest = {
+        setShowDialog()
+    }) {
+        Column(
+            modifier = Modifier
+                .background(Color.White)
+                .padding(15.dp)
+        ) {
+            Text(text = "该续费VIP咯\n")
+            Text(text = textToShow)
+            TextButton(onClick = {
+                setShowDialog()
             }) {
                 Text(text = "知道了")
             }

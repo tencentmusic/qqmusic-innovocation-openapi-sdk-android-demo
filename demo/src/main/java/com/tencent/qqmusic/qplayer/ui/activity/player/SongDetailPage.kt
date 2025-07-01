@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,7 +39,8 @@ import com.tencent.qqmusic.openapisdk.model.FreeStrategy
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.GsonHelper
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.convertTime
-import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPageActivity
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.CommonProfileActivity
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.ui.activity.ui.theme.QPlayerTheme
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 
@@ -70,6 +72,8 @@ fun DetailPage(observer: PlayerObserver? = null) {
     val songInfo = observer?.currentSong
     val activity = LocalContext.current as Activity
     val strategy = observer?.freeStrategy
+    val isAIEffect = UiUtils.getCurSoundEffectIsAI()
+    val aiEffectEvent = observer?.largeModelEffectEvent
 
     QPlayerTheme {
         Column(
@@ -103,10 +107,8 @@ fun DetailPage(observer: PlayerObserver? = null) {
 
             Box(modifier = Modifier.clickable {
                 activity.startActivity(
-                    Intent(activity, SearchPageActivity::class.java)
-                        .putExtra(SearchPageActivity.searchType, SearchPageActivity.singerIntentTag)
-                        .putExtra(SearchPageActivity.singerIntentTag, songInfo?.singerId)
-
+                    Intent(activity, CommonProfileActivity::class.java)
+                        .putExtra(SongListActivity.KEY_SINGER_ID, songInfo?.singerId)
                 )
             }) {
                 Row(modifier = Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -187,7 +189,7 @@ fun DetailPage(observer: PlayerObserver? = null) {
             }
             Column(modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)) {
                 Text(text = "试听位置 ： ${convertTime(songInfo?.tryBegin?.toLong()?.div(1000) ?: 0L)}~${convertTime(songInfo?.tryEnd?.toLong()?.div(1000) ?: 0L)}")
-                Text(text = "高潮位置 ： ${convertTime(songInfo?.chorusBegin?.toLong()?.div(1000) ?: 0L)}~${convertTime(songInfo?.chorusEnd?.toLong()?.div(1000) ?: 0L)}")
+                Text(text = "副歌位置 ： ${convertTime(songInfo?.chorusBegin?.toLong()?.div(1000) ?: 0L)}~${convertTime(songInfo?.chorusEnd?.toLong()?.div(1000) ?: 0L)}")
             }
 
             Row(modifier = Modifier.padding(top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -211,6 +213,40 @@ fun DetailPage(observer: PlayerObserver? = null) {
             }
 
             Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+
+            Column {
+                Text(text = "歌曲标签 ")
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)) {
+                    Text(text = "心情 ： ")
+                    Text(text = songInfo?.extraInfo?.mood ?: "null")
+                }
+            }
+
+            Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+            Column {
+                Text(text = "内容安全限制: ${songInfo?.action?.sa}")
+                val sa = songInfo?.action?.sa ?: 0
+                if (sa > 0) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)) {
+                        Text(text = "AI作品 ： ")
+                        Text(text = if (songInfo?.isAISong() == true) "是" else "否")
+                    }
+                }
+            }
+
+            if (isAIEffect) {
+                Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+                Column {
+                    Text(text = "大模型音效 ")
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)) {
+                        Text(text = "类型 ： ${aiEffectEvent?.shortType}\n")
+                        Text(text = "描述 ： ${aiEffectEvent?.desc}")
+                    }
+                }
+            }
         }
     }
 

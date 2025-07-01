@@ -3,7 +3,6 @@ package com.tencent.qqmusic.qplayer.ui.activity.songlist
 import android.util.Log
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,10 +22,11 @@ class AlbumSongPagingSource(val albumId: String) : PagingSource<Int, SongInfo>()
         return try {
             withContext(Dispatchers.IO) {
                 val nextPage = params.key ?: 0
-                val songList = SongListRepo().fetchSongInfoByALbum(albumId, nextPage, 50).data
+                val resp = SongListRepo().fetchSongInfoByAlbum(albumId, nextPage, 50)
+                val songList = resp.data
                     ?: emptyList()
                 val prevKey = if (nextPage == 0) null else nextPage - 1
-                val nextKey = if (songList.isEmpty()) null else nextPage + 1
+                val nextKey = if (!resp.hasMore) null else nextPage + 1
                 Log.i(TAG,
                     "load: album id $albumId, next page $nextPage, prev key $prevKey, next key $nextKey")
                 LoadResult.Page(

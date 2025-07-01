@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.openapisdk.model.Album
+import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
+import com.tencent.qqmusic.qplayer.ui.activity.loadMoreItemUI
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 
 @Composable
@@ -33,7 +35,7 @@ fun BuyAlbumScreen(albums: List<Album>) {
 
 @OptIn(ExperimentalCoilApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun BuyAlbumPage(albums: List<Album>) {
+fun BuyAlbumPage(albums: List<Album>, loadMoreItem: LoadMoreItem? = null) {
     val activity = LocalContext.current as Activity
     val clipboardManager = LocalContext.current.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
@@ -78,5 +80,6 @@ fun BuyAlbumPage(albums: List<Album>) {
                 }
             }
         }
+        loadMoreItemUI(albums.size, loadMoreItem)
     }
 }

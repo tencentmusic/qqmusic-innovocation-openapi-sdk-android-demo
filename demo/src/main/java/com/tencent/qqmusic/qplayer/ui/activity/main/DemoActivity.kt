@@ -29,11 +29,12 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,7 +54,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.innovation.common.util.UtilContext
-import com.tencent.qqmusic.openapisdk.business_common.event.BaseBusinessEvent
 import com.tencent.qqmusic.openapisdk.business_common.event.BusinessEventHandler
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LoginEvent
 import com.tencent.qqmusic.openapisdk.business_common.event.event.TransactionEvent
@@ -71,21 +71,26 @@ import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.player.proxy.QQMusicServiceProxyHelper
 import com.tencent.qqmusic.qplayer.ui.activity.BaseComposeActivity
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
+import com.tencent.qqmusic.qplayer.ui.activity.home.RemindRenewalDialog
 import com.tencent.qqmusic.qplayer.ui.activity.home.VIPSuccessDialog
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import com.tencent.qqmusic.qplayer.utils.PrivacyManager
+import com.tencent.qqmusic.qzdownloader.utils.FileUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.io.File
 
 class DemoActivity : BaseComposeActivity() {
     private val TAG = "DemoActivity"
 
     private var showVipDialog = mutableStateOf(false)
+    private var showPayDialog = mutableStateOf(Pair<Boolean,TransactionPushData?>(false,null))
     private var showLoginDialog = mutableStateOf(false)
     private var isLoginEvent = false
+    private val dir by lazy(LazyThreadSafetyMode.NONE) { UtilContext.getApp().filesDir.toString() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,6 +98,10 @@ class DemoActivity : BaseComposeActivity() {
             initView()
         }
         bindWidget(PlayerSpectrumViewWidget(getViewModel(), STYLE_SPECTRUM_BAR, container = window.decorView as ViewGroup))
+
+        val fileName = "ai_image_ai_song_demo2.png"
+        val imagePath = File(dir, fileName).absolutePath
+        FileUtils.copyAssets(this, fileName, imagePath)
     }
 
     private fun initView() {
@@ -141,6 +150,14 @@ class DemoActivity : BaseComposeActivity() {
                         showLoginDialog.value = false
                     }, buttons = { /*TODO*/ })
             }
+
+            if (showPayDialog.value.first){
+                VIPSuccessDialog(
+                    data = showPayDialog.value.second,
+                    categoryViewModel = viewModel<MineViewModel>(),
+                    onDismiss = { showPayDialog.value = Pair(false,null) }
+                )
+            }
         }
     }
 
@@ -153,6 +170,10 @@ class DemoActivity : BaseComposeActivity() {
 
                 LoginEvent.MusicUserLogIn, LoginEvent.MusicUserLogOut -> {
                     showLoginDialog.value = true
+                }
+
+                TransactionEvent.TransactionEventCode -> {
+                    showPayDialog.value = Pair(true, it.data as? TransactionPushData)
                 }
             }
         }
@@ -167,7 +188,7 @@ class DemoActivity : BaseComposeActivity() {
             null
         }
         OpenApiSDK.getPlayerApi().setEnableCallStateListener(false)
-        OpenApiSDK.getPlayerApi().setSDKSpecialNeedInterface(object : ISDKSpecialNeedInterface {
+        OpenApiSDK.getPlayerApi().setSDKSpecialNeedInterface(object : ISDKSpecialNeedInterface() {
 
             val title: String = try {
                 UtilContext.getApp().applicationInfo.loadLabel(UtilContext.getApp().packageManager).toString() + " 正在播放"
@@ -222,6 +243,9 @@ class DemoActivity : BaseComposeActivity() {
                 autoPlayErrNum = sharedPreferences?.getInt("restore_play_list_err_num", 0) ?: 0
                 playWhenRequestFocusFailed = sharedPreferences?.getBoolean("playWhenRequestFocusFailed", true) ?: true
                 needFadeWhenPlayNewSong = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
+                mediaCodecQualityForDolby = 2424
+                acceptsDelayedFocusGain = sharedPreferences?.getBoolean("delayGetAudioFocus", false) ?: false
+                playHigherQualityCache = sharedPreferences?.getBoolean("playHigherQualityCache", true) ?: true
             }
 
             override fun getPlayerModuleFunctionConfigParam(): PlayerModuleFunctionConfigParam {
@@ -300,7 +324,7 @@ fun Navigation(navController: NavHostController, homeViewModel: HomeViewModel) {
             HomeScreen(homeViewModel)
         }
         composable(NavigationItem.Books.route) {
-            SearchScreen(homeViewModel)
+            SearchScreen()
         }
         composable(NavigationItem.Profile.route) {
             MineScreen(homeViewModel)
@@ -368,30 +392,21 @@ fun BottomNavigationBar(navController: NavController) {
 @Composable
 fun MainScreen(homeViewModel: HomeViewModel = viewModel(), mineViewModel: MineViewModel = viewModel()) {
     val navController = rememberNavController()
-    var showVipDialog = remember {
-        mutableStateOf(false)
-    }
-    var vipData: MutableState<TransactionPushData?> = remember {
-        mutableStateOf(null)
-    }
-
 
     val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
     DisposableEffect(Unit) {
-        val listener = object : BusinessEventHandler {
-            override fun handle(event: BaseBusinessEvent) {
+        val listener =
+            BusinessEventHandler { event ->
                 when (event.code) {
                     LoginEvent.UserAccountLoginExpired -> {
                         setShowDialog(true)
                     }
 
-                    TransactionEvent.TransactionEventCode -> {
-                        showVipDialog.value = true
-                        vipData.value = event.data as TransactionPushData
+                    LoginEvent.MusicUserLogIn -> {
+                        mineViewModel.refreshVipRenewalInfo()
                     }
                 }
             }
-        }
 
         OpenApiSDK.registerBusinessEventHandler(listener)
         onDispose {
@@ -399,14 +414,17 @@ fun MainScreen(homeViewModel: HomeViewModel = viewModel(), mineViewModel: MineVi
         }
     }
     loginExpiredDialog(showDialog = showDialog, setShowDialog = setShowDialog)
-    if (showVipDialog.value) {
-        VIPSuccessDialog(
-            vipData.value,
-            mineViewModel
-        ) {
-            showVipDialog.value = false
+
+    val showRenewalInfo = mineViewModel.remindRenewalInfo.collectAsState().value
+    var showRenewalDialog by remember { mutableStateOf(true) }
+    showRenewalInfo?.let {
+        if (showRenewalDialog && (it.isGreenVipNeedNotice != 0 || it.isSuperVipNeedNotice != 0)) {
+            RemindRenewalDialog(it) {
+                showRenewalDialog = false
+            }
         }
     }
+
     ConstraintLayout(
         modifier = Modifier.fillMaxSize()
     ) {
