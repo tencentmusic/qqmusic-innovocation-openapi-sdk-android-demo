@@ -31,11 +31,12 @@ import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.core.player.playlist.MusicPlayList
-import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderActivity
+import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderListActivity
 import com.tencent.qqmusic.qplayer.ui.activity.home.ai.AIFunctionPage
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVFunctionPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.isRadio
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.CommonProfileActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import kotlinx.coroutines.Dispatchers
@@ -63,7 +64,7 @@ fun HomePage(homeViewModel: HomeViewModel) {
 @Composable
 fun homePageTabs(homeViewModel: HomeViewModel) {
     val pages = mutableListOf(
-        "分类歌单", "首页推荐", "视频", "AI功能", "排行榜",
+        "分类歌单", "首页推荐", "视频", "AI功能", "音乐馆",
         "专区", "长音频",
     )
 
@@ -118,7 +119,7 @@ fun homePageTabs(homeViewModel: HomeViewModel) {
             }
 
             4 -> {
-                rankPage(homeViewModel)
+                MusicHallEntrancePage()
             }
 
             5 -> {
@@ -190,9 +191,9 @@ fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolea
                                     )
                                 } else {
                                     activity.startActivity(
-                                        Intent(activity, FolderActivity::class.java)
+                                        Intent(activity, FolderListActivity::class.java)
                                             .putIntegerArrayListExtra(
-                                                FolderActivity.KEY_CATEGORY_IDS,
+                                                FolderListActivity.KEY_CATEGORY_IDS,
                                                 arrayListOf(topCategory.id, subId)
                                             )
                                     )

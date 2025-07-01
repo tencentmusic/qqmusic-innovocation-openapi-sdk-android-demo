@@ -292,12 +292,6 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (currentPlayState == PlayerState.ACTIVE_PAUSED) {
-            mPlayer?.play()
-        }
-    }
 
     override fun onStart() {
         super.onStart()

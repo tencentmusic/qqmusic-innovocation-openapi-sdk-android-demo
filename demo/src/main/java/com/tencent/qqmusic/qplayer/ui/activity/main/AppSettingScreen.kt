@@ -79,7 +79,7 @@ fun SingleItem(title: String, item: String?, block: () -> Unit) {
             end.linkTo(image.start, 5.dp)
         })
 
-        Image(painter = painterResource(R.drawable.ic_right_arrow), contentDescription = "", modifier = Modifier.constrainAs(image) {
+        Image(painter = painterResource(com.tencent.qqmusic.qplayer.base.R.drawable.ic_right_arrow), contentDescription = "", modifier = Modifier.constrainAs(image) {
             top.linkTo(parent.top)
             bottom.linkTo(parent.bottom)
             end.linkTo(parent.end, 10.dp)

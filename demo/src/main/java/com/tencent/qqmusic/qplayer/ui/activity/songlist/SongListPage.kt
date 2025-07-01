@@ -7,10 +7,12 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,7 +21,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
@@ -34,10 +38,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -58,6 +60,8 @@ import com.tencent.qqmusic.openapisdk.model.PlayParam
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.core.player.playlist.MusicPlayList
+import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
+import com.tencent.qqmusic.qplayer.ui.activity.loadMoreItemUI
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity.Companion.MV_ID
@@ -163,8 +167,7 @@ fun SongListPage(
         playlistHeader(songs = songs.snapshot().items, playListType = playListType, playListTypeId = playListTypeId)
 
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-
-            this.items(songs) { song ->
+            items(songs) { song ->
                 song ?: return@items
                 itemUI(PlayListParams(songList, song, playListType, playListTypeId, displayOnly))
             }
@@ -362,7 +365,6 @@ fun itemUI(params: PlayListParams) {
     val activity = LocalContext.current as Activity
     val currentSong = PlayerObserver.currentSong
     val coroutineScope = rememberCoroutineScope()
-    val clipboardManager = LocalClipboardManager.current
 
     val collectState = remember {
         mutableStateOf(params.startSong?.hot == 1)
@@ -447,7 +449,7 @@ fun itemUI(params: PlayListParams) {
                 text = params.startSong?.singerName ?: "未知",
                 color = txtColor
             )
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically)  {
                 if (params.startSong?.vip == 1) {
                     Image(
                         painter = painterResource(R.drawable.pay_icon_in_cell_old),
@@ -496,6 +498,15 @@ fun itemUI(params: PlayListParams) {
                             .width(18.dp)
                             .height(10.dp)
                     )
+                }
+                val pd = android.graphics.Color.parseColor("#1FCF91")
+                if (params.startSong != null && params.startSong.isAISong()) {
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = "AI", fontSize = 8.sp, color = Color(pd), modifier = Modifier.padding(2.dp).wrapContentWidth().height(10.dp))
+                }
+                if (params.startSong?.extraInfo?.mood?.isNotEmpty() == true) {
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = params.startSong.extraInfo?.mood ?: "", fontSize = 8.sp, color = Color(pd), modifier = Modifier.padding(2.dp).wrapContentWidth().height(10.dp))
                 }
             }
         }
@@ -615,20 +626,12 @@ fun itemUI(params: PlayListParams) {
                 TextButton(modifier = Modifier.height(20.dp),
                     contentPadding = PaddingValues(0.dp),
                     onClick = {
-                        // 将文本放入剪贴板
-                        clipboardManager.setText(AnnotatedString(params.startSong?.songId.toString()))
-                        coroutineScope.launch(Dispatchers.Main) {
-                            Toast
-                                .makeText(
-                                    activity,
-                                    "songId:${params.startSong?.songId},复制成功",
-                                    Toast.LENGTH_SHORT
-                                )
-                                .show()
-                        }
+                        val intent = Intent(activity, SongProfileActivity::class.java)
+                        intent.putExtra(SongProfileActivity.KEY_SONG, params.startSong)
+                        activity.startActivity(intent)
                     }
                 ) {
-                    Text(text = "复制歌曲Id", fontSize = 10.sp)
+                    Text(text = "详情", fontSize = 10.sp)
                 }
             }
         }
@@ -636,29 +639,20 @@ fun itemUI(params: PlayListParams) {
 }
 
 @Composable
-fun SongListPage(songs: List<SongInfo>, displayOnly: Boolean = false, needPlayer: Boolean = true) {
-    val activity = LocalContext.current as Activity
-    val coroutineScope = rememberCoroutineScope()
-    ConstraintLayout(modifier = Modifier.fillMaxSize()) {
-        val (folder, player) = createRefs()
-        Box(modifier = Modifier.constrainAs(folder) {
-            height = Dimension.fillToConstraints
-            top.linkTo(parent.top)
-            bottom.linkTo(player.top)
-        }) {
+fun SongListPage(songs: List<SongInfo>, displayOnly: Boolean = false, needPlayer: Boolean = true, loadMoreItem: LoadMoreItem? = null) {
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Bottom) {
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
             val scrollState = rememberLazyListState()
             PerformanceHelper.MonitorListScroll(scrollState = scrollState, location = "SongListPage")
             LazyColumn(state = scrollState, modifier = Modifier.fillMaxSize()) {
-                this.items(songs.size) { index ->
-                    val song = songs.elementAtOrNull(index) ?: return@items
+                items(songs) { song ->
                     itemUI(PlayListParams(songs, song, displayOnly = displayOnly))
                 }
+                loadMoreItemUI(songs.size, loadMoreItem)
             }
         }
         if (needPlayer) {
-            Box(modifier = Modifier.constrainAs(player) {
-                bottom.linkTo(parent.bottom)
-            }) {
+            Box(modifier = Modifier) {
                 FloatingPlayerPage()
             }
         }

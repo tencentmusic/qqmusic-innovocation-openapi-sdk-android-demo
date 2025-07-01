@@ -48,7 +48,6 @@ import com.tencent.qqmusic.ai.entity.AICoverDataInfo
 import com.tencent.qqmusic.ai.entity.AICoverSongCreateType
 import com.tencent.qqmusic.ai.entity.AITagData
 import com.tencent.qqmusic.ai.function.base.IAIFunction
-import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.ui.activity.home.ai.AITimbreCreatePage
@@ -67,6 +66,7 @@ import java.util.Locale
 internal val AITimbreTAG = "timbreCreate"
 internal val AISearchTAG = "serach"
 internal val AIBuyTAG = "buy"
+internal val AIVoucherTAG = "voucher"
 
 internal val AIPersonalCreatePageTAG = "AIPersonalCreatePageTAG"
 private var songMid: String? = ""
@@ -98,6 +98,12 @@ fun AICoverSongPage() {
                 navController.popBackStack()
             }
         }
+
+        composable(AIVoucherTAG) {
+            AIVoucherPage {
+                navController.popBackStack()
+            }
+        }
     }
 
 }
@@ -126,11 +132,16 @@ private fun BasePage(navController: NavHostController) {
         Column(modifier = Modifier.fillMaxSize()) {
             AITimbrePage(navController = navController, onlyPersonal = true)
 
-            Box(modifier = Modifier.padding(10.dp)) {
+            Row (modifier = Modifier.padding(10.dp)) {
                 Button(onClick = {
                     navController.navigate(AISearchTAG)
                 }) {
                     Text(text = "搜索")
+                }
+                Button(modifier = Modifier.padding(10.dp, 0.dp), onClick = {
+                    navController.navigate(AIVoucherTAG)
+                }) {
+                    Text(text = "优惠券")
                 }
             }
             AIHotPage(navController = navController)
@@ -142,7 +153,7 @@ private fun BasePage(navController: NavHostController) {
 @Composable
 private fun AIHotPage(aiViewModel: AIViewModel = viewModel(), navController: NavHostController?) {
     LaunchedEffect(key1 = 1) {
-        aiViewModel.getAICoverTagList()
+        aiViewModel.getAITagList()
     }
 
     val currentTag = remember {
@@ -247,7 +258,7 @@ fun AISearchPage(aiViewModel: AIViewModel = viewModel(), navController: NavHostC
     val searchWord = remember {
         mutableStateOf("")
     }
-    val currentPage = remember { mutableStateOf("0") } // 用于记录当前页码
+    val currentPage = remember { mutableStateOf(0) } // 用于记录当前页码
     Column(modifier = Modifier.fillMaxSize()) {
         TextField(value = searchWord.value, onValueChange = {
             searchWord.value = it
@@ -259,9 +270,9 @@ fun AISearchPage(aiViewModel: AIViewModel = viewModel(), navController: NavHostC
         }, modifier = Modifier.fillMaxWidth())
 
         LaunchedEffect(searchWord.value) {
-            currentPage.value = "0"
+            currentPage.value = 0
             aiViewModel.passBackIndex.remove("getSearchSongList")
-            aiViewModel.getSearchResultByWord(searchWord.value, "0")
+            aiViewModel.getSearchResultByWord(searchWord.value, 0)
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -275,7 +286,7 @@ fun AISearchPage(aiViewModel: AIViewModel = viewModel(), navController: NavHostC
                 Box(modifier = Modifier
                     .padding(start = 20.dp, end = 20.dp)
                     .clickable {
-                        currentPage.value = aiViewModel.aiSearchNext ?: "0"
+                        currentPage.value = aiViewModel.aiSearchNext ?: 0
                         aiViewModel.getSearchResultByWord(searchWord.value, currentPage.value)
                     }) {
                     if (aiViewModel.passBackIndex["getSearchSongList"] == "-1") {

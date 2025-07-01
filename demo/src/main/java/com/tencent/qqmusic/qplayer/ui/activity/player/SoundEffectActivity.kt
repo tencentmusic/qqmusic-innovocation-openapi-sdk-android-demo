@@ -1,6 +1,7 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -32,6 +33,7 @@ import androidx.paging.*
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.player.PlayCallback
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.model.SoundEffectItem
 import com.tencent.qqmusic.openapisdk.model.VipType
@@ -52,6 +54,8 @@ import kotlin.math.roundToInt
  * Copyright (c) 2022 TME. All rights reserved.
  */
 class SoundEffectActivity : ComponentActivity() {
+
+    private val TAG = "SoundEffectActivity"
 
     private val vm: SoundEffectViewModel by viewModels()
 
@@ -91,7 +95,9 @@ class SoundEffectActivity : ComponentActivity() {
 
     @Composable
     fun adjust51Param() {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)) {
             Button(modifier = Modifier.padding(10.dp), onClick = {
                 vm.currentSelectSoundEffectItem.value?.let {
                     OpenApiSDK.getSoundEffectApi().resetSoundEffectParam(it)
@@ -272,7 +278,9 @@ class SoundEffectActivity : ComponentActivity() {
 
     @Composable
     fun adjustSuperBassParam() {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)) {
             Button(modifier = Modifier.padding(10.dp), onClick = {
                 vm.currentSelectSoundEffectItem.value?.let {
                     OpenApiSDK.getSoundEffectApi().resetSoundEffectParam(it)
@@ -350,7 +358,9 @@ class SoundEffectActivity : ComponentActivity() {
 
     @Composable
     fun adjust3DParam() {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)) {
             Button(modifier = Modifier.padding(10.dp), onClick = {
                 vm.currentSelectSoundEffectItem.value?.let {
                     OpenApiSDK.getSoundEffectApi().resetSoundEffectParam(it)
@@ -411,6 +421,7 @@ class SoundEffectActivity : ComponentActivity() {
                                 .setSoundEffectType(null)
                             UiUtils.showToast("取消音效->${effect.name}")
                             curId.value = -1
+                            UiUtils.setCurSoundEffectIsAI(false)
                             return@clickable
                         }
                         val ret = OpenApiSDK
@@ -431,26 +442,38 @@ class SoundEffectActivity : ComponentActivity() {
                         if (ret == 0) {
                             UiUtils.showToast("设置音效->${effect.name}")
                             curId.value = effect.sdkId
-                        }
-                        else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_WANOS) {
+                            UiUtils.setCurSoundEffectIsAI(effect.isLargeModeEffect())
+                        } else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_WANOS) {
                             UiUtils.showToast("为保证您的听歌体验，WANOS歌曲播放中不建议叠加其他音效等效果")
-                        }
-                        else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_DOLBY) {
+                        } else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_DOLBY) {
                             UiUtils.showToast("为保证您的听歌体验，杜比音质播放中不建议叠加其他音效等效果")
-                        }
-                        else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_EXCELLENT) {
+                        } else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_EXCELLENT) {
                             UiUtils.showToast("为保证您的听歌体验，臻品2.0播放中不建议叠加其他音效等效果")
-                        }
-                        else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_GALAXY) {
+                        } else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_GALAXY) {
                             UiUtils.showToast("为保证您的听歌体验，臻品全景声音质播放中不建议叠加其他音效等效果")
-                        }
-                        else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_MASTER_TAPE) {
+                        } else if (ret == PlayDefine.PlayError.PLAY_ERR_UNSUPPORT_MASTER_TAPE) {
                             UiUtils.showToast("为保证您的听歌体验，臻品母带音质播放中不建议叠加其他音效等效果")
-                        }
-                        else if (ret == PlayDefine.PlayError.PLAY_ERR_NEED_VIP){
+                        } else if (ret == PlayDefine.PlayError.PLAY_ERR_NEED_VIP) {
                             UiUtils.showToast("需要vip")
                         } else if (ret == PlayDefine.PlayError.PLAY_ERR_NEED_SUPER_VIP) {
                             UiUtils.showToast("需要超级会员")
+                            if (OpenApiSDK
+                                    .getSoundEffectApi()
+                                    .canTrySoundEffect(effect)
+                            ) {
+                                OpenApiSDK
+                                    .getSoundEffectApi()
+                                    .tryOpenSoundEffect(effect, object :
+                                        PlayCallback {
+                                        override fun onSuccess() {
+                                            Log.i(TAG, "try suc ")
+                                        }
+
+                                        override fun onFailure(errCode: Int, msg: String?) {
+                                            Log.i(TAG, "try failed. msg:$msg")
+                                        }
+                                    })
+                            }
                         } else {
                             UiUtils.showToast("ret:$ret")
                         }
@@ -462,34 +485,16 @@ class SoundEffectActivity : ComponentActivity() {
                                 text = " 定制音效",
                                 modifier = Modifier.padding(5.dp, 0.dp)
                             )
-                            if (effect.vipFlag == 2) {
-                                Text(
-                                    text = " 超级会员",
-                                    modifier = Modifier.padding(5.dp, 0.dp),
-                                    color = Color.Yellow,
-                                )
-                            } else if (effect.vipFlag == 1) {
-                                Text(
-                                    text = " 豪华绿钻",
-                                    modifier = Modifier.padding(5.dp, 0.dp),
-                                    color = Color.Green,
-                                )
-                            }
-                        } else if (effect.vipFlag == 1) {
-                            val vipType = OpenApiSDK.getPlayerApi().getSoundEffectVipType()
-                            val soundEffectVipText = when (vipType) {
-                                VipType.SUPER_VIP -> {
-                                    " 超级会员"
-                                }
-                                VipType.GREEN_VIP -> {
-                                    " 豪华绿钻"
-                                }
-                                else -> {
-                                    ""
-                                }
-                            }
+                        }
+                        if (effect.getVipType() == VipType.SUPER_VIP) {
                             Text(
-                                text = soundEffectVipText,
+                                text = " 超级会员",
+                                modifier = Modifier.padding(5.dp, 0.dp),
+                                color = Color.Yellow,
+                            )
+                        } else if (effect.getVipType() == VipType.GREEN_VIP) {
+                            Text(
+                                text = " 豪华绿钻",
                                 modifier = Modifier.padding(5.dp, 0.dp),
                                 color = Color.Green,
                             )

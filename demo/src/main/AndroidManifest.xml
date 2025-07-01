@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
         android:name=".App"
@@ -22,7 +24,7 @@
             android:name=".ui.activity.mv.MVPlayerActivity"
             android:exported="false" />
         <activity
-            android:name=".ui.activity.folder.FolderActivity"
+            android:name=".ui.activity.folder.FolderListActivity"
             android:exported="true"
             android:label="@string/title_activity_folder"
             android:theme="@style/Theme.QPlayerSDKAndroid.NoActionBar" />
@@ -88,6 +90,9 @@
         <activity android:name=".ui.activity.aiaccompany.AiListenTogetherActivity" />
         <activity android:name=".ui.activity.musictherapy.MusicTherapyActivity" />
         <activity android:name=".ui.activity.TrafficActivity"/>
+        <activity android:name=".ui.activity.songlist.SongProfileActivity" />
+        <activity android:name=".ui.activity.songlist.CommonProfileActivity" />
+        <activity android:name=".ui.activity.musichall.MusicHallActivity" />
     </application>
 
 </manifest>

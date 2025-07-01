@@ -27,6 +27,9 @@ import kotlinx.coroutines.launch
 
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
+import com.tencent.qqmusic.qplayer.ui.activity.home.area.AreaViewModel
+import com.tencent.qqmusic.qplayer.ui.activity.loadMoreItemUI
 import kotlinx.coroutines.CoroutineScope
 
 //
@@ -37,22 +40,25 @@ import kotlinx.coroutines.CoroutineScope
 private const val TAG = "HomePage"
 
 @Composable
-fun NewAlbumPage(homeViewModel: HomeViewModel) {
+fun NewAlbumPage(areaViewModel: AreaViewModel) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        albumPageTabs(homeViewModel = homeViewModel,)
+        albumPageTabs(areaViewModel = areaViewModel)
     }
 }
 
 @SuppressLint("CoroutineCreationDuringComposition")
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun albumPageTabs(homeViewModel: HomeViewModel) {
+fun albumPageTabs(areaViewModel: AreaViewModel) {
+    LaunchedEffect(Unit) {
+        areaViewModel.fetchNewAlbumAreaList()
+    }
 
-    val pages = homeViewModel.areaId.map { it.name }
+    val pages = areaViewModel.areaId.map { it.name }
     // 添加地区信息到列表中
 
     val pagerState = rememberPagerState()
@@ -89,59 +95,48 @@ fun albumPageTabs(homeViewModel: HomeViewModel) {
         Log.i(TAG, "NewAlbumPage: current index $index")
         when (index) {
             0 -> {
-
                 LaunchedEffect(Unit ){
-                    homeViewModel.fetchNewAlbum(1, null)
+                    areaViewModel.fetchNewAlbum(1, null)
                 }
-                MyUI(homeViewModel)
-                SelectTypeView(homeViewModel = homeViewModel, 1 )
+                MyUI(areaViewModel, 1)
+                SelectTypeView(areaViewModel = areaViewModel, 1 )
 
             }
             1 -> {
                 LaunchedEffect(Unit) {
-
-                        homeViewModel.fetchNewAlbum(2, type = null)
-
+                    areaViewModel.fetchNewAlbum(2, type = null)
                 }
-                MyUI(homeViewModel)
-                SelectTypeView(homeViewModel = homeViewModel, 2 )
+                MyUI(areaViewModel, 2)
+                SelectTypeView(areaViewModel = areaViewModel, 2 )
             }
             2 -> {
                 LaunchedEffect(Unit) {
-
-                        homeViewModel.fetchNewAlbum(3, type = null)
-
+                    areaViewModel.fetchNewAlbum(3, type = null)
                 }
-                MyUI(homeViewModel)
-                SelectTypeView(homeViewModel = homeViewModel, 3 )
+                MyUI(areaViewModel, 3)
+                SelectTypeView(areaViewModel = areaViewModel, 3 )
 
             }
             3 -> {
                 LaunchedEffect(Unit) {
-
-                        homeViewModel.fetchNewAlbum(4, type = null)
-
+                    areaViewModel.fetchNewAlbum(4, type = null)
                 }
-                MyUI(homeViewModel)
-                SelectTypeView(homeViewModel = homeViewModel, 4 )
+                MyUI(areaViewModel, 4)
+                SelectTypeView(areaViewModel = areaViewModel, 4 )
             }
             4 -> {
                 LaunchedEffect(Unit) {
-
-                        homeViewModel.fetchNewAlbum(5, type = null)
-
+                    areaViewModel.fetchNewAlbum(5, type = null)
                 }
-                MyUI(homeViewModel)
-                SelectTypeView(homeViewModel = homeViewModel, 5 )
+                MyUI(areaViewModel, 5)
+                SelectTypeView(areaViewModel = areaViewModel, 5 )
             }
             5 -> {
                 LaunchedEffect(Unit) {
-
-                        homeViewModel.fetchNewAlbum(6, type = null)
-
+                    areaViewModel.fetchNewAlbum(6, type = null)
                 }
-                MyUI(homeViewModel)
-                SelectTypeView(homeViewModel = homeViewModel, 6 )
+                MyUI(areaViewModel, 6)
+                SelectTypeView(areaViewModel = areaViewModel, 6 )
             }
         }
     }
@@ -149,9 +144,12 @@ fun albumPageTabs(homeViewModel: HomeViewModel) {
 
 
 @Composable
-fun MyUI(homeViewModel: HomeViewModel){
+fun MyUI(areaViewModel: AreaViewModel, area: Int){
     val activity = LocalContext.current as Activity
-    val albums = homeViewModel.newAlbums
+    val albums = areaViewModel.albumList(area)
+    val loadMoreItem = LoadMoreItem(areaViewModel.hasMore(area), onLoadMore = {
+        areaViewModel.fetchMoreNewAlbum(area)
+    })
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(albums.size) { index ->
             val album = albums.getOrNull(index) ?: return@items
@@ -180,16 +178,13 @@ fun MyUI(homeViewModel: HomeViewModel){
                 }
             }
         }
+        loadMoreItemUI(albums.size, loadMoreItem)
     }
-
-
 }
 
 
-
-
 @Composable
-fun SelectTypeView(homeViewModel: HomeViewModel,areaId:Int) {
+fun SelectTypeView(areaViewModel: AreaViewModel,areaId:Int) {
     val typeList = mutableListOf(
         "全部",
         "单曲",
@@ -225,37 +220,37 @@ fun SelectTypeView(homeViewModel: HomeViewModel,areaId:Int) {
                             val myScope = CoroutineScope(Dispatchers.Main)
                             when(it){
                                 "全部" ->{
-                                    homeViewModel.fetchNewAlbum(areaId, type = null)
+                                    areaViewModel.fetchNewAlbum(areaId, type = null)
                                     myScope.launch {
-                                        homeViewModel.fetchNewAlbum(areaId, type = null)
+                                        areaViewModel.fetchNewAlbum(areaId, type = null)
                                     }
                                 }
                                 "单曲" ->{
                                     // 根据单曲类型进行筛选逻
-                                    homeViewModel.fetchNewAlbum(areaId, type = 10)
+                                    areaViewModel.fetchNewAlbum(areaId, type = 10)
                                     myScope.launch {
-                                        homeViewModel.fetchNewAlbum(areaId, type = 10)
+                                        areaViewModel.fetchNewAlbum(areaId, type = 10)
                                     }
                                 }
                                 "EP" ->{
                                     // 根据EP类型进行筛选逻辑
-                                    homeViewModel.fetchNewAlbum(areaId,11)
+                                    areaViewModel.fetchNewAlbum(areaId,11)
                                     myScope.launch {
-                                        homeViewModel.fetchNewAlbum(areaId, type = 11)
+                                        areaViewModel.fetchNewAlbum(areaId, type = 11)
                                     }
                                 }
                                 "录音室专辑" ->{
                                     // 根据录音室专辑类型进行筛选逻辑
-                                    homeViewModel.fetchNewAlbum(areaId,0)
+                                    areaViewModel.fetchNewAlbum(areaId,0)
                                     myScope.launch {
-                                        homeViewModel.fetchNewAlbum(areaId, type = 0)
+                                        areaViewModel.fetchNewAlbum(areaId, type = 0)
                                     }
                                 }
                                 "现场专辑" ->{
                                     // 根据现场专辑类型进行筛选逻辑
-                                    homeViewModel.fetchNewAlbum(areaId,1)
+                                    areaViewModel.fetchNewAlbum(areaId,1)
                                     myScope.launch {
-                                        homeViewModel.fetchNewAlbum(areaId, type = 1)
+                                        areaViewModel.fetchNewAlbum(areaId, type = 1)
                                     }
 
                                 }

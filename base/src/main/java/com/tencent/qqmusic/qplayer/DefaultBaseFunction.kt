@@ -7,13 +7,16 @@ class DefaultBaseFunction : IBaseFunction {
         return Account("11", "11")
     }
 
-    override fun getAppCheckMode(): Boolean {
-        return false
+    override fun getAppCheckMode(): Int {
+        return AppCheckMode.STRICT
     }
 
-    override fun setAppCheckMode(strick: Boolean) {
-
+    override fun setAppCheckMode(appCheckMode: Int) {
     }
+
+    override fun setAppIdAndAppKey(appId: String, appKey: String) {
+    }
+
 
     override fun getWxAPPID(): String {
         return ""

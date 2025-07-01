@@ -17,6 +17,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomePage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
+import com.tencent.qqmusic.qplayer.ui.activity.home.SearchViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.login.MinePage
 import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPage
 
@@ -64,8 +65,8 @@ fun RadioScreen() {
 }
 
 @Composable
-fun SearchScreen(homeViewModel: HomeViewModel = viewModel()) {
-    SearchPage(homeViewModel)
+fun SearchScreen(searchViewModel: SearchViewModel = viewModel()) {
+    SearchPage(searchViewModel)
 }
 
 @Composable

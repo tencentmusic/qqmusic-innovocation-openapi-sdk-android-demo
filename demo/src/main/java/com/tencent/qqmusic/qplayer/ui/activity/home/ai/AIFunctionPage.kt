@@ -1,9 +1,10 @@
 package com.tencent.qqmusic.qplayer.ui.activity.home.ai
 
+//import androidx.compose.foundation.lazy.GridCells
+//import androidx.compose.foundation.lazy.LazyVerticalGrid
 import android.util.Log
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -13,9 +14,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.GridCells
-import androidx.compose.foundation.lazy.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -40,6 +41,7 @@ val functionIndex = mutableStateOf(-1)
 private val functionTypes = mutableListOf(
     "AI歌曲专区",
     "灵感做歌",
+    "图片做歌",
     "帮你唱",
     "作曲",
     "AI个人资产",
@@ -47,12 +49,12 @@ private val functionTypes = mutableListOf(
 )
 private const val TAG = "AIFunctionPage"
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AIFunctionPage() {
 
     remember {
         functionIndex.value = -1
+        true
     }
 
     val callback = object : OnBackPressedCallback(true) {
@@ -86,23 +88,29 @@ fun AIFunctionPage() {
         }
 
         2 -> {
+            AIImageSongPage {
+                backAIFunctionHome()
+            }
+        }
+
+        3 -> {
             AICoverSongPage()
         }
 
 
-        3 -> {
+        4 -> {
             AIComposePage {
                 backAIFunctionHome()
             }
         }
 
-        4 -> {
+        5 -> {
             AISongRecordPage {
                 backAIFunctionHome()
             }
         }
 
-        5 ->{
+        6 ->{
             AICoverSongPersonalDataPage{
                 backAIFunctionHome()
             }
@@ -135,7 +143,7 @@ fun AIFunctionPage() {
                 }
                 LazyVerticalGrid(
                     modifier = Modifier.fillMaxSize(),
-                    cells = GridCells.Fixed(2),
+                    columns = GridCells.Fixed(2),
                 ) {
                     items(functionTypes) {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier

@@ -3,13 +3,13 @@ package com.tencent.qqmusic.qplayer.ui.activity.home.ai
 
 import android.graphics.Bitmap
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,11 +27,17 @@ import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
 import androidx.compose.material.Card
 import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.Slider
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
+import androidx.compose.material.TextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -51,29 +57,25 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberImagePainter
 import com.google.gson.Gson
 import com.tencent.qqmusic.ai.entity.AICreateTaskInfo
 import com.tencent.qqmusic.ai.entity.AIPayInfo
 import com.tencent.qqmusic.ai.entity.QueryEditWorkStatusResp
+import com.tencent.qqmusic.ai.function.base.AISceneType
 import com.tencent.qqmusic.ai.function.base.IAICommon.OnPlayListener
 import com.tencent.qqmusic.ai.function.base.IAIFunction
-import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine.PlayState
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
-import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
-import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.tryPauseFirst
-import com.tencent.qqmusic.qplayer.ui.activity.ui.QQMusicSlider
-import com.tencent.qqmusic.qplayer.ui.activity.ui.Segment
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.concurrent.thread
 import kotlin.math.ceil
 
 @Composable
@@ -136,11 +138,16 @@ fun AISongRecordPage(backPrePage: () -> Unit) {
         }
     }
 
-    if (isEditClick && scene == 1) {
+    var expanded by remember { mutableStateOf(false) }
+    var selectedIndex by remember { mutableStateOf(0) }
+    val options = listOf("全部(灵感+图片)", "已发布", "AI作曲")
+
+    // 图片做歌和灵感做歌都可编辑、发布
+    if (isEditClick && AISceneType.isCanEditor(scene)) {
         editTask?.taskId?.let {
-            EditAiCreateSongWorkPage(it)
+            EditAiCreateSongWorkPage(it, scene)
         }
-    } else if (showPublishDialog && scene == 1) {
+    } else if (showPublishDialog && AISceneType.isCanPublish(scene)) {
         editTask?.let {
             PublishDialog(it) {
                 showPublishDialog = false
@@ -155,31 +162,70 @@ fun AISongRecordPage(backPrePage: () -> Unit) {
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(35.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Button(onClick = {
-                    scene = 1
-                    status = 0
-                    loadFirstFun.invoke()
-                }) {
-                    Text("AI灵感做歌")
+                // 文本框+下拉箭头
+                Box(modifier = Modifier.weight(2f)) {
+                    TextField(
+                        value = options[selectedIndex],
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                modifier = Modifier.clickable { expanded = true }
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    // 下拉菜单
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        options.forEachIndexed { index, option ->
+                            DropdownMenuItem(
+                                onClick = {
+                                    selectedIndex = index
+                                    expanded = false
+                                }
+                            ) {
+                                Text(option)
+                            }
+                        }
+                    }
                 }
-                Button(onClick = {
-                    scene = 2
-                    status = 0
-                    loadFirstFun.invoke()
-                }) {
-                    Text("AI作曲")
-                }
-                Button(onClick = {
-                    scene = 1
-                    status = 1
-                    loadPublishFirstFun.invoke()
-                }) {
-                    Text("已发布")
+                Spacer(Modifier.padding(2.dp))
+                // 查询按钮（保持原有功能）
+                Button(
+                    onClick = {
+                        when (selectedIndex) {
+                            0 -> {
+                                // 灵感做歌+图片做歌
+                                scene = AISceneType.AI_SCENE_TYPE_CREATE_SONG
+                                status = 0
+                                loadFirstFun.invoke()
+                            }
+                            1 -> {
+                                // 已发布-灵感做歌
+                                scene = AISceneType.AI_SCENE_TYPE_CREATE_SONG
+                                status = 1
+                                loadPublishFirstFun.invoke()
+                            }
+                            2 -> {
+                                // AI作曲
+                                scene = AISceneType.AI_SCENE_TYPE_COMPOSE
+                                status = 0
+                                loadFirstFun.invoke()
+                            }
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("查询")
                 }
             }
 
@@ -224,6 +270,7 @@ fun AISongRecordPage(backPrePage: () -> Unit) {
 
                 item {
                     if (isLoading) {
+                        records.clear()
                         CircularProgressIndicator(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -385,6 +432,7 @@ fun AICreateTaskInfoItem(record: AICreateTaskInfo, scene: String, onItemIconClic
     val aiFunction = OpenApiSDK.getAIFunctionApi(IAIFunction::class.java)
     var rememberPlayTime by remember { mutableStateOf(0F) }
     var rememberDuration by remember { mutableStateOf(0) }
+    val aiViewModel: AIViewModel = viewModel()
 
     Card(
         modifier = Modifier
@@ -482,15 +530,9 @@ fun AICreateTaskInfoItem(record: AICreateTaskInfo, scene: String, onItemIconClic
                             PlayState.MEDIAPLAYER_STATE_ERROR,
                             PlayState.MEDIAPLAYER_STATE_STOPPED,
                             PlayState.MEDIAPLAYER_STATE_PLAYBACKCOMPLETED,
+                            PlayState.MEDIAPLAYER_STATE_END,
                             PlayState.MEDIAPLAYER_STATE_IDLE -> {
-                                aiFunction?.playAIMusic(record, object : OnPlayListener {
-
-                                    override fun onDownload(taskId: Int) {
-                                            downloadTaskId = taskId
-                                            UiUtils.showToast("开始下载")
-                                            playStateRes = R.drawable.list_icon_playing
-                                        }
-
+                                aiViewModel.playTask(record, object : OnPlayListener {
                                         override fun onDownloadErr() {
                                             UiUtils.showToast("下载失败")
                                             playStateRes = R.drawable.ic_state_paused
@@ -501,7 +543,7 @@ fun AICreateTaskInfoItem(record: AICreateTaskInfo, scene: String, onItemIconClic
                                             if (state == PlayState.MEDIAPLAYER_STATE_STARTED) {
                                                 playStateRes = R.drawable.ic_state_playing
                                                 return
-                                            } else if (state == PlayState.MEDIAPLAYER_STATE_PLAYBACKCOMPLETED || state == PlayState.MEDIAPLAYER_STATE_STOPPED || state == PlayState.MEDIAPLAYER_STATE_PAUSED) {
+                                            } else if (state == PlayState.MEDIAPLAYER_STATE_PLAYBACKCOMPLETED || state == PlayState.MEDIAPLAYER_STATE_STOPPED || state == PlayState.MEDIAPLAYER_STATE_PAUSED || state == PlayState.MEDIAPLAYER_STATE_END) {
                                                 playStateRes = R.drawable.ic_state_paused
                                                 return
                                             } else if (state != PlayState.MEDIAPLAYER_STATE_ERROR) {
@@ -526,13 +568,13 @@ fun AICreateTaskInfoItem(record: AICreateTaskInfo, scene: String, onItemIconClic
                                     })
                             }
                             PlayState.MEDIAPLAYER_STATE_STARTED -> {
-                                aiFunction?.pauseAIMusic()
+                                aiViewModel.pause()
                             }
                             PlayState.MEDIAPLAYER_STATE_PAUSED -> {
-                                aiFunction?.resumeAIMusic()
+                                aiViewModel.resume()
                             }
                             else -> {
-                                aiFunction?.stopAIMusic(downloadTaskId)
+                                aiViewModel.stopPlayCoverLink()
                                 playStateRes = R.drawable.ic_state_paused
                             }
                         }
@@ -593,7 +635,7 @@ fun AICreateTaskInfoItem(record: AICreateTaskInfo, scene: String, onItemIconClic
                         rememberPlayTime = newValue
                     },
                     onValueChangeFinished = {
-                        aiFunction?.seek(rememberPlayTime.toInt())
+                        aiViewModel.seek(rememberPlayTime.toInt())
                     },
                     modifier = Modifier
                         .weight(1f, true)
@@ -619,12 +661,12 @@ fun AICreateTaskInfoItem(record: AICreateTaskInfo, scene: String, onItemIconClic
 }
 
 @Composable
-fun QrCodeDialog(img: Bitmap?, onDismiss: () -> Unit) {
+fun QrCodeDialog(img: Bitmap?, onDismiss: () -> Unit, url: String? = null) {
     img ?: return
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = "下载二维码")
+            Text(text = if (url.isNullOrEmpty()) "二维码" else "url=$url")
         },
         text = {
             Image(
@@ -655,4 +697,12 @@ fun TextDialog(text: String, onDismiss: () -> Unit) {
             }
         }
     )
+}
+
+fun AISceneType.isCanEditor(scene: Int):Boolean{
+    return scene in listOf(AI_SCENE_TYPE_CREATE_SONG, AI_SCENE_TYPE_IMAGE_SONG)
+}
+
+fun AISceneType.isCanPublish(scene: Int):Boolean{
+    return isCanEditor(scene)
 }

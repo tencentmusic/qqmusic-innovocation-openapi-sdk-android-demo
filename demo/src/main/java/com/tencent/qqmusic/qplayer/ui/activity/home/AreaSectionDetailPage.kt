@@ -1,11 +1,9 @@
 package com.tencent.qqmusic.qplayer.ui.activity.main
 
 import android.app.Activity
-import android.app.Dialog
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,9 +21,8 @@ import coil.compose.rememberImagePainter
 import com.google.accompanist.flowlayout.FlowRow
 import com.tencent.qqmusic.openapisdk.model.*
 import com.tencent.qqmusic.qplayer.R
-import com.tencent.qqmusic.qplayer.openapi.internal.AreaTag
 import com.tencent.qqmusic.qplayer.ui.activity.area.AreaListActivity
-import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderActivity
+import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderListActivity
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
@@ -204,8 +201,8 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                                         activity.startActivity(
                                             Intent(
                                                 activity,
-                                                FolderActivity::class.java
-                                            ).putExtra(FolderActivity.KEY_FOLDER_ID, folderId)
+                                                FolderListActivity::class.java
+                                            ).putExtra(FolderListActivity.KEY_FOLDER_ID, folderId)
                                         )
                                     },
                                 contentAlignment = Alignment.Center

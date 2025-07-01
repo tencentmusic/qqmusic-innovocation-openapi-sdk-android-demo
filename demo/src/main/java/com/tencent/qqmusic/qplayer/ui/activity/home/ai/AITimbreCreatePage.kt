@@ -46,6 +46,7 @@ import com.tencent.qqmusic.ai.function.base.IAudioRecord
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine.PlayState
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.core.voiceplay.AICoverLinkPlayer
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusic.qzdownloader.downloader.DownloadResult
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -271,6 +272,9 @@ fun RequestAudioPermissionScreen(aiViewModel: AIViewModel) {
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         hasAudioPermission.value = isGranted
+        if (!isGranted) {
+            UiUtils.showToast("录音权限未授予,请前往系统设置-权限管理页面进行授权")
+        }
     }
 
     val recordState = remember {

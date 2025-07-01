@@ -33,12 +33,16 @@ import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.openapisdk.model.Singer
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
+import com.tencent.qqmusic.qplayer.ui.activity.loadMoreItemUI
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.CommonProfileActivity
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import kotlinx.coroutines.flow.Flow
 
 val plachImageID: Int = R.drawable.musicopensdk_icon_light
 
 @Composable
-fun singerPage(list: List<Singer>) {
+fun singerPage(list: List<Singer>, loadMoreItem: LoadMoreItem? = null) {
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
         val (folder) = createRefs()
         Box(modifier = Modifier.constrainAs(folder) {
@@ -56,15 +60,15 @@ fun singerPage(list: List<Singer>) {
                         .fillMaxWidth()
                         .clickable {
                             activity.startActivity(
-                                Intent(activity, SearchPageActivity::class.java)
-                                    .putExtra(SearchPageActivity.searchType, SearchPageActivity.singerIntentTag)
-                                    .putExtra(SearchPageActivity.singerIntentTag, singer.id)
+                                Intent(activity, CommonProfileActivity::class.java)
+                                    .putExtra(SongListActivity.KEY_SINGER_ID, singer.id)
                             )
                         }) {
                         singerItem(data = singer)
                     }
 
                 }
+                loadMoreItemUI(list.size, loadMoreItem = loadMoreItem)
             }
         }
 
@@ -90,9 +94,8 @@ fun singerPage(flow: Flow<PagingData<Singer>>) {
                         .fillMaxWidth()
                         .clickable {
                             activity.startActivity(
-                                Intent(activity, SearchPageActivity::class.java)
-                                    .putExtra(SearchPageActivity.searchType, SearchPageActivity.singerIntentTag)
-                                    .putExtra(SearchPageActivity.singerIntentTag, singer.id)
+                                Intent(activity, CommonProfileActivity::class.java)
+                                    .putExtra(SongListActivity.KEY_SINGER_ID, singer.id)
                             )
                         }) {
                         singerItem(data = singer)

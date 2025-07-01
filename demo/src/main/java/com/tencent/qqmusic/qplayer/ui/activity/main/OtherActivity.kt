@@ -259,6 +259,17 @@ fun OtherScreen() {
             playWhenRequestFocusFailed.value = next_value.not()
         }
 
+        val playHigherQualityCache: MutableState<Boolean> = remember {
+            mutableStateOf(sharedPreferences?.getBoolean("playHigherQualityCache", true) ?: true)
+        }
+
+        SingleItem(title = "优先播放高音质完整缓存", item = if (playHigherQualityCache.value) "开启" else "关闭") {
+            val next_value = sharedPreferences?.getBoolean("playHigherQualityCache", true) ?: true
+            sharedPreferences?.edit()?.putBoolean("playHigherQualityCache", next_value.not())?.apply()
+            Toast.makeText(activity, "请重启应用", Toast.LENGTH_SHORT).show()
+            playHigherQualityCache.value = next_value.not()
+        }
+
         val needFadeWhenPlay: MutableState<Boolean> = remember {
             mutableStateOf(sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false)
         }
@@ -319,6 +330,15 @@ fun OtherScreen() {
             useMediaPlayer.value = nextValue
             Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
         }
+        val delayGetAudioFocus: MutableState<Boolean> = remember {
+            mutableStateOf(sharedPreferences?.getBoolean("delayGetAudioFocus", false) ?: false)
+        }
+        SingleItem(title = "是否延迟获取焦点", item = if (delayGetAudioFocus.value) "开启" else "关闭") {
+            val nextValue = delayGetAudioFocus.value.not()
+            sharedPreferences?.edit()?.putBoolean("delayGetAudioFocus", nextValue)?.apply()
+            delayGetAudioFocus.value = nextValue
+            Toast.makeText(activity, "设置成功，立刻生效，效果需查看日志", Toast.LENGTH_SHORT).show()
+        }
 
         val useCustomNetworkCheck: MutableState<Boolean> = remember {
             mutableStateOf(sharedPreferences?.getBoolean("useCustomNetworkCheck", false) ?: false)
@@ -340,6 +360,16 @@ fun OtherScreen() {
                 SettingsUtil.isNetworkAvailable = nextValue
                 Toast.makeText(activity, "设置成功，立即生效", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        val enableWns: MutableState<Boolean> = remember {
+            mutableStateOf(sharedPreferences?.getBoolean("enableWns", true) ?: true)
+        }
+        SingleItem(title = "是否启用WNS", item = if(enableWns.value) "打开" else "关闭") {
+            val nextValue = enableWns.value.not()
+            sharedPreferences?.edit()?.putBoolean("enableWns", nextValue)?.apply()
+            enableWns.value = nextValue
+            Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
         }
 
         Button(onClick = {

@@ -271,6 +271,7 @@ class PlayListActivity : ComponentActivity() {
                     if (editFlag.value.not() && isFirst) {
                         constraintsScope.launch {
                             val index = songList.indexOfFirst { it.second.songId == observer.currentSong?.songId }
+                            if (index < 0) return@launch
                             listState.animateScrollToItem(minOf(index, maxOf(0, index - 5)))
                             isFirst = false
                         }

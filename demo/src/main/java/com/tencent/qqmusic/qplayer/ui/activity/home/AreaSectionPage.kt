@@ -6,8 +6,11 @@ import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.GridCells
-import androidx.compose.foundation.lazy.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+//import androidx.compose.foundation.lazy.GridCells
+//import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -15,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tencent.qqmusic.openapisdk.model.AreaId
+import com.tencent.qqmusic.qplayer.ui.activity.home.area.AreaViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.main.AreaSectionDetailPage
 
 private const val TAG = "AreaSectionPage"
@@ -41,7 +45,8 @@ fun areaScreen(homeViewModel: HomeViewModel) {
         "臻品母带专区",
         "场景歌单",
         "新碟",
-        "小宇宙"
+        "小宇宙",
+        "DTS专区"
     )
 
     val callback = object : OnBackPressedCallback(true) {
@@ -63,7 +68,7 @@ fun areaScreen(homeViewModel: HomeViewModel) {
         -1 -> {
             LazyVerticalGrid(
                 modifier = Modifier.fillMaxSize(),
-                cells = GridCells.Fixed(2),
+                columns = GridCells.Fixed(2),
             ) {
                 items(pages) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier
@@ -100,10 +105,13 @@ fun areaScreen(homeViewModel: HomeViewModel) {
             categoryFoldersPage(homeViewModel = homeViewModel, true)
         }
         7 -> {
-            NewAlbumPage(homeViewModel)
+            NewAlbumPage(areaViewModel = AreaViewModel())
         }
         8 -> {
             AreaSectionDetailPage(AreaId.XiaoYuZhou, homeViewModel)
+        }
+        9 -> {
+            AreaSectionDetailPage(AreaId.DTS, homeViewModel)
         }
     }
 

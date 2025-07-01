@@ -205,7 +205,7 @@ class PlayerTestActivity : ComponentActivity() {
                             return@fetchSongInfoBatch
                         }
                         val ret = try {
-                            OpenApiSDK.getPlayerApi().appendSongToPlaylist(it.data!!, it.data!!.indices.random())
+                            OpenApiSDK.getPlayerApi().appendSongToPlaylist(it.data!!, -1)
                         } catch (e: Exception) {
                             0
                         }
@@ -360,7 +360,7 @@ class PlayerTestActivity : ComponentActivity() {
     private fun refresh() {
         val textQuality = findViewById<TextView>(R.id.text_prefre_quality)
 
-        val qualityStr = when (OpenApiSDK.getPlayerApi().getPreferSongQuality()) {
+        val qualityStr = when (PlayerObserver.mPreferQuality) {
             Quality.HQ -> {
                 "hq"
             }
@@ -403,6 +403,14 @@ class PlayerTestActivity : ComponentActivity() {
 
             Quality.MASTER_SR -> {
                 "臻品母带省流"
+            }
+
+            Quality.DTSC -> {
+                "DTSC"
+            }
+
+            Quality.DTSX -> {
+                "DTSX"
             }
 
             else -> {
@@ -486,7 +494,7 @@ class PlayerTestActivity : ComponentActivity() {
         funcMap["seekToPlay"] = {
             OpenApiSDK.getPlayerApi().seekToPlay(params1.toLongOrNull() ?: 60000L, needFade)
         }
-        funcMap["seek"] = { OpenApiSDK.getPlayerApi().seek(params1.toIntOrNull() ?: 60000) }
+        funcMap["seek"] = { OpenApiSDK.getPlayerApi().seek(params1.toIntOrNull() ?: 640000) }
         funcMap["playPos"] = { OpenApiSDK.getPlayerApi().playPos(params1.toIntOrNull() ?: 1) }
         funcMap["pause"] = { OpenApiSDK.getPlayerApi().pause() }
 

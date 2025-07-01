@@ -4,13 +4,13 @@ plugins {
 
 }
 
-if (isLiteSDK.toBoolean()) {
-    apply plugin: 'openapi-sdk'
-}
+
 
 
 android {
-    compileSdk 33
+    compileSdk 34
+    namespace "com.tencent.qqmusic.qplayer"
+    android.buildFeatures.buildConfig true
 
     defaultConfig {
         applicationId "com.tencent.qqmusicrecognition"
@@ -33,6 +33,7 @@ android {
             abiFilters "arm64-v8a","x86_64","x86","armeabi-v7a"
         }
         buildConfigField "String", "DEMO_APPID", "\"${System.getenv('demoAppId') ?: ""}\""
+        buildConfigField "boolean", "isLiteSDK", "${isLiteSDK}"
         buildConfigField "String", "DEMO_APPKEY", "\"${System.getenv('demoAppKey') ?: ""}\""
     }
 
@@ -90,7 +91,7 @@ android {
         compose true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion compose_version
+        kotlinCompilerExtensionVersion compose_compiler_version
         kotlinCompilerVersion kotlin_version
     }
 
@@ -110,15 +111,13 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.aar'])
-    if (!isLiteSDK.toBoolean()) {
-        implementation "com.tencent.qqmusic.openapi:openapi-sdk:$sdk_version"
-    }
+
     implementation 'com.tencent.mm.opensdk:wechat-sdk-android-without-mta:6.8.0'
 
     implementation 'com.google.android.material:material:1.4.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.5.0'
-    implementation 'androidx.navigation:navigation-runtime-ktx:2.5.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.7'
+    implementation 'androidx.navigation:navigation-runtime-ktx:2.8.5'
     implementation('com.github.bumptech.glide:glide:4.8.0')
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.4.0"
     implementation 'androidx.activity:activity-ktx:1.5.2'
@@ -127,8 +126,8 @@ dependencies {
     implementation "androidx.compose.material:material:1.0.5"
     implementation "androidx.compose.ui:ui-tooling:1.0.4"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
-    implementation "androidx.constraintlayout:constraintlayout-compose:1.0.0-beta02"
-    implementation "androidx.navigation:navigation-compose:2.5.0"
+    implementation "androidx.constraintlayout:constraintlayout-compose:1.1.0"
+    implementation "androidx.navigation:navigation-compose:2.8.5"
     implementation "androidx.activity:activity-compose:1.3.1"
     implementation "androidx.compose.foundation:foundation:1.1.0-beta01"
     implementation "com.google.accompanist:accompanist-flowlayout:0.21.0-beta"

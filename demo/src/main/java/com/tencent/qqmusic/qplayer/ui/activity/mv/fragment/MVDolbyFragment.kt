@@ -19,10 +19,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.GridCells
-import androidx.compose.foundation.lazy.GridItemSpan
-import androidx.compose.foundation.lazy.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+//import androidx.compose.foundation.lazy.GridCells
+//import androidx.compose.foundation.lazy.GridItemSpan
+//import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,7 +38,6 @@ import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelStoreOwner
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.edgemv.data.MediaGroupRes
@@ -46,14 +48,11 @@ import com.tencent.qqmusic.qplayer.ui.activity.mv.PlayerViewModel
 
 class MVDolbyFragment : Fragment() {
 
-    private val mViewModelStoreOwner by lazy {  activity as AppCompatActivity }
+    private val mViewModelStoreOwner by lazy { activity as AppCompatActivity }
 
 
-    var composeView: ComposeView? = null
-    val playerViewModel by lazy { ViewModelProvider(mViewModelStoreOwner)[PlayerViewModel::class.java] }
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
+    private var composeView: ComposeView? = null
+    private val playerViewModel by lazy { ViewModelProvider(mViewModelStoreOwner)[PlayerViewModel::class.java] }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         playerViewModel.getDolbyContent()
@@ -68,8 +67,29 @@ class MVDolbyFragment : Fragment() {
             CreateView(playerViewModel)
         }
     }
+}
+
+class MVExcellentFragment : Fragment() {
+
+    private val mViewModelStoreOwner by lazy { activity as AppCompatActivity }
 
 
+    private var composeView: ComposeView? = null
+    private val playerViewModel by lazy { ViewModelProvider(mViewModelStoreOwner)[PlayerViewModel::class.java] }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        playerViewModel.getExcellentContent()
+        return inflater.inflate(R.layout.fragment_compose_view, container, false)
+
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        composeView = view.findViewById(R.id.mv_list_compose_view)
+        composeView?.setContent {
+            CreateView(playerViewModel)
+        }
+    }
 }
 
 private val plachImageID: Int = R.drawable.musicopensdk_icon_light
@@ -78,7 +98,7 @@ private val plachImageID: Int = R.drawable.musicopensdk_icon_light
 @Preview
 @Composable
 private fun CreateView(playerViewModel: PlayerViewModel? = null) {
-    val data = playerViewModel?.dolbyContent
+    val data = playerViewModel?.mvContent
     val activity = LocalContext.current as Activity
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = data?.value?.title ?: "", fontSize = 30.sp)
@@ -98,11 +118,11 @@ private fun CreateView(playerViewModel: PlayerViewModel? = null) {
 
         LazyVerticalGrid(
             modifier = Modifier.fillMaxSize(),
-            cells = GridCells.Fixed(2),
+            columns = GridCells.Fixed(2),
         ) {
             data?.value?.items?.forEach { item: MediaGroupRes ->
                 item(span = { GridItemSpan(2) }) {
-                    Text(text = item.title ?: "", fontSize = 30.sp, modifier = Modifier.clickable {
+                    Text(text = (item.title ?: "无主题")+" >" , fontSize = 30.sp, modifier = Modifier.clickable {
                         activity.startActivity(
                             Intent(activity, MVPlayerActivity::class.java).apply {
                                 putExtra(MVPlayerActivity.Content_Type, MVPlayerActivity.Content_Detail)
@@ -171,20 +191,33 @@ fun DolbyItem(mediaResDetail: MediaSimpleRes? = null) {
                             }
                     )
 
-                    Text(text = mediaResDetail?.playCount?.toString() ?: "0", fontSize = 10.sp, modifier = Modifier.constrainAs(playerNum) {
+                    Text(text = formatPlayCount(mediaResDetail?.playCount), fontSize = 10.sp, modifier = Modifier.constrainAs(playerNum) {
                         start.linkTo(cor.start)
                         bottom.linkTo(cor.bottom)
                     })
 
-                    Text(text = MVPlayerFragment.convertSecondsToMinutesSeconds(mediaResDetail?.playTime ?: 0), fontSize = 10.sp, modifier = Modifier.constrainAs(playTime) {
-                        end.linkTo(cor.end)
-                        bottom.linkTo(cor.bottom)
-                    })
+                    Text(
+                        text = MVPlayerFragment.convertSecondsToMinutesSeconds(mediaResDetail?.playTime ?: 0),
+                        fontSize = 10.sp,
+                        modifier = Modifier.constrainAs(playTime) {
+                            end.linkTo(cor.end)
+                            bottom.linkTo(cor.bottom)
+                        })
 
                 }
-                Text(text = mediaResDetail?.name ?: "暂无标题", fontSize = 20.sp)
+                Text(text = mediaResDetail?.name ?: "暂无标题", fontSize = 15.sp)
             }
         }
     }
 
+}
+
+fun formatPlayCount(playCount:Int?):String{
+    if(playCount!=null){
+        if (playCount>=10000){
+            return "%.1f万".format(playCount/10000.0)
+        }
+        return playCount.toString()
+    }
+    return "null"
 }

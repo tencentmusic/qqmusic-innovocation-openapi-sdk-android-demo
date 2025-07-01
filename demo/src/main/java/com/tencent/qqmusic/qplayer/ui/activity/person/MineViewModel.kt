@@ -14,6 +14,7 @@ import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.model.OperationsInfo
 import com.tencent.qqmusic.openapisdk.model.UserInfo
 import com.tencent.qqmusic.openapisdk.model.VipInfo
+import com.tencent.qqmusic.openapisdk.model.vip.CheckNeedRenewalInfo
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +39,7 @@ class MineViewModel : ViewModel() {
     private val _limitFree = MutableStateFlow<OpenApiResponse<OperationsInfo>?>(null)
     val limitFree: StateFlow<OpenApiResponse<OperationsInfo>?> = _limitFree
 
+    val remindRenewalInfo = MutableStateFlow<CheckNeedRenewalInfo?>(null)
 
     init {
         OpenApiSDK.registerBusinessEventHandler { event ->
@@ -92,6 +94,14 @@ class MineViewModel : ViewModel() {
         }
     }
 
+    fun refreshVipRenewalInfo() {
+        viewModelScope.launch {
+            OpenApiSDK.getOpenApi().getVipRenewalInfo {
+                remindRenewalInfo.value = it.data
+            }
+        }
+    }
+
     fun getLoginType(openIdInfo: OpenIdInfo?): String {
         return openIdInfo?.let {
             when (it.type) {
@@ -112,8 +122,8 @@ class MineViewModel : ViewModel() {
     }
 
 
-    fun getVipText(vipInfo: VipInfo?): String {
-        val ret = StringBuilder()
+    fun getVipText(vipInfo: VipInfo?): List<String> {
+        val ret = mutableListOf<String>()
         val audioVip = if (vipInfo?.isVip() == false && !vipInfo.isLongAudioVip()) {
             "非vip用户"
         } else if (vipInfo?.isSuperVip() == true) {
@@ -127,7 +137,7 @@ class MineViewModel : ViewModel() {
         } else {
             ""
         }
-        ret.append(audioVip)
+        ret.add(audioVip)
         val payVip = if (vipInfo?.twelveFlag == 1) {
             "12元付费包用户"
         } else if (vipInfo?.eightFlag == 1) {
@@ -135,23 +145,17 @@ class MineViewModel : ViewModel() {
         } else {
             ""
         }
-        if (ret.isNotEmpty()) {
-            ret.append("、")
-        }
-        ret.append(payVip)
+        ret.add(payVip)
         if (vipInfo?.longAudioVip == 1) {
-            if (ret.isNotEmpty()) {
-                ret.append("、")
-            }
-            ret.append("听书会员用户")
+            ret.add("听书会员用户")
         }
         if (OpenApiSDK.getLoginApi().isQQMusicLoginUserSame()) {
-            ret.append("、Q音手机端登录相同账号")
+            ret.add("Q音手机端登录相同账号")
         }
         if (ret.isEmpty()) {
-            return "信息获取不明"
+            ret.add("信息获取不明")
         }
-        return ret.toString()
+        return ret
     }
 
     fun getVipTimeStartText(vipInfo: VipInfo?): String {

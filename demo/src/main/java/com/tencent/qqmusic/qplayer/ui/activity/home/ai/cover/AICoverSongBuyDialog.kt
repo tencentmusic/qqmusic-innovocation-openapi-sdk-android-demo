@@ -317,7 +317,7 @@ fun AiCoverBuyPage(dataInfo: AICoverDataInfo?, backPrePage: () -> Unit) {
                     }
                 }
 
-                Text(" 原价 ${(num.first ?: 0) / 1000}  需支付 ${(num.second ?: 0) / 1000} 元")
+                Text(" 原价 ${(num.first ?: 0) / 100}  需支付 ${(num.second ?: 0) / 100} 元")
             }
         }
         val isRebuild = when (midProduce.value) {

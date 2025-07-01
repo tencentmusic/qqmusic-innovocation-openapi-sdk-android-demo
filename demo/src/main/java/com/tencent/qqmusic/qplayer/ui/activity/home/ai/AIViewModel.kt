@@ -11,18 +11,26 @@ import com.tencent.qqmusic.ai.entity.AICoverCreatePayType
 import com.tencent.qqmusic.ai.entity.AICoverDataInfo
 import com.tencent.qqmusic.ai.entity.AICoverSongCreateType
 import com.tencent.qqmusic.ai.entity.AICoverVoucherListResponse
+import com.tencent.qqmusic.ai.entity.AICreateTaskInfo
+import com.tencent.qqmusic.ai.entity.AITabDataReq
 import com.tencent.qqmusic.ai.entity.AITagData
 import com.tencent.qqmusic.ai.entity.AITryLinkResponse
 import com.tencent.qqmusic.ai.entity.AIWorkLinkResponse
 import com.tencent.qqmusic.ai.entity.AccInfo
 import com.tencent.qqmusic.ai.entity.CollectInfo
+import com.tencent.qqmusic.ai.entity.GetSongStyleReq
 import com.tencent.qqmusic.ai.entity.HotCreateWorkInfo
 import com.tencent.qqmusic.ai.entity.LikeInfo
+import com.tencent.qqmusic.ai.entity.PicSongStyle
 import com.tencent.qqmusic.ai.entity.SongStyle
 import com.tencent.qqmusic.ai.entity.TimbreRecordData
 import com.tencent.qqmusic.ai.entity.VocalItem
+import com.tencent.qqmusic.ai.entity.Voucher
+import com.tencent.qqmusic.ai.entity.VoucherActivity
 import com.tencent.qqmusic.ai.entity.VoucherGetStatus
+import com.tencent.qqmusic.ai.function.AICommonPlayer
 import com.tencent.qqmusic.ai.function.base.AICoverSongOperaType
+import com.tencent.qqmusic.ai.function.base.IAICommon
 import com.tencent.qqmusic.ai.function.base.IAIFunction
 import com.tencent.qqmusic.ai.function.base.IAudioRecord
 import com.tencent.qqmusic.innovation.common.util.ToastUtils
@@ -32,7 +40,11 @@ import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.core.voiceplay.AICoverLinkPlayer
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -44,6 +56,7 @@ class AIViewModel : ViewModel() {
 
     val timbreList = mutableStateOf(mutableListOf<VocalItem>())
     var songStyleList: List<SongStyle> by mutableStateOf(emptyList())
+    var songImageStyleList: List<PicSongStyle> by mutableStateOf(emptyList())
     var hotAiCreateSongList: List<HotCreateWorkInfo> by mutableStateOf(emptyList())
     val aiFunction = OpenApiSDK.getAIFunctionApi(IAIFunction::class.java)
     val createTimbreSongList = mutableStateListOf<AccInfo?>()
@@ -54,7 +67,7 @@ class AIViewModel : ViewModel() {
     val passBackIndex = mutableMapOf<String, String?>()
 
 
-    var aiSearchNext: String? = ""
+    var aiSearchNext: Int? = 0
 
     val aiPersonalCoverSongDataList = mutableStateListOf<AICoverDataInfo>()
 
@@ -68,6 +81,51 @@ class AIViewModel : ViewModel() {
     var payUrl = mutableStateOf<String?>("")
 
     private var aiCoverLinkPlayer: AICoverLinkPlayer? = null
+    private var aiCommonPlayer: AICommonPlayer? = null
+
+    private val _activityList = MutableStateFlow<List<VoucherActivity>>(emptyList())
+    val activityList: StateFlow<List<VoucherActivity>> = _activityList.asStateFlow()
+
+    private val _voucherList = MutableStateFlow<List<Voucher>>(emptyList())
+    val voucherList: StateFlow<List<Voucher>> = _voucherList.asStateFlow()
+
+    val voucherListHasMore = mutableStateOf(false)
+
+    fun getVoucherActivityList() {
+        viewModelScope.launch {
+            aiFunction?.getVoucherActivityList(3) { resp ->
+                UiUtils.showToast("获取活动列表${if (resp.isSuccess()) "成功" else "失败${resp.errorMsg}"}")
+                _activityList.value = resp.voucherActivityList ?: emptyList()
+            }
+        }
+    }
+
+    fun getVoucherList() {
+        viewModelScope.launch {
+            aiFunction?.getVoucherList(3, VoucherGetStatus.NOT_USE, _voucherList.value.size.toString(), 100) { resp ->
+                UiUtils.showToast("获取代金券列表${if (resp.isSuccess()) "成功" else "失败${resp.errorMsg}"}")
+                _voucherList.value = resp.vouchers ?: emptyList()
+                voucherListHasMore.value = resp.hasMore == true
+            }
+        }
+    }
+
+    fun collectVoucher(activity: VoucherActivity) {
+        activity.id?.let { activityId ->
+            aiFunction?.collectVoucher(3, activityId) { resp ->
+                UiUtils.showToast("领取代金券${if (resp.isSuccess()) "成功" else "失败${resp.errorMsg}"}")
+                if (resp.isSuccess()) {
+                    _activityList.value = _activityList.value.map {
+                        if (it.id == activity.id) {
+                            it.copy(hasJoin = true)
+                        } else {
+                            it
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     fun refreshTimbreList() {
         aiFunction?.getTimbreList("0", 50) { re ->
@@ -75,12 +133,21 @@ class AIViewModel : ViewModel() {
         }
     }
 
-    fun getSongStyleList() {
+    fun getSongStyleList(req: GetSongStyleReq = GetSongStyleReq()) {
         if (Utils.isFastDoubleClick(TAG + "getSongStyleList", 500)) {
             return
         }
-        aiFunction?.getSongStyleList() {
+        aiFunction?.getSongStyleList(req) {
             songStyleList = it.data?.styleList ?: mutableListOf()
+        }
+    }
+
+    fun getImageSongStyleList(req: GetSongStyleReq = GetSongStyleReq()) {
+        if (Utils.isFastDoubleClick(TAG + "getImageSongStyleList", 500)) {
+            return
+        }
+        aiFunction?.getSongStyleList(req) {
+            songImageStyleList = it.data?.picSongStyles ?: mutableListOf()
         }
     }
 
@@ -90,9 +157,16 @@ class AIViewModel : ViewModel() {
         }
     }
 
+//    fun getHotAICreateImageSongs() {
+//        aiFunction?.getHotAIImageSongList("", 20) {
+//            hotAiCreateSongList = it.data?.workList ?: mutableListOf()
+//        }
+//    }
 
-    fun getAICoverTagList() {
-        aiFunction?.getAICoverHotSongTag { resp ->
+
+
+    fun getAITagList(aiTabDataReq: AITabDataReq = AITabDataReq()) {
+        aiFunction?.getAIHotSongTag(aiTabDataReq) { resp ->
             aiCoverTagListData.clear()
             aiCoverTagListData.addAll(resp.tabList)
         }
@@ -122,13 +196,13 @@ class AIViewModel : ViewModel() {
     }
 
 
-    fun getSearchResultByWord(keyWord: String, startIndex: String) {
+    fun getSearchResultByWord(keyWord: String, startIndex: Int) {
         aiFunction?.getSearchSongList(keyWord, 20, startIndex) {
-            if (startIndex == "0") {
+            if (startIndex == 0) {
                 aiSearchCoverSongList.clear()
             }
             aiSearchCoverSongList.addAll(it.aiWorkSongInfo)
-            aiSearchNext = it.nextPassBack
+            aiSearchNext = (aiSearchNext ?: 0) + aiSearchCoverSongList.size
             if (it.aiWorkSongInfo.isEmpty()) {
                 passBackIndex["getSearchSongList"] = "-1"
             }
@@ -284,14 +358,19 @@ class AIViewModel : ViewModel() {
 
     fun pause() {
         aiCoverLinkPlayer?.pause()
+        aiCommonPlayer?.pauseAIMusic()
     }
 
     fun resume() {
         aiCoverLinkPlayer?.resume()
+        aiCommonPlayer?.resumeAIMusic()
     }
 
     fun stopPlayCoverLink() {
         aiCoverLinkPlayer?.stop()
+        aiCommonPlayer?.stopAIMusic()
+        aiCommonPlayer = null
+        aiCoverLinkPlayer = null
     }
 
 
@@ -371,5 +450,19 @@ class AIViewModel : ViewModel() {
             }
 
         }
+    }
+
+    fun playTask(record: AICreateTaskInfo, onPlayListener: IAICommon.OnPlayListener) {
+        if (Utils.isFastDoubleClick(TAG + "playLink", 500L)) {
+            return
+        }
+        aiCoverLinkPlayer?.stop()
+        aiCommonPlayer?.stopAIMusic()
+        aiCommonPlayer = aiFunction?.getAICommonPlayer(record)
+        aiCommonPlayer?.playAIMusic(onPlayListener)
+    }
+
+    fun seek(toInt: Int) {
+        aiCommonPlayer?.seek(toInt)
     }
 }

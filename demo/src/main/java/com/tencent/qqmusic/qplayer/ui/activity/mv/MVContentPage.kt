@@ -7,8 +7,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.lazy.GridCells
-import androidx.compose.foundation.lazy.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+//import androidx.compose.foundation.lazy.GridCells
+//import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -25,12 +28,13 @@ fun MVFunctionPage() {
 
     val pages = mutableMapOf(
         "最新最热的MV" to MVPlayerActivity.Recommend,
-        "Dolby视界专区" to MVPlayerActivity.Dolby_Content
+        "Dolby视界专区" to MVPlayerActivity.Dolby_Content,
+        "4K臻品世界" to MVPlayerActivity.Content_EXCELLENT,
     )
 
     LazyVerticalGrid(
         modifier = Modifier.fillMaxSize(),
-        cells = GridCells.Fixed(2),
+        columns = GridCells.Fixed(2),
     ) {
         items(pages.keys.toList()) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier

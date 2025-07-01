@@ -14,6 +14,7 @@ import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.mv.fragment.MVAreaFragment
 import com.tencent.qqmusic.qplayer.ui.activity.mv.fragment.MVDetailFragment
 import com.tencent.qqmusic.qplayer.ui.activity.mv.fragment.MVDolbyFragment
+import com.tencent.qqmusic.qplayer.ui.activity.mv.fragment.MVExcellentFragment
 import com.tencent.qqmusic.qplayer.ui.activity.mv.fragment.MVPlayerFragment
 import com.tencent.qqmusic.qplayer.ui.activity.mv.fragment.MVRecommendFragment
 
@@ -27,6 +28,7 @@ class MVPlayerActivity : AppCompatActivity() {
         const val Dolby_Content = "Dolby_content"
         const val Content_Detail = "Content_Detail"
         const val Content_Area = "Content_Area"
+        const val Content_EXCELLENT = "Content_EXCELLENT"
 
     }
 
@@ -53,6 +55,10 @@ class MVPlayerActivity : AppCompatActivity() {
 
                 Dolby_Content -> {
                     listOf(MVDolbyFragment())
+                }
+
+                Content_EXCELLENT -> {
+                    listOf(MVExcellentFragment())
                 }
 
                 Content_Detail -> {

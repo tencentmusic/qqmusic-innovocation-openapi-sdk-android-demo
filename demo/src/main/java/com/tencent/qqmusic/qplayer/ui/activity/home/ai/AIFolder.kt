@@ -30,8 +30,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.openapisdk.model.Folder
+import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.home.currentNewAiPage
+import com.tencent.qqmusic.qplayer.ui.activity.loadMoreItemUI
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 
 val AIFloderHomePage = "base"
@@ -135,16 +137,9 @@ fun newAiFolder(homeViewModel: HomeViewModel) {
                     }
                 }
             }
-            if (homeViewModel.showNewAiNextButton.value) {
-                item {
-                    Button(onClick = {
-                        homeViewModel.fetchNewAiFolder(currentNewAiPage.value + 1)
-
-                    }) {
-                        Text(text = "下一页")
-                    }
-                }
-            }
+            loadMoreItemUI(data.size, loadMoreItem = LoadMoreItem(homeViewModel.showNewAiNextButton, onLoadMore = {
+                homeViewModel.fetchNewAiFolder(currentNewAiPage.value + 1)
+            }))
         }
 
     }

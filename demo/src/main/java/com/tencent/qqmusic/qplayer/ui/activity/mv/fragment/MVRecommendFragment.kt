@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.tencent.qqmusic.edgemv.impl.AreaID
+import com.tencent.qqmusic.edgemv.impl.CategoryType
 import com.tencent.qqmusic.edgemv.impl.GetMVRecommendCmd
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVResDetailPage
@@ -44,7 +45,7 @@ class MVRecommendFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         composeView = view.findViewById(R.id.mv_list_compose_view)
         composeView?.setContent {
-            playerViewModel.getRecommendMvList(GetMVRecommendCmd.LATEST, AreaID.Mainland)
+            playerViewModel.getRecommendMvList(GetMVRecommendCmd.LATEST, AreaID.Mainland, CategoryType.ALL)
             CreateView()
         }
     }
@@ -58,6 +59,9 @@ class MVRecommendFragment : Fragment() {
         val areaID = remember {
             mutableStateOf(AreaID.Mainland)
         }
+        val typ2 = remember {
+            mutableStateOf(CategoryType.ALL)
+        }
 
         val showTypeSelect = remember {
             mutableStateOf(false)
@@ -67,8 +71,12 @@ class MVRecommendFragment : Fragment() {
             mutableStateOf(false)
         }
 
+        val showType2Select = remember {
+            mutableStateOf(false)
+        }
+
         fun update() {
-            playerViewModel.getRecommendMvList(type.value, areaID.value)
+            playerViewModel.getRecommendMvList(type.value, areaID.value, typ2.value)
         }
         Column {
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -77,7 +85,7 @@ class MVRecommendFragment : Fragment() {
                         Text(text = "类型")
                         Button(onClick = {
                             showTypeSelect.value = true
-                        }, modifier = Modifier.padding(start = 20.dp)) {
+                        }, modifier = Modifier.padding(start = 10.dp)) {
                             Text(text = type.value.name)
                         }
                     }
@@ -99,11 +107,11 @@ class MVRecommendFragment : Fragment() {
                 }
 
                 Column {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 40.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 10.dp)) {
                         Text(text = "地区")
                         Button(onClick = {
                             showAreaSelect.value = true
-                        }, modifier = Modifier.padding(start = 20.dp)) {
+                        }, modifier = Modifier.padding(start = 10.dp)) {
                             Text(text = areaID.value.name)
                         }
                     }
@@ -124,6 +132,33 @@ class MVRecommendFragment : Fragment() {
                     }
                 }
             }
+
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 10.dp)) {
+                    Text(text = "分类2")
+                    Button(onClick = {
+                        showType2Select.value = true
+                    }, modifier = Modifier.padding(start = 10.dp)) {
+                        Text(text = typ2.value.name)
+                    }
+                }
+
+                DropdownMenu(expanded = showType2Select.value, onDismissRequest = { }) {
+                    CategoryType.values().forEach {
+                        DropdownMenuItem(
+                            onClick = {
+                                showType2Select.value = showType2Select.value.not()
+                                typ2.value = it
+                                update()
+                            },
+                            content = {
+                                Text(text = it.name)
+                            }
+                        )
+                    }
+                }
+            }
+
             MVResDetailPage(list = list.value)
         }
     }

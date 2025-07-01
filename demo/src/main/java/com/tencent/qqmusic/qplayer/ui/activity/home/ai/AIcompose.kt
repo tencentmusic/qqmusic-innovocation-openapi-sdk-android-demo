@@ -44,7 +44,9 @@ import androidx.compose.ui.unit.sp
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.ai.function.base.IAIFunction
 import com.tencent.qqmusic.ai.entity.AICreateTaskInfo
+import com.tencent.qqmusic.ai.entity.AIQueryStatusReq
 import com.tencent.qqmusic.ai.entity.ComposePromptInfo
+import com.tencent.qqmusic.ai.function.base.AISceneType
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.delay
 
@@ -80,16 +82,25 @@ fun AIComposePage(backPrePage: () -> Unit) {
     var taskId by remember { mutableStateOf("") }
     var polling by remember { mutableStateOf(-1L) }
     var taskInfo by remember { mutableStateOf<AICreateTaskInfo?>(null) }
+    var taskStatus by remember { mutableStateOf(0) }
 
     LaunchedEffect(polling) {
         if (taskId.isNotBlank()) {
-            delay(1000L)
-            OpenApiSDK.getAIFunctionApi(IAIFunction::class.java)?.queryAIComposeTaskInfo(listOf(taskId)) { taskInfoList ->
-                if (taskInfoList.isSuccess()) {
-                    if (taskInfoList.data != null && taskInfoList.data!!.isNotEmpty()) {
-                        taskInfo = taskInfoList.data!![0]
+            delay(5000L)
+            OpenApiSDK.getAIFunctionApi(IAIFunction::class.java)?.queryCreateTaskStatus(AIQueryStatusReq(AISceneType.AI_SCENE_TYPE_COMPOSE, taskId)) { info ->
+                if (info.isSuccess()) {
+                    if (info.data == 2) {
+                        OpenApiSDK.getAIFunctionApi(IAIFunction::class.java)?.queryAIComposeTaskInfo(listOf(taskId)) { taskInfoList ->
+                            if (taskInfoList.isSuccess()) {
+                                if (taskInfoList.data != null && taskInfoList.data!!.isNotEmpty()) {
+                                    taskInfo = taskInfoList.data!![0]
+                                }
+                                taskId = ""
+                            }
+                        }
                     }
-                    if ((taskInfo?.taskStatus ?: 0) < 2) {
+                    taskStatus = info.data ?: 0
+                    if ((info.data ?: 0) == 1) {
                         polling++
                     }
                 }
@@ -211,6 +222,14 @@ fun AIComposePage(backPrePage: () -> Unit) {
         }
 
         Spacer(modifier = Modifier.height(6.dp))
+        if (taskId.isNotBlank()) {
+            when (taskStatus) {
+                0 -> Text(text = "等待中")
+                1 -> Text(text = "进行中")
+                2 -> Text(text = "已完成")
+                3 -> Text(text = "生成失败")
+            }
+        }
         taskInfo?.let { AICreateTaskInfoItem(it, scene = "2") }
     }
 

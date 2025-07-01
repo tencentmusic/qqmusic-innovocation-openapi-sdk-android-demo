@@ -15,6 +15,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -24,8 +27,11 @@ import androidx.constraintlayout.compose.Dimension
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.openapisdk.model.Folder
+import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
+import com.tencent.qqmusic.qplayer.ui.activity.loadMoreItemUI
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.CommonProfileActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 
@@ -35,7 +41,7 @@ import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 //
 
 @Composable
-fun FolderScreen(folders: List<Folder>) {
+fun FolderListScreen(folders: List<Folder>, loadMore: LoadMoreItem? = null) {
     Scaffold(
         topBar = { TopBar() }
     ) {
@@ -47,7 +53,7 @@ fun FolderScreen(folders: List<Folder>) {
                 top.linkTo(parent.top)
                 bottom.linkTo(player.top)
             }) {
-                FolderPage(folders = folders)
+                FolderListPage(folders = folders, loadMore = loadMore)
             }
             Box(modifier = Modifier.constrainAs(player) {
                 bottom.linkTo(parent.bottom)
@@ -60,12 +66,14 @@ fun FolderScreen(folders: List<Folder>) {
 
 @OptIn(ExperimentalCoilApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun FolderPage(folders: List<Folder>, source:Int?=null) {
+fun FolderListPage(folders: List<Folder>, source:Int?=null, loadMore: LoadMoreItem? = null) {
     val activity = LocalContext.current as Activity
     val clipboardManager = LocalContext.current.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
     val scrollState = rememberLazyListState()
     PerformanceHelper.MonitorListScroll(scrollState = scrollState, location = "FolderPage")
+    // 我喜欢使用单独接口
+    val myLikeId = folders.firstOrNull { folder -> folder.name == "我喜欢" }?.id
     LazyColumn(state = scrollState, modifier = Modifier.fillMaxSize()) {
         items(folders.size) { index ->
             val folder = folders.getOrNull(index) ?: return@items
@@ -83,8 +91,9 @@ fun FolderPage(folders: List<Folder>, source:Int?=null) {
                             } else {
                                 PerformanceHelper.monitorClick("FolderPage_SongListActivity")
                                 activity.startActivity(
-                                    Intent(activity, SongListActivity::class.java).apply {
+                                    Intent(activity, CommonProfileActivity::class.java).apply {
                                         putExtra(SongListActivity.KEY_FOLDER_ID, folder.id)
+                                        putExtra(SongListActivity.KEY_IS_MY_LIKE_FOLDER, folder.id == myLikeId)
                                         if (source!=null){
                                             putExtra(SongListActivity.KEY_SOURCE, source)
                                         }
@@ -124,5 +133,8 @@ fun FolderPage(folders: List<Folder>, source:Int?=null) {
                 }
             }
         }
+        loadMoreItemUI(folders.size, LoadMoreItem(loadMore?.needLoadMore ?: mutableStateOf(false), onLoadMore = {
+            loadMore?.onLoadMore?.invoke()
+        }))
     }
 }

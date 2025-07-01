@@ -1,9 +1,6 @@
 package com.tencent.qqmusic.qplayer.ui.activity.songlist
 
-import android.annotation.SuppressLint
 import android.os.Bundle
-import android.provider.Settings.Global
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -19,14 +16,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewModelScope
-import coil.annotation.ExperimentalCoilApi
-import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.SongInfo
-import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.player.playlist.MusicPlayList
-import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderActivity
 import kotlinx.coroutines.*
 
 //
@@ -38,7 +30,9 @@ class SongListActivity : ComponentActivity() {
 
     companion object {
         const val KEY_FOLDER_ID = "folder_id"
+        const val KEY_IS_MY_LIKE_FOLDER = "KEY_IS_MY_LIKE_FOLDER"
         const val KEY_ALBUM_ID = "album_id"
+        const val KEY_SINGER_ID = "singer_id"
         const val KEY_SONG = "song_id"
         const val KEY_RANK_ID = "rank_id"
         const val KEY_SOURCE = "source"

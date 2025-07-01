@@ -33,6 +33,8 @@ object QualityAlert {
             PlayerEnums.Quality.GALAXY,
             PlayerEnums.Quality.MASTER_TAPE,
             PlayerEnums.Quality.MASTER_SR,
+            PlayerEnums.Quality.DTSC,
+            PlayerEnums.Quality.DTSX,
         )
 
     var qualityOrderString = arrayOf("")
@@ -50,6 +52,8 @@ object QualityAlert {
                 "GALAXY",
                 "MASTER_TAPE",
                 "MASTER_SR",
+                "DTSC",
+                "DTSX"
             )
     }
 
@@ -73,44 +77,26 @@ object QualityAlert {
             }
 
             val accessStr = UiUtils.getFormatAccessLabel(curSong, quality, isDownload)
+            val qualitySize = if (curSong == null) 0 else OpenApiSDK.getPlayerApi().getSongQualitySize(curSong, quality)
             val tryPlayQualityLabel = if (OpenApiSDK.getPlayerApi().canTryOpenQuality(curSong, quality)) {
                 "-可试听"
             } else ""
             when (it) {
-                "LQ" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeLQ()?.toLong()) + accessStr
-                }
-                "STANDARD" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeStandard()?.toLong()) + accessStr
-                }
-                "HQ" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeHQ()?.toLong()) + accessStr
-                }
-                "SQ" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeSQ()?.toLong()) + accessStr
-                }
                 "SQ_SR" -> {
-                    "SQ省流版"+ UiUtils.getFormatSize(curSong?.getSongQuality(Quality.SQ_SR)?.size?.toLong()) + accessStr + tryPlayQualityLabel
+                    "SQ省流版"+ UiUtils.getFormatSize(qualitySize) + accessStr + tryPlayQualityLabel
                 }
                 "DOLBY" -> {
                     it + UiUtils.getFormatSize(curSong?.getSizeDolby()?.toLong()) + accessStr + tryPlayQualityLabel
-                }
-                "HIRES" -> {
-                    it + UiUtils.getFormatSize(curSong?.getSizeHiRes()?.toLong()) + accessStr
                 }
                 "EXCELLENT" -> {
                     if (isDownload) {
                         "臻品音质2.0 - 不支持下载"
                     } else {
-                        "臻品音质2.0-$accessStr$tryPlayQualityLabel"
+                        "臻品音质2.0${UiUtils.getFormatSize(qualitySize)}$accessStr$tryPlayQualityLabel"
                     }
                 }
                 "GALAXY" -> {
-                    if (curSong?.isGalaxyEffectType() == true) {
-                        "臻品全景声-$accessStr$tryPlayQualityLabel"
-                    } else {
-                        "臻品全景声" + UiUtils.getFormatSize(curSong?.getSizeGalaxy()?.toLong()) + accessStr + tryPlayQualityLabel
-                    }
+                    "臻品全景声" + UiUtils.getFormatSize(qualitySize) + accessStr + tryPlayQualityLabel
                 }
                 "WANOS" -> {
                     if (isDownload) {
@@ -120,13 +106,13 @@ object QualityAlert {
                     }
                 }
                 "MASTER_TAPE" -> {
-                    "臻品母带 "+ UiUtils.getFormatSize(curSong?.getSongQuality(Quality.MASTER_TAPE)?.size?.toLong()) + accessStr + tryPlayQualityLabel
+                    "臻品母带 "+ UiUtils.getFormatSize(qualitySize) + accessStr + tryPlayQualityLabel
                 }
                 "MASTER_SR" -> {
-                    "臻品母带省流版"+ UiUtils.getFormatSize(curSong?.getSongQuality(Quality.MASTER_SR)?.size?.toLong()) + accessStr + tryPlayQualityLabel
+                    "臻品母带省流版"+ UiUtils.getFormatSize(qualitySize) + accessStr + tryPlayQualityLabel
                 }
                 else -> {
-                    it
+                    it + UiUtils.getFormatSize(qualitySize) + accessStr
                 }
             }
         }

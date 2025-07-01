@@ -21,10 +21,12 @@ import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import com.tencent.qqmusic.openapisdk.model.LyricInfo
+import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
+import com.tencent.qqmusic.qplayer.ui.activity.loadMoreItemUI
 
 
 @Composable
-fun LyricPage(list: List<LyricInfo>) {
+fun LyricPage(list: List<LyricInfo>, loadMoreItem: LoadMoreItem? = null) {
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
         val (folder) = createRefs()
         Box(modifier = Modifier.constrainAs(folder) {
@@ -37,6 +39,7 @@ fun LyricPage(list: List<LyricInfo>) {
                     val singer = list.elementAtOrNull(index) ?: return@items
                     LyricItem(data = singer)
                 }
+                loadMoreItemUI(list.size, loadMoreItem = loadMoreItem)
             }
         }
 
