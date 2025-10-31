@@ -122,7 +122,7 @@ class BaseLyricFragment(val layoutId: Int = -1): Fragment(), LyricStateInterface
 
     private fun onTapSeek(mStartTime: Long) {
         hideHighlightLyricInOffset.run()
-        val needFade = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
+        val needFade = sharedPreferences?.getBoolean("needFadeWhenPlay", true) != false
         OpenApiSDK.getPlayerApi().seekToPlay(mStartTime, needFade)
     }
     override fun onLoadLyric(

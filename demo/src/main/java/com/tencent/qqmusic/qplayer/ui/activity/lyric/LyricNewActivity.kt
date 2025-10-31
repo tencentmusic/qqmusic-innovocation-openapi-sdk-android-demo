@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
@@ -34,12 +35,16 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
 
     private val vocalAccompanyButton: Button by lazy { findViewById(R.id.vocalAccompany) }
     private val vocalAccompanySeekbar: AppCompatSeekBar by lazy { findViewById(R.id.seekbar) }
-
+    private val backButton : ImageButton by lazy { findViewById(R.id.btn_back) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_lyric_new)
+        // 绑定Toolbar并设置返回按钮
+        backButton.setOnClickListener {
+            onBackPressedDispatcher.onBackPressed()
+        }
         OpenApiSDK.getVocalAccompanyApi().addVocalAccompanyStatusChangeListener(this)
         val viewPage = findViewById<ViewPager2>(R.id.view_pager)
         val tabLayout = findViewById<TabLayout>(R.id.tab_layout)

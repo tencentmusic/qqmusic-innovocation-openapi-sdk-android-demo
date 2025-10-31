@@ -76,6 +76,7 @@ import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.ui.activity.home.ai.cover.AIPersonalTimbreTAG
 import com.tencent.qqmusic.qplayer.ui.activity.home.ai.cover.AITimbreTAG
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusictvsdk.internal.lyric.LyricManager
@@ -115,6 +116,11 @@ fun AIComposingSongPage(backPrePage: () -> Unit) {
         composable("home") { composeSongPage(aiViewModel, navController) }
         composable(AITimbreTAG) {
             AITimbreCreatePage {
+                navController.popBackStack()
+            }
+        }
+        composable(AIPersonalTimbreTAG) {
+            AIPersonalTimbrePage(aiViewModel) {
                 navController.popBackStack()
             }
         }
@@ -238,7 +244,7 @@ private fun composeSongPage(viewModel: AIViewModel, navController: NavController
 
         item {
             Text(text = "选择音色")
-            AITimbrePage(navController = navController) {
+            AITimbrePage(aiViewModel = viewModel, navController = navController) {
                 vocal.value = it
             }
         }

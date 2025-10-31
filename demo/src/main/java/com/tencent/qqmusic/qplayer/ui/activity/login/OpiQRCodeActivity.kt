@@ -1,16 +1,17 @@
 package com.tencent.qqmusic.qplayer.ui.activity.login
 
-import android.app.Activity
-import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.Message
 import android.util.Log
 import android.view.View
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.ComponentActivity
+import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
 import com.tencent.qqmusic.qplayer.R
@@ -18,11 +19,11 @@ import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
-// 
+//
 // Created by clydeazhang on 2022/1/6 2:30 下午.
 // Copyright (c) 2022 Tencent. All rights reserved.
 // 
-class OpiQRCodeActivity : Activity() {
+class OpiQRCodeActivity : ComponentActivity() {
 
     private var isFinished = false
 
@@ -45,6 +46,10 @@ class OpiQRCodeActivity : Activity() {
         findViewById<TextView>(R.id.btn_refresh)
     }
 
+    private val btnBack by lazy {
+        findViewById<ImageButton>(R.id.btn_back)
+    }
+
     private val handler by lazy { Handler(Looper.getMainLooper()) }
     private val devName by lazy {
         intent.extras?.getString(KEY_DEV_NAME, "Unknown") ?: "Unknown"
@@ -56,6 +61,14 @@ class OpiQRCodeActivity : Activity() {
 
         btnRefresh.setOnClickListener {
             startGetQrCode()
+        }
+        btnBack.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= 33) {
+                onBackPressedDispatcher.onBackPressed()
+            } else {
+                @Suppress("DEPRECATION")
+                onBackPressed()
+            }
         }
 
         startGetQrCode()
@@ -108,8 +121,17 @@ class OpiQRCodeActivity : Activity() {
                             requestQrCodeAuthResult(pollAuthCode)
                         }, POLL_INTERVAL)
                     }
-                } else {
-                    showTips("轮询结果失败", true)
+                } else if(Global.isTestEnv && it.ret == -1 &&
+                    it.errorMsg?.contains("502")==true){
+                    // 测试环境不稳定允许失败
+                    if (!isDestroyed) {
+                        handler.postDelayed(Runnable {
+                            requestQrCodeAuthResult(pollAuthCode)
+                        }, POLL_INTERVAL)
+                    }
+                }
+                else {
+                    showTips("轮询结果失败:${it.ret}", true)
                 }
             }
         }

@@ -3,6 +3,7 @@ package com.tencent.qqmusic.qplayer.ui.activity.player
 import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.core.player.visualizer.AudioFeature
 import com.tencent.qqmusic.openapisdk.core.player.visualizer.VisualizerStrategy
+import com.tencent.qqmusic.openapisdk.playerui.visualizer.EffectAudioFeatureManager
 
 /**
  * Created by silverfu on 2024/12/4.
@@ -10,5 +11,6 @@ import com.tencent.qqmusic.openapisdk.core.player.visualizer.VisualizerStrategy
 class CustomVisualizer : VisualizerStrategy() {
     override fun onUpdate(audioFeature: AudioFeature?) {
         MLog.i("CustomVisualizer", "audioFeature:$audioFeature")
+//        EffectAudioFeatureManager.notifyDataUpdate(effectAudioFeature)
     }
 }

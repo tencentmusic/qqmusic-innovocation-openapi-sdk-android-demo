@@ -50,6 +50,7 @@ import com.tencent.qqmusic.ai.entity.AITagData
 import com.tencent.qqmusic.ai.function.base.IAIFunction
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.ui.activity.home.ai.AIPersonalTimbrePage
 import com.tencent.qqmusic.qplayer.ui.activity.home.ai.AITimbreCreatePage
 import com.tencent.qqmusic.qplayer.ui.activity.home.ai.AITimbrePage
 import com.tencent.qqmusic.qplayer.ui.activity.home.ai.AIViewModel
@@ -64,6 +65,7 @@ import java.util.Date
 import java.util.Locale
 
 internal val AITimbreTAG = "timbreCreate"
+internal val AIPersonalTimbreTAG = "timbreRole"
 internal val AISearchTAG = "serach"
 internal val AIBuyTAG = "buy"
 internal val AIVoucherTAG = "voucher"
@@ -75,10 +77,16 @@ var buyAccDataInfo: AICoverDataInfo? = null
 @Composable
 fun AICoverSongPage() {
     val navController = rememberNavController()
+    val aiViewModel : AIViewModel = viewModel()
     NavHost(navController = navController, startDestination = "home") {
-        composable("home") { BasePage(navController) }
+        composable("home") { BasePage(aiViewModel, navController) }
         composable(AITimbreTAG) {
             AITimbreCreatePage {
+                navController.popBackStack()
+            }
+        }
+        composable(AIPersonalTimbreTAG) {
+            AIPersonalTimbrePage(aiViewModel) {
                 navController.popBackStack()
             }
         }
@@ -109,7 +117,7 @@ fun AICoverSongPage() {
 }
 
 @Composable
-private fun BasePage(navController: NavHostController) {
+private fun BasePage(aiViewModel : AIViewModel = viewModel(), navController: NavHostController) {
 
     val callback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -130,7 +138,7 @@ private fun BasePage(navController: NavHostController) {
     val saveableStateHolder = rememberSaveableStateHolder()
     saveableStateHolder.SaveableStateProvider(true) {
         Column(modifier = Modifier.fillMaxSize()) {
-            AITimbrePage(navController = navController, onlyPersonal = true)
+            AITimbrePage(navController = navController, aiViewModel = aiViewModel, onlyPersonal = true)
 
             Row (modifier = Modifier.padding(10.dp)) {
                 Button(onClick = {

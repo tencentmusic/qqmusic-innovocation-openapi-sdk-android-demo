@@ -4,11 +4,16 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import android.util.Log
-import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,11 +21,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Divider
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.Icon
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Slider
 import androidx.compose.material.Switch
@@ -28,7 +37,11 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.TopAppBar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
@@ -48,12 +62,16 @@ import androidx.compose.ui.unit.sp
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
+import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.core.player.PlayCallback
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyConfig
 import com.tencent.qqmusic.openapisdk.core.player.VocalPercent
 import com.tencent.qqmusic.openapisdk.model.PlaySpeedType
-import com.tencent.qqmusic.openapisdk.model.ProfitInfo
+import com.tencent.qqmusic.openapisdk.model.SuperQualityType
+import com.tencent.qqmusic.openapisdk.model.VipInfo
+import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
 import com.tencent.qqmusic.qplayer.core.supersound.GalaxyFileQualityManager
 import com.tencent.qqmusic.qplayer.core.supersound.MasterSRManager
@@ -63,12 +81,16 @@ import com.tencent.qqmusic.qplayer.ui.activity.TrafficActivity
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiListenTogetherActivity
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
 import com.tencent.qqmusic.qplayer.ui.activity.musictherapy.MusicTherapyActivity
+import com.tencent.qqmusic.qplayer.ui.activity.player.voyage.PlayerVoyageActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
+import com.tencent.qqmusic.qplayer.utils.UiUtils.getProfitTypeName
+import com.tencent.qqmusic.qplayer.utils.UiUtils.getSuperQualityTypeName
+import com.tencent.qqmusic.qplayer.utils.getAllProfitList
+import com.tencent.qqmusic.qplayer.utils.getAllSuperQualityList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.lang.StringBuilder
 import kotlin.concurrent.thread
-import kotlin.math.sin
 
 
 /**
@@ -83,13 +105,17 @@ private val TAG = "PlayControlTestPage"
 @Preview
 @Composable
 fun PlayControlTestPage() {
+    val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(text = "播放调试", fontSize = 18.sp) },
                 contentColor = Color.White,
-                actions = {
-                }
+                navigationIcon = {
+                    Icon(Icons.Filled.KeyboardArrowLeft,"back",
+                        modifier = Modifier.clickable{ dispatcher?.onBackPressed() })
+                },
+                actions = {}
             )
         }
     ) {
@@ -115,12 +141,11 @@ fun PlayControlArea() {
     ) {
         // todo 改造成openApi接口获取
         var vipInfo by remember { mutableStateOf(Global.getLoginModuleApi().vipInfo) }
-        var canTryExcellentQuality by remember { mutableStateOf(false) }
-        var canTryGalaxyQuality by remember { mutableStateOf(false) }
-        var canTryDolbyQuality by remember { mutableStateOf(false) }
-
         val scope = rememberCoroutineScope()
         var trafficMb by remember { mutableStateOf(0f) }
+        LaunchedEffect(Global.getLoginModuleApi().vipInfo) {
+            vipInfo = Global.getLoginModuleApi().vipInfo
+        }
 
         Text(text = "今天已消耗流量：${trafficMb}MB")
         Row {
@@ -142,10 +167,12 @@ fun PlayControlArea() {
                 Text(text = "前往流量查询页面")
             }
         }
-        Divider(modifier = Modifier
-            .padding(top = 9.dp)
-            .fillMaxWidth()
-            .height(3.dp))
+        Divider(
+            modifier = Modifier
+                .padding(top = 9.dp)
+                .fillMaxWidth()
+                .height(3.dp)
+        )
 
         Text(
             text = "最大音量比例：${PlayerObserver.maxVolumeRatio}",
@@ -171,7 +198,11 @@ fun PlayControlArea() {
                 },
                 onValueChangeFinished = {
                     val ret = OpenApiSDK.getPlayerApi().setVolumeRatio(PlayerObserver.maxVolumeRatio)
-                    Toast.makeText(UtilContext.getApp(), if (ret) "设置最大音量比例为: ${PlayerObserver.maxVolumeRatio}" else "设置最大比例失败，请重试", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        UtilContext.getApp(),
+                        if (ret) "设置最大音量比例为: ${PlayerObserver.maxVolumeRatio}" else "设置最大比例失败，请重试",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 },
                 modifier = Modifier
                     .weight(1f, true)
@@ -223,13 +254,20 @@ fun PlayControlArea() {
                 .fillMaxWidth()
                 .height(3.dp)
         )
-
-        Button(
-            onClick = {
-                activity.startActivity(Intent(activity, AiListenTogetherActivity::class.java))
+        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            Button(
+                onClick = {
+                    activity.startActivity(Intent(activity, AiListenTogetherActivity::class.java))
+                }
+            ) {
+                Text(text = "前往AI伴听页面")
             }
-        ) {
-            Text(text = "前往AI伴听页面")
+
+            Button(onClick = {
+                UtilContext.getApp().startActivity(Intent(UtilContext.getApp(), PlayerVoyageActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }) {
+                Text(text = "臻品乐航页面")
+            }
         }
 
         Divider(
@@ -246,115 +284,171 @@ fun PlayControlArea() {
         Button(onClick = {
             val curValue = OpenApiSDK.getPlayerApi().getEnableReplayGain()
             val ret = OpenApiSDK.getPlayerApi().setEnableReplayGain(curValue.not())
-            if(ret == PlayDefine.PlayError.PLAY_ERR_NONE){
+            if (ret == PlayDefine.PlayError.PLAY_ERR_NONE) {
                 enableReplayGain = curValue.not()
-            }else{
+            } else {
                 UiUtils.showToast("开启失败:code=${ret}")
             }
         }, modifier = Modifier.padding(padding)) {
             Text(text = "开启音量均衡 ${if (enableReplayGain) "开启" else "关闭"}")
         }
-
         Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
-        Text(
-            text = "能否试听臻品音质：$canTryExcellentQuality, 是否试听过：${vipInfo?.isProfitTriedByType(ProfitInfo.QUALITY_TYPE_EXCELLENT)}," +
-                    "试听剩余时间：${vipInfo?.getProfitInfoByType(ProfitInfo.QUALITY_TYPE_EXCELLENT)?.remainTime}"
-        )
+        // 音质选择
+        var expanded by remember { mutableStateOf(false) }
+        var superQuality by remember { mutableIntStateOf(SuperQualityType.QUALITY_TYPE_EXCELLENT) }
+        var textMsg by remember { mutableStateOf("") }
 
-        Button(
-            onClick = {
-                OpenApiSDK.getOpenApi().canTryPlayExcellentQuality {
-                    canTryExcellentQuality = it.data ?: true
-                    vipInfo = Global.getLoginModuleApi().vipInfo
+        LaunchedEffect(superQuality,vipInfo) {
+            textMsg = updateTextInfo(type=superQuality)
+            Log.d(TAG, "profitInfoType=$superQuality,textMsg: $textMsg")
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.wrapContentSize().padding(2.dp)
+                    .border(BorderStroke(width = 1.dp, color = Color.Blue))
+                    .clickable{
+                        expanded = true
+                    }) {
+                Row{
+                    Text(text = getSuperQualityTypeName(superQuality), fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(4.dp))
+                    Icon(Icons.Filled.ArrowDropDown,"选择音质")
                 }
-
-            }
-        ) {
-            Text(text = "查看臻品音质试听状态")
-        }
-        Button(
-            onClick = {
-                OpenApiSDK.getPlayerApi().tryToOpenExcellentQuality(OpenApiSDK.getPlayerApi().getCurrentSongInfo(), object : PlayCallback {
-                    override fun onSuccess() {
-                        Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.width(IntrinsicSize.Min)
+                ) {
+                    getAllSuperQualityList().forEach { type ->
+                        DropdownMenuItem(
+                            onClick = {
+                                superQuality = type
+                                expanded = false
+                                // 这里可以添加选择后的处理逻辑
+                            }
+                        ) {
+                            Text(text = "${getSuperQualityTypeName(type)}-$type")
+                        }
                     }
-
-                    override fun onFailure(errCode: Int, msg: String?) {
-                        Toast.makeText(UtilContext.getApp(), "试听失败！$errCode, msg: $msg", Toast.LENGTH_SHORT).show()
-                    }
-                })
-            }
-        ) {
-            Text(text = "试听臻品音质")
-        }
-
-        Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
-
-        Text(
-            text = "能否试听臻品全景声：$canTryGalaxyQuality, 是否试听过：${vipInfo?.isProfitTriedByType(ProfitInfo.QUALITY_TYPE_GALAXY)}," +
-                    "试听剩余时间：${vipInfo?.getProfitInfoByType(ProfitInfo.QUALITY_TYPE_GALAXY)?.remainTime}"
-        )
-
-        Button(
-            onClick = {
-                OpenApiSDK.getOpenApi().canTryPlayGalaxyQuality {
-                    canTryGalaxyQuality = it.data ?: true
-                    vipInfo = Global.getLoginModuleApi().vipInfo
                 }
-
             }
-        ) {
-            Text(text = "查看臻品全景声试听状态")
-        }
-        Button(
-            onClick = {
-                OpenApiSDK.getPlayerApi().tryToOpenGalaxyQuality(OpenApiSDK.getPlayerApi().getCurrentSongInfo(), object : PlayCallback {
-                    override fun onSuccess() {
-                        Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
+            Button(
+                onClick = {
+                    when(superQuality){
+                        -1 -> {
+                            UiUtils.showToast("未知权益类型")
+                        }
+                        SuperQualityType.QUALITY_TYPE_EXCELLENT-> {
+                            OpenApiSDK.getOpenApi().canTryPlayExcellentQuality {
+                                vipInfo = Global.getLoginModuleApi().vipInfo
+                            }
+                        }
+                        SuperQualityType.QUALITY_TYPE_GALAXY-> {
+                            OpenApiSDK.getOpenApi().canTryPlayGalaxyQuality {
+                                vipInfo = Global.getLoginModuleApi().vipInfo
+                            }
+                        }
+                        SuperQualityType.QUALITY_TYPE_DOLBY -> {
+                            OpenApiSDK.getOpenApi().canTryPlayDolbyQuality {
+                                vipInfo = Global.getLoginModuleApi().vipInfo
+                            }
+                        }
+                        SuperQualityType.QUALITY_TYPE_VOYAGE -> {
+                            val res = OpenApiSDK.getVoyageApi().getVoyageTrialStatus()
+                            UiUtils.showToast(res.tip)
+                            vipInfo = Global.getLoginModuleApi().vipInfo
+                        }
+                        else-> {
+                            OpenApiSDK.getOpenApi().getFreeLimitedTimeProfitInfo(type = superQuality) {
+                                vipInfo = Global.getLoginModuleApi().vipInfo
+                            }
+                        }
                     }
-
-                    override fun onFailure(errCode: Int, msg: String?) {
-                        Toast.makeText(UtilContext.getApp(), "试听失败！$errCode, msg: $msg", Toast.LENGTH_SHORT).show()
+                    // SuperQualityType音质检查
+                    if(!getAllSuperQualityList().containsAll(getAllProfitList())){
+                        getAllProfitList().forEach {
+                            if (!getAllSuperQualityList().contains(it)){
+                                UiUtils.showToast("SuperQualityType缺少: ${it}-${getProfitTypeName(it)}")
+                            }
+                        }
                     }
-                })
-            }
-        ) {
-            Text(text = "试听臻品全景声")
-        }
-
-        Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
-
-        Text(
-            text = "能否试听杜比全景声：$canTryDolbyQuality, 是否试听过：${vipInfo?.isProfitTriedByType(ProfitInfo.QUALITY_TYPE_DOLBY)}," +
-                    "试听剩余时间：${vipInfo?.getProfitInfoByType(ProfitInfo.QUALITY_TYPE_DOLBY)?.remainTime}"
-        )
-
-        Button(
-            onClick = {
-                OpenApiSDK.getOpenApi().canTryPlayDolbyQuality() {
-                    canTryDolbyQuality = it.data ?: true
-                    vipInfo = Global.getLoginModuleApi().vipInfo
                 }
-
+            ) {
+                Text(text = "查看试听状态")
             }
-        ) {
-            Text(text = "查看杜比全景声试听状态")
-        }
-        Button(
-            onClick = {
-                OpenApiSDK.getPlayerApi().tryToOpenDolbyQuality(OpenApiSDK.getPlayerApi().getCurrentSongInfo(), object : PlayCallback {
-                    override fun onSuccess() {
-                        Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
-                    }
+            Button(
+                onClick = {
+                    when(superQuality){
+                        SuperQualityType.QUALITY_TYPE_EXCELLENT -> {
+                            OpenApiSDK.getPlayerApi().tryToOpenExcellentQuality(OpenApiSDK.getPlayerApi().getCurrentSongInfo(),
+                                object : PlayCallback {
+                                override fun onSuccess() {
+                                    vipInfo = Global.getLoginModuleApi().vipInfo
+                                    Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
+                                }
+                                override fun onFailure(errCode: Int, msg: String?) {
+                                    vipInfo = Global.getLoginModuleApi().vipInfo
+                                    Toast.makeText(UtilContext.getApp(), "试听失败！$errCode, msg: $msg", Toast.LENGTH_SHORT).show()
+                                }
+                            })
+                        }
+                        SuperQualityType.QUALITY_TYPE_GALAXY -> {
+                            OpenApiSDK.getPlayerApi().tryToOpenGalaxyQuality(OpenApiSDK.getPlayerApi().getCurrentSongInfo(), object : PlayCallback {
+                                override fun onSuccess() {
+                                    vipInfo = Global.getLoginModuleApi().vipInfo
+                                    Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
+                                }
 
-                    override fun onFailure(errCode: Int, msg: String?) {
-                        Toast.makeText(UtilContext.getApp(), "试听失败！$errCode, msg: $msg", Toast.LENGTH_SHORT).show()
+                                override fun onFailure(errCode: Int, msg: String?) {
+                                    vipInfo = Global.getLoginModuleApi().vipInfo
+                                    Toast.makeText(UtilContext.getApp(), "试听失败！$errCode, msg: $msg", Toast.LENGTH_SHORT).show()
+                                }
+                            })
+                        }
+                        SuperQualityType.QUALITY_TYPE_DOLBY -> {
+                            OpenApiSDK.getPlayerApi().tryToOpenDolbyQuality(OpenApiSDK.getPlayerApi().getCurrentSongInfo(), object : PlayCallback {
+                                override fun onSuccess() {
+                                    vipInfo = Global.getLoginModuleApi().vipInfo
+                                    Toast.makeText(UtilContext.getApp(), "试听成功！", Toast.LENGTH_SHORT).show()
+                                }
+
+                                override fun onFailure(errCode: Int, msg: String?) {
+                                    vipInfo = Global.getLoginModuleApi().vipInfo
+                                    Toast.makeText(UtilContext.getApp(), "试听失败！$errCode, msg: $msg", Toast.LENGTH_SHORT).show()
+                                }
+                            })
+                        }
+                        SuperQualityType.QUALITY_TYPE_VOYAGE -> {
+                            OpenApiSDK.getVoyageApi().enableUsagePermission {
+                                UiUtils.showToast(it.tip)
+                                vipInfo = Global.getLoginModuleApi().vipInfo
+                            }
+                        }
+                        else-> {
+                            OpenApiSDK.getOpenApi().openFreeLimitedTimeAuth(type = superQuality)  {
+                                if(it.isSuccess() && it.data==true) {
+                                    UiUtils.showToast("试听成功")
+                                } else {
+                                    UiUtils.showToast("试听失败:${it.errorMsg}")
+                                }
+                                vipInfo = Global.getLoginModuleApi().vipInfo
+                            }
+                        }
                     }
-                })
+                    AppScope.launch {
+                        delay(1000)
+                        vipInfo = Global.getLoginModuleApi().vipInfo
+                        textMsg = updateTextInfo(type=superQuality)
+                    }
+                }
+            ){
+                Text(text="试听")
             }
-        ) {
-            Text(text = "试听杜比全景声")
         }
+
+        Text(text=textMsg)
+
 
         Button(
             onClick = {
@@ -439,7 +533,11 @@ fun PlayControlArea() {
             Switch(
                 checked = PlayerObserver.vocalAccompanyConfig.replay,
                 onCheckedChange = {
-                    val vocalAccompanyConfig = VocalAccompanyConfig(PlayerObserver.vocalAccompanyConfig.defaultVocalPercent, it, PlayerObserver.vocalAccompanyConfig.keepPlayStateWhenVocalStateChange)
+                    val vocalAccompanyConfig = VocalAccompanyConfig(
+                        PlayerObserver.vocalAccompanyConfig.defaultVocalPercent,
+                        it,
+                        PlayerObserver.vocalAccompanyConfig.keepPlayStateWhenVocalStateChange
+                    )
                     PlayerObserver.vocalAccompanyConfig = vocalAccompanyConfig
                     OpenApiSDK.getVocalAccompanyApi().saveDefaultVocalAccompanyConfig(vocalAccompanyConfig)
                 })
@@ -458,7 +556,8 @@ fun PlayControlArea() {
             Switch(
                 checked = PlayerObserver.vocalAccompanyConfig.keepPlayStateWhenVocalStateChange,
                 onCheckedChange = {
-                    val vocalAccompanyConfig = VocalAccompanyConfig(PlayerObserver.vocalAccompanyConfig.defaultVocalPercent, PlayerObserver.vocalAccompanyConfig.replay, it)
+                    val vocalAccompanyConfig =
+                        VocalAccompanyConfig(PlayerObserver.vocalAccompanyConfig.defaultVocalPercent, PlayerObserver.vocalAccompanyConfig.replay, it)
                     PlayerObserver.vocalAccompanyConfig = vocalAccompanyConfig
                     OpenApiSDK.getVocalAccompanyApi().saveDefaultVocalAccompanyConfig(vocalAccompanyConfig)
                 })
@@ -474,8 +573,10 @@ fun PlayControlArea() {
                 value = PlayerObserver.vocalAccompanyConfig.defaultVocalPercent.value.toFloat(),
                 valueRange = VocalPercent.min.value.toFloat()..VocalPercent.max.value.toFloat(),
                 onValueChange = {
-                    val vocalAccompanyConfig = VocalAccompanyConfig(OpenApiSDK.getVocalAccompanyApi().convertToCloseVocalRadio(it.toInt()), PlayerObserver.vocalAccompanyConfig.replay,
-                        PlayerObserver.vocalAccompanyConfig.keepPlayStateWhenVocalStateChange)
+                    val vocalAccompanyConfig = VocalAccompanyConfig(
+                        OpenApiSDK.getVocalAccompanyApi().convertToCloseVocalRadio(it.toInt()), PlayerObserver.vocalAccompanyConfig.replay,
+                        PlayerObserver.vocalAccompanyConfig.keepPlayStateWhenVocalStateChange
+                    )
                     PlayerObserver.vocalAccompanyConfig = vocalAccompanyConfig
                     OpenApiSDK.getVocalAccompanyApi().saveDefaultVocalAccompanyConfig(PlayerObserver.vocalAccompanyConfig)
                 },
@@ -549,10 +650,12 @@ fun PlayControlArea() {
             text = "是否支持MasterSR: ${!MasterSRManager.isDeviceNotSupportMasterSRQuality()}, SQSR: ${!SQSRManager.isDeviceNotSupportSQSRQuality()}",
             fontFamily = FontFamily.Monospace
         )
-        Divider(modifier = Modifier
-            .padding(top = 9.dp)
-            .fillMaxWidth()
-            .height(3.dp))
+        Divider(
+            modifier = Modifier
+                .padding(top = 9.dp)
+                .fillMaxWidth()
+                .height(3.dp)
+        )
 
         Text(text = "设置音量", modifier = Modifier.padding(4.dp))
         Row(
@@ -605,15 +708,17 @@ fun PlayControlArea() {
             Text("setVolume")
         }
 
-        Divider(modifier = Modifier
-            .padding(top = 9.dp)
-            .fillMaxWidth()
-            .height(3.dp))
+        Divider(
+            modifier = Modifier
+                .padding(top = 9.dp)
+                .fillMaxWidth()
+                .height(3.dp)
+        )
 
         val fileStrBuilder = StringBuilder()
         GalaxyFileQualityManager.getExcellentFile()?.forEach {
             fileStrBuilder.appendLine(it.name)
-            if (it.name.contains("csv")){
+            if (it.name.contains("csv")) {
                 fileStrBuilder.appendLine(it.readText())
             }
         }
@@ -629,25 +734,34 @@ fun PlayControlArea() {
             Text(text = "关闭通知栏")
         }
 
-        Divider(modifier = Modifier
-            .padding(top = 9.dp)
-            .fillMaxWidth()
-            .height(3.dp))
+        Divider(
+            modifier = Modifier
+                .padding(top = 9.dp)
+                .fillMaxWidth()
+                .height(3.dp)
+        )
 
         Row(modifier = Modifier, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             val currentLimitedSize = remember {
                 mutableIntStateOf(OpenApiSDK.getPlayerApi().getLastPlayListLimitedSize())
             }
             Text(text = "限制恢复列表大小 ")
-            TextField(value = "${currentLimitedSize.intValue}", singleLine = true, keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number), onValueChange = {
-                currentLimitedSize.intValue = it.toIntOrNull() ?: -1
-            }, colors = TextFieldDefaults.textFieldColors(
-                backgroundColor = Color.Transparent,
-                cursorColor = Color.Black,
-                disabledLabelColor = Color.Gray,
-                focusedIndicatorColor = Color.Blue,
-                unfocusedIndicatorColor = Color.Blue
-            ), modifier = Modifier.width(100.dp))
+            TextField(
+                value = "${currentLimitedSize.intValue}",
+                singleLine = true,
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                onValueChange = {
+                    currentLimitedSize.intValue = it.toIntOrNull() ?: -1
+                },
+                colors = TextFieldDefaults.textFieldColors(
+                    backgroundColor = Color.Transparent,
+                    cursorColor = Color.Black,
+                    disabledLabelColor = Color.Gray,
+                    focusedIndicatorColor = Color.Blue,
+                    unfocusedIndicatorColor = Color.Blue
+                ),
+                modifier = Modifier.width(100.dp)
+            )
             Button(onClick = {
                 val ret = OpenApiSDK.getPlayerApi().setLastPlayListLimitedSize(currentLimitedSize.intValue)
                 if (ret == 0) {
@@ -660,6 +774,26 @@ fun PlayControlArea() {
             }
         }
 
+        Divider(
+            modifier = Modifier
+                .padding(top = 9.dp)
+                .fillMaxWidth()
+                .height(3.dp)
+        )
     }
 
+}
+
+
+private fun updateVipInfo(callback: OpenApiCallback<OpenApiResponse<VipInfo>>? = null){
+    OpenApiSDK.getOpenApi().fetchGreenMemberInformation(callback)
+}
+
+private fun updateTextInfo(type:Int): String{
+    if (Global.getLoginModuleApi().vipInfo?.getProfitInfoByType(type)==null){
+        return "无此音质下发:${type},${getProfitTypeName(type)}"
+    }
+    return "能否试听：${Global.getLoginModuleApi().vipInfo?.getProfitInfoByType(type)?.canTry()}," +
+            " 是否试听过：${Global.getLoginModuleApi().vipInfo?.isProfitTriedByType(type)}," +
+            "试听剩余时间：${Global.getLoginModuleApi().vipInfo?.getProfitInfoByType(type)?.remainTime}"
 }

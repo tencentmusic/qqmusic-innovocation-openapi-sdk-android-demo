@@ -6,23 +6,27 @@ import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Divider
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
+import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,16 +35,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.FreeStrategy
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.GsonHelper
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.convertTime
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.CommonProfileActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongProfileActivity
 import com.tencent.qqmusic.qplayer.ui.activity.ui.theme.QPlayerTheme
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 
@@ -53,8 +58,8 @@ fun SongDetailPage(observer: PlayerObserver) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(text = "播放信息", fontSize = 18.sp) },
+            TopBar(
+                "播放信息",
                 contentColor = Color.White,
                 actions = {
                 }
@@ -79,9 +84,16 @@ fun DetailPage(observer: PlayerObserver? = null) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier
                 .fillMaxSize()
-//                .then(Modifier.verticalScroll(rememberScrollState())) //加了这个方法会导致图片加载不出来，原因未知
+                .verticalScroll(rememberScrollState())
                 .then(Modifier.background(color = Color(248, 248, 248)))
         ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = {
+                    val intent = Intent(activity, SongProfileActivity::class.java)
+                    intent.putExtra(SongProfileActivity.KEY_SONG, songInfo)
+                    activity.startActivity(intent)
+                }) { Text("歌曲详情") }
+            }
             Row(modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)) {
                 Text(text = "歌曲名称 ： ")
                 Text(text = songInfo?.songName ?: "当前未播放歌曲")
@@ -213,28 +225,6 @@ fun DetailPage(observer: PlayerObserver? = null) {
             }
 
             Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
-
-            Column {
-                Text(text = "歌曲标签 ")
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)) {
-                    Text(text = "心情 ： ")
-                    Text(text = songInfo?.extraInfo?.mood ?: "null")
-                }
-            }
-
-            Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
-            Column {
-                Text(text = "内容安全限制: ${songInfo?.action?.sa}")
-                val sa = songInfo?.action?.sa ?: 0
-                if (sa > 0) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)) {
-                        Text(text = "AI作品 ： ")
-                        Text(text = if (songInfo?.isAISong() == true) "是" else "否")
-                    }
-                }
-            }
 
             if (isAIEffect) {
                 Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))

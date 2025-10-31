@@ -28,7 +28,6 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Slider
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
-import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +54,7 @@ import com.tencent.qqmusic.openapisdk.core.player.musictherapy.MusicTherapyStatu
 import com.tencent.qqmusic.openapisdk.core.player.musictherapy.OnMusicTherapyStateListener
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.player.proxy.PlayStateProxyHelper
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 
 class MusicTherapyActivity : ComponentActivity(), OnMusicTherapyStateListener {
     companion object {
@@ -83,9 +83,7 @@ class MusicTherapyActivity : ComponentActivity(), OnMusicTherapyStateListener {
     @Composable
     fun MusicTherapyView() {
         Scaffold(topBar = {
-            TopAppBar(
-                title = { Text(text = "音乐疗愈", fontSize = 18.sp) }, contentColor = Color.White
-            )
+            TopBar("音乐疗愈")
         }) {
             ConstraintLayout(modifier = Modifier.fillMaxSize()) {
                 VideoPlayer()

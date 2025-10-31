@@ -151,8 +151,6 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
             }
         }
 
-        val needFade = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
-
         Image(
             painter = painterResource(id = if (isPlaying) R.drawable.ic_state_playing else R.drawable.ic_state_paused),
             contentDescription = null,
@@ -178,7 +176,7 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
                             .apply {
                                 if (isPlaying) {
                                     tryPauseFirst()
-                                    pause(needFade)
+                                    pause(observer.needFade)
                                 } else {
                                     tryPauseFirst()
                                     play()
@@ -283,7 +281,7 @@ fun lyric(
 
     val listener: LyricLoadInterface by remember {
         mutableStateOf(object : LyricLoadInterface {
-            override fun onLoadSuc(lyric: Lyric?, transLyric: Lyric?, romaLyric: Lyric?, state: Int) {
+            override fun onLoadSuc(lyric: Lyric, transLyric: Lyric, romaLyric: Lyric, state: Int, lyricStartTime: Long) {
                 lyricView.setLyric(lyric, transLyric, romaLyric, state)
             }
 

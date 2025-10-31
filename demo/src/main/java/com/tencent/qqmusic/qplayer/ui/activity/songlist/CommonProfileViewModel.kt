@@ -6,6 +6,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
@@ -17,6 +18,7 @@ import com.tencent.qqmusic.openapisdk.model.Folder
 import com.tencent.qqmusic.openapisdk.model.SingerDetail
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.core.player.playlist.MusicPlayList
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.lang.reflect.Type
@@ -181,6 +183,9 @@ class CommonProfileViewModel: ViewModel() {
     var playListType: Int by mutableIntStateOf(0)
     var playListTypeId: Long by mutableLongStateOf(0L)
 
+    private val _selectedSongs = mutableStateListOf<SongInfo>()
+    val selectedSongs: List<SongInfo> get() = _selectedSongs
+
     private val profileModels = mutableMapOf<Type, ProfileDataModel<*>>()
 
     private fun registerProfileModel(type: Type, model: ProfileDataModel<*>) {
@@ -271,6 +276,40 @@ class CommonProfileViewModel: ViewModel() {
         val model = profileModels[listType(typeToken)] as? ProfileDataListModel<*>
         model?._order?.intValue = order
         fetchData()
+    }
+
+    fun toggleSongSelection(song: SongInfo) {
+        if (_selectedSongs.contains(song)) {
+            _selectedSongs.remove(song)
+        } else {
+            _selectedSongs.add(song)
+        }
+    }
+
+    fun selectAllSongs(songs: List<SongInfo>) {
+        _selectedSongs.clear()
+        _selectedSongs.addAll(songs)
+    }
+
+    fun clearSelection() {
+        _selectedSongs.clear()
+    }
+
+    fun deleteSelectedSongs() {
+        val folderId = playListTypeId.toString()
+        val delSongList = selectedSongs
+        OpenApiSDK.getOpenApi().deleteSongFromFolder(
+            folderId = folderId,
+            songIdList = delSongList.map { it.songId },
+            midList = null,
+            songTypes = delSongList.map { it.songType.toString() }){
+            if (it.isSuccess()){
+                UiUtils.showToast("删除成功")
+            }else{
+                UiUtils.showToast(it.errorMsg?:"删除失败")
+            }
+            fetchData()
+        }
     }
 
 }

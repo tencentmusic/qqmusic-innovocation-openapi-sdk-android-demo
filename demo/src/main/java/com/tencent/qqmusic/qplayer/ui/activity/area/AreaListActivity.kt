@@ -32,11 +32,9 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
 import coil.compose.rememberImagePainter
-import com.google.accompanist.pager.ExperimentalPagerApi
-import com.tencent.qqmusic.openapisdk.model.AreaShelf
 import com.tencent.qqmusic.openapisdk.model.AreaShelfItem
 import com.tencent.qqmusic.openapisdk.model.AreaShelfType
-import com.tencent.qqmusic.qplayer.ui.activity.main.PodcastItem
+import com.tencent.qqmusic.qplayer.ui.activity.home.PodcastItem
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import kotlinx.coroutines.flow.Flow

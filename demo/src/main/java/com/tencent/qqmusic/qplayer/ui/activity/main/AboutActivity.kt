@@ -9,23 +9,30 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
+import androidx.compose.material.IconButton
+import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -36,12 +43,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
-import com.tencent.qqmusic.openapisdk.business_common.Global
-import com.tencent.qqmusic.openapisdk.business_common.Global.versionName
 import com.tencent.qqmusic.openapisdk.business_common.cgi.CgiConfig
 import com.tencent.qqmusic.openapisdk.business_common.utils.IPCSdkManager
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.qplayer.BaseFunctionManager
 import com.tencent.qqmusic.qplayer.baselib.util.deviceid.DeviceInfoManager
+import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.login.WebViewActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusiccommon.ConfigPreferences
@@ -50,7 +57,9 @@ class AboutActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            AboutScreen()
+            Scaffold(topBar = { TopBar("关于") }) {
+                AboutScreen()
+            }
         }
     }
 }
@@ -68,46 +77,45 @@ fun AboutScreen() {
             .fillMaxSize()
             .verticalScroll(state = rememberScrollState())
     ) {
-        CopyableText(title = "包名", content = "com.tencent.qqmusicrecognition")
-        CopyableText(title = "SDK版本号", content = versionName)
-        CopyableText(title = "APPID", content = Global.opiAppId)
-        CopyableText(title = "APPKEY", content = Global.opiAppKey)
-        EditorView(title = "ChannelId", content = Global.channelId) {
-            if(it.isNotBlank()) {
-                sharedPreferences?.edit { putString("DemoChannelId", it) }
-            } else {
-                UiUtils.showToast("请输入ChannelId")
-            }
+        CopyableItem(title = "包名", content = "com.tencent.qqmusicrecognition")
+        CopyableItem(title = "SDK版本号", content = OpenApiSDK.getSdkVersion())
+        CopyableItem(title = "APPID", content = MustInitConfig.APP_ID)
+        EditorView(title = "ChannelId", content = BaseFunctionManager.proxy.getChannelId()) {
+            sharedPreferences?.edit { putString("DemoChannelId", it) }
         }
-        EditorView(title = "合作方设备id(DeviceId)", content = Global.opiDeviceId){
+        EditorView(title = "合作方设备id(DeviceId)", content = sharedPreferences?.getString("demoOpiDeviceId", "123456789") ?: "123456789"){
             if(it.isNotBlank()) {
                 sharedPreferences?.edit { putString("demoOpiDeviceId", it) }
             } else {
                 UiUtils.showToast("请输入DeviceId")
             }
         }
-        EditorView(title = "车型(car_type)", content = Global.deviceConfigInfo.hardwareInfo){
+        EditorView(title = "车型(car_type)", content = sharedPreferences?.getString("demoHardwareInfo", "L9") ?: "L9"){
             sharedPreferences?.edit { putString("demoHardwareInfo", it) }
         }
-        EditorView(title = "品牌信息(brand)", content = Global.deviceConfigInfo.brand){
+        EditorView(title = "品牌信息(brand)", content = sharedPreferences?.getString("demoBrand", "Xiaomi") ?: "Xiaomi"){
             sharedPreferences?.edit { putString("demoBrand", it) }
         }
         // 内部方法 仅用于测试。谨慎调用
-        CopyableText(
+        CopyableItem(
             title = "特殊模式",
-            content = "低内存模式(lowMemoryMode):${Global.deviceConfigInfo.lowMemoryMode}\n" +
+            content = "低内存模式(lowMemoryMode):${sharedPreferences?.getBoolean("lowMemoryMode", false) ?: false}\n" +
                     "IPC模式(IpcMode):${IPCSdkManager.useIpc}"
         )
-        CopyableText(title = (if (OpenApiSDK.getLoginApi().hasLogin()) "openId" else "设备id")+"(日志上报Id)",
+        CopyableItem(title = (if (OpenApiSDK.getLoginApi().hasLogin()) "openId" else "设备id")+"(日志上报Id)",
             content = CgiConfig.uin())
-        CopyableText(title = "wnsId", content = ConfigPreferences.getInstance().wnsWid.toString())
-        CopyableText(title = "qimei36", content = DeviceInfoManager.q36)
-        CopyableText(title = "协议", content = if (OpenApiSDK.isNewProtocol) "新协议" else "旧协议")
-        CopyableText(title = "架构", content = Build.SUPPORTED_ABIS.first())
+        CopyableItem(title = "wnsId", content = ConfigPreferences.getInstance().wnsWid.toString())
+        CopyableItem(title = "qimei36", content = DeviceInfoManager.q36)
+        CopyableItem(title = "协议", content = if (OpenApiSDK.isNewProtocol) "新协议" else "旧协议")
+        CopyableItem(title = "架构", content = Build.SUPPORTED_ABIS.first())
         PrivacyView()
 
         Button(onClick = {
             OpenApiSDK.getLogApi().uploadLog(activity) { code, tips, uuid ->
+                if (code == 7) {
+                    UiUtils.showToast("$tips")
+                    return@uploadLog
+                }
                 Log.i(tag, "OtherScreen: code $code, tips $tips, uuid $uuid")
                 UiUtils.showToast("日志上传结果, code:$code, msg:$tips, uuid $uuid")
             }
@@ -118,7 +126,8 @@ fun AboutScreen() {
 }
 
 @Composable
-fun CopyableText(title: String, content: String) {
+fun CopyableItem(title: String, content: String) {
+    val clipboardManager = LocalClipboardManager.current
     Column {
         Text(
             text = title,
@@ -141,10 +150,55 @@ fun CopyableText(title: String, content: String) {
                 ),
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
+                    .clickable {
+                        clipboardManager.setText(AnnotatedString(content))
+                        UiUtils.showToast("已复制到剪切板")
+                    }
             )
         }
     }
 }
+
+@Composable
+fun CopyableText(title: String?=null, content: String?=null, copyText: String?= null, color: Color = Color.Black) {
+    val clipboardManager = LocalClipboardManager.current
+    Row(verticalAlignment = Alignment.Top) {
+        title?.let {
+            Text(
+                text = "$it:",
+                style = TextStyle(
+                    fontFamily = FontFamily.Default,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = color
+                ),
+                modifier = Modifier.wrapContentSize()
+            )
+        }
+        SelectionContainer {
+            Text(
+                text = content?:"null",
+                style = TextStyle(
+                    fontFamily = FontFamily.Default,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    color = color
+                ),
+                modifier = Modifier
+                    .wrapContentSize()
+                    .clickable {
+                        val copyText2 = copyText?:content
+                        copyText2?.let {
+                            clipboardManager.setText(AnnotatedString(it))
+                            UiUtils.showToast("已复制到剪切板")
+                        }
+                    }
+            )
+        }
+
+    }
+}
+
 
 @Composable
 fun PrivacyView() {
@@ -184,7 +238,9 @@ fun PrivacyView() {
 }
 
 @Composable
-fun UrlSpanView(tag: String, text: String) {
+fun UrlSpanView(tag: String, text: String, modifier: Modifier = Modifier
+    .padding(horizontal = 16.dp)
+    .height(60.dp)) {
     val spannedText = buildAnnotatedString {
         withStyle(style = SpanStyle(color = Color.Blue)) {
             pushStringAnnotation(tag = text, annotation = tag)
@@ -202,9 +258,7 @@ fun UrlSpanView(tag: String, text: String) {
             fontSize = 16.sp,
             color = Color.Black
         ),
-        modifier = Modifier
-            .padding(horizontal = 16.dp)
-            .height(60.dp))
+        modifier = modifier)
     { offset->
         spannedText.getStringAnnotations(offset, offset).firstOrNull()?.let { span->
             WebViewActivity.start(context, span.tag)
@@ -219,7 +273,7 @@ fun EditorView(title: String, content: String, updateHandler: (String) -> Unit) 
     Column {
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 10.dp),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = title,
@@ -230,7 +284,7 @@ fun EditorView(title: String, content: String, updateHandler: (String) -> Unit) 
                     color = Color.Black
                 )
             )
-            androidx.compose.material.IconButton(
+            IconButton(
                 onClick = {
                     // 点击后弹出编辑对话框
                     val editText = android.widget.EditText(context).apply {

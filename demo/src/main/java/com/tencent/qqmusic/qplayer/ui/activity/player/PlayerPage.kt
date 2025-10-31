@@ -19,10 +19,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
-import androidx.compose.material.ButtonColors
 import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
+import androidx.compose.material.TopAppBar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,11 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -55,12 +55,11 @@ import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiAccompanyHelper
 import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricNewActivity
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.tryPauseFirst
-import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPageActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.CommonProfileActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
-import com.tencent.qqmusic.qplayer.ui.activity.ui.DefaultSliderColor
 import com.tencent.qqmusic.qplayer.ui.activity.ui.QQMusicSlider
 import com.tencent.qqmusic.qplayer.ui.activity.ui.Segment
 import com.tencent.qqmusic.qplayer.utils.UiUtils
@@ -76,7 +75,7 @@ private const val TAG = "PlayerPage"
 
 @Composable
 fun PlayerScreen(observer: PlayerObserver) {
-    Scaffold {
+    Scaffold(topBar = { TopBar(title = "播放页") }) {
         PlayerPage(observer)
     }
 }
@@ -90,6 +89,7 @@ fun PlayerPage(observer: PlayerObserver) {
     val currMode = observer.currentMode
     val playStateText = observer.playStateText
     var quality = observer.mCurrentQuality
+    var aiText = observer.mCurrentAiText
     val collectState = remember {
         mutableStateOf(currSong?.hot == 1)
     }
@@ -124,21 +124,37 @@ fun PlayerPage(observer: PlayerObserver) {
         // 歌曲信息
         Text(
             text = currSong?.songName ?: "未知",
-            fontSize = 20.sp,
+            fontSize = 18.sp,
             modifier = Modifier.padding(top = 8.dp)
         )
         Text(
-            text = currSong?.singerName ?: "未知",
-            fontSize = 20.sp,
-            modifier = Modifier.padding(top = 8.dp).clickable {
-                currSong?.singerId?.let {
-                    activity.startActivity(
-                        Intent(activity, CommonProfileActivity::class.java)
-                            .putExtra(SongListActivity.KEY_SINGER_ID, it)
-                    )
+            text = buildString {
+                append(currSong?.singerName ?: "未知")
+                currSong?.otherSingerList?.let {
+                    if (it.isNotEmpty()){
+                        append("/${it.joinToString("/"){ it.title?:it.name }}")
+                    }
                 }
-            }
+            },
+            fontSize = 14.sp,
+            modifier = Modifier
+                .padding(top = 8.dp)
+                .clickable {
+                    currSong?.singerId?.let {
+                        activity.startActivity(
+                            Intent(activity, CommonProfileActivity::class.java)
+                                .putExtra(SongListActivity.KEY_SINGER_ID, it)
+                        )
+                    }
+                }
         )
+        aiText?.let {
+            Text(
+                text = it,
+                fontSize = 16.sp,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
 
         Text(
             text = sentence.ifBlank { "无歌词" },
@@ -149,7 +165,9 @@ fun PlayerPage(observer: PlayerObserver) {
         AndroidView(
             factory = {
                 lyricView
-            }, modifier = Modifier.padding(top = 40.dp).size(width = 400.dp, height = 16.dp)
+            }, modifier = Modifier
+                .padding(top = 40.dp)
+                .size(width = 400.dp, height = 16.dp)
         )
 
         Row(
@@ -171,13 +189,17 @@ fun PlayerPage(observer: PlayerObserver) {
                     .size(50.dp)
                     .clickable {
                         tryPauseFirst()
-                        QualityAlert.showQualityAlert(activity, isDownload = false, {
-                            OpenApiSDK
-                                .getPlayerApi()
-                                .setCurrentPlaySongQuality(it)
-                        }, {
-                            quality = it
-                        })
+                        QualityAlert.showQualityAlert(
+                            activity = activity,
+                            isDownload = false,
+                            setBlock = {
+                                OpenApiSDK
+                                    .getPlayerApi()
+                                    .setCurrentPlaySongQuality(it)
+                            },
+                            refresh = {
+                                quality = it
+                            })
                     }
             )
 
@@ -194,14 +216,12 @@ fun PlayerPage(observer: PlayerObserver) {
                         if (currSong != null) {
                             Log.i(TAG, "currSong ${currSong.extraInfo?.trace}")
                             QualityAlert.showQualityAlert(
-                                activity, isDownload = true, {
+                                activity = activity, isDownload = true, setBlock = {
                                     OpenApiSDK
                                         .getDownloadApi()
                                         .downloadSong(currSong, it)
                                     PlayDefine.PlayError.PLAY_ERR_NONE
-                                }, {
-                                    quality = it
-                                })
+                                }, refresh = {})
                         }
                     }
             )
@@ -365,8 +385,8 @@ fun PlayerPage(observer: PlayerObserver) {
                             }
                         }
                         tryPauseFirst()
-                        val needFade = PlayerObserver.sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
-                        val res = OpenApiSDK.getPlayerApi().seekToPlay(seekPosition.toLong(), needFade)
+                        val res = OpenApiSDK.getPlayerApi().seekToPlay(seekPosition.toLong(),
+                            PlayerObserver.needFade)
 //                        val res = OpenApiSDK.getPlayerApi().seek(seekPosition, true)
                         if (res.toInt() == seekPosition) {
                             QLog.i(TAG, "PlayerPage seek success res = $res, seekPosition = $seekPosition")
@@ -392,7 +412,7 @@ fun PlayerPage(observer: PlayerObserver) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 30.dp),
+                .padding(top = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -458,7 +478,6 @@ fun PlayerPage(observer: PlayerObserver) {
                     }
             )
 
-            val needFade = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
 
             Image(
                 painter = painterResource(id = if (isPlaying) R.drawable.ic_state_playing else R.drawable.ic_state_paused),
@@ -471,7 +490,7 @@ fun PlayerPage(observer: PlayerObserver) {
                             val ret = if (isPlaying) {
                                 OpenApiSDK
                                     .getPlayerApi()
-                                    .pause(needFade)
+                                    .pause(observer.needFade)
                             } else {
                                 OpenApiSDK
                                     .getPlayerApi()
@@ -526,6 +545,19 @@ fun PlayerPage(observer: PlayerObserver) {
                     .clickable {
                         val intent = Intent(activity, PlayListActivity::class.java)
                         activity.startActivity(intent)
+                    }
+            )
+
+            Image(
+                painter = painterResource(id = R.drawable.ic_ai_accompany),
+                contentDescription = null,
+                colorFilter = if (OpenApiSDK.getAIGlobalListenTogetherApi()
+                        .isAIListenTogetherOpened()
+                ) ColorFilter.tint(Color.Green, BlendMode.SrcAtop) else null,
+                modifier = Modifier
+                    .size(30.dp)
+                    .clickable {
+                        AIAccompanyDialog.show(activity = activity)
                     }
             )
         }

@@ -6,26 +6,40 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.SharedPreferences
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.AlertDialog
+import androidx.compose.material.AppBarDefaults
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.Button
 import androidx.compose.material.Icon
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.primarySurface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +54,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -61,8 +77,10 @@ import com.tencent.qqmusic.openapisdk.business_common.event.event.TransactionPus
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.ISDKSpecialNeedInterface
 import com.tencent.qqmusic.openapisdk.core.player.PlayRadioCallBack
+import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.openapisdk.core.player.PlayerModuleFunctionConfigParam
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.openapisdk.model.VipInfo
 import com.tencent.qqmusic.openapisdk.playerui.view.PlayerSpectrumViewWidget
 import com.tencent.qqmusic.openapisdk.playerui.view.PlayerSpectrumViewWidget.Companion.STYLE_SPECTRUM_BAR
 import com.tencent.qqmusic.qplayer.R
@@ -73,11 +91,13 @@ import com.tencent.qqmusic.qplayer.ui.activity.BaseComposeActivity
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.home.RemindRenewalDialog
 import com.tencent.qqmusic.qplayer.ui.activity.home.VIPSuccessDialog
+import com.tencent.qqmusic.qplayer.ui.activity.mv.MvBuyQRDialog.showTextDialog
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import com.tencent.qqmusic.qplayer.utils.PrivacyManager
+import com.tencent.qqmusic.qplayer.utils.UiUtils.getQualityName
 import com.tencent.qqmusic.qzdownloader.utils.FileUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -96,9 +116,8 @@ class DemoActivity : BaseComposeActivity() {
         super.onCreate(savedInstanceState)
         PrivacyManager.init(this) {
             initView()
+            bindWidget(PlayerSpectrumViewWidget(getViewModel(), STYLE_SPECTRUM_BAR, container = window.decorView as ViewGroup))
         }
-        bindWidget(PlayerSpectrumViewWidget(getViewModel(), STYLE_SPECTRUM_BAR, container = window.decorView as ViewGroup))
-
         val fileName = "ai_image_ai_song_demo2.png"
         val imagePath = File(dir, fileName).absolutePath
         FileUtils.copyAssets(this, fileName, imagePath)
@@ -175,6 +194,22 @@ class DemoActivity : BaseComposeActivity() {
                 TransactionEvent.TransactionEventCode -> {
                     showPayDialog.value = Pair(true, it.data as? TransactionPushData)
                 }
+
+                LoginEvent.MusicAccountLoginFailed -> {
+                    showTextDialog(context = this, title="Music帐号发生变化",
+                        message = "Music帐号自动登录失败", autoCloseMs = 2000)
+                }
+                LoginEvent.ProfitInfoChange -> {
+                    showTextDialog(context = this, title="试用权益发生变更",
+                        message = (it.data as? VipInfo)?.
+                        profitInfoList?.firstOrNull()?.type?.getQualityName().toString(),
+                        autoCloseMs = 2000)
+                }
+                LoginEvent.UserVipIconsChange -> {
+                    showTextDialog(context = this, title="会员图标变化",
+                        message = (it.data as? VipInfo)?.userIconsUI?.iconlist?.firstOrNull()?.desc.toString(),
+                        autoCloseMs = 2000)
+                }
             }
         }
     }
@@ -242,15 +277,52 @@ class DemoActivity : BaseComposeActivity() {
                 enableRestorePlaylistFunctionality = sharedPreferences?.getBoolean("restore_play_list", true) ?: true
                 autoPlayErrNum = sharedPreferences?.getInt("restore_play_list_err_num", 0) ?: 0
                 playWhenRequestFocusFailed = sharedPreferences?.getBoolean("playWhenRequestFocusFailed", true) ?: true
-                needFadeWhenPlayNewSong = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
+                needFadeWhenPlayNewSong = sharedPreferences?.getBoolean("needFadeWhenPlay", true) != false
                 mediaCodecQualityForDolby = 2424
                 acceptsDelayedFocusGain = sharedPreferences?.getBoolean("delayGetAudioFocus", false) ?: false
                 playHigherQualityCache = sharedPreferences?.getBoolean("playHigherQualityCache", true) ?: true
+                filterAddToNextOneSong = sharedPreferences?.getBoolean("filterAddToNextOneSong", false) ?: false
             }
 
             override fun getPlayerModuleFunctionConfigParam(): PlayerModuleFunctionConfigParam {
                 return param.apply {
-                    needFadeWhenPlayNewSong = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
+                    needFadeWhenPlayNewSong = sharedPreferences?.getBoolean("needFadeWhenPlay", true) != false
+                }
+            }
+
+            override fun createAudioTrack(
+                streamType: Int,
+                sampleRate: Int,
+                channelMask: Int,
+                pcmEncoding: Int,
+                bufferSizeInByte: Int,
+                transferMode: Int,
+                sessionId: Int
+            ): AudioTrack? {
+                if (PlayerObserver.mCurrentQuality == Quality.DOLBY || PlayerObserver.mCurrentQuality == Quality.GALAXY) {
+                    Log.i(TAG, "createAudioTrack multi channel. quality:${PlayerObserver.mCurrentQuality}, channelMask:$channelMask")
+                }
+
+                val attributes = AudioAttributes.Builder()
+                attributes.setLegacyStreamType(streamType)
+                val audioFormat = AudioFormat.Builder()
+                audioFormat.setSampleRate(sampleRate)
+                audioFormat.setEncoding(pcmEncoding)
+                audioFormat.setChannelMask(channelMask)
+                return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    AudioTrack.Builder()
+                        .setAudioAttributes(attributes.build())
+                        .setAudioFormat(audioFormat.build())
+                        .setBufferSizeInBytes(bufferSizeInByte)
+                        .setTransferMode(transferMode)
+                        .setSessionId(sessionId)
+                        .build()
+                } else {
+                    AudioTrack(
+                        attributes.build(), audioFormat.build(),
+                        bufferSizeInByte, transferMode,
+                        sessionId
+                    )
                 }
             }
         })
@@ -336,12 +408,37 @@ fun Navigation(navController: NavHostController, homeViewModel: HomeViewModel) {
 }
 
 @Composable
-fun TopBar(title: String = stringResource(R.string.app_name)) {
+fun TopBar(
+    title: String = stringResource(R.string.app_name),
+    modifier: Modifier = Modifier,
+    navigationIcon: @Composable (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+    backgroundColor: Color = MaterialTheme.colors.primarySurface,
+    contentColor: Color = Color.White,
+    elevation: Dp = AppBarDefaults.TopAppBarElevation
+) {
+    val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
     TopAppBar(
-        title = { Text(text = title, fontSize = 18.sp) }, contentColor = Color.White
+        title = { Text(text = title, fontSize = 18.sp) },
+        modifier = modifier,
+        navigationIcon = navigationIcon ?: {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(56.dp)
+                    .clickable { dispatcher?.onBackPressed() }) {
+                Icon(Icons.Filled.KeyboardArrowLeft, "back",
+                    modifier = Modifier.align(Alignment.CenterStart).size(30.dp))
+            }
+        },
+        actions = actions,
+        backgroundColor = backgroundColor,
+        contentColor = contentColor,
+        elevation = elevation
     )
 }
 
+@Preview
 @Composable
 fun TopBarPreview() {
     TopBar()

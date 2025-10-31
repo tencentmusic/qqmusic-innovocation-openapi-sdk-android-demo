@@ -65,6 +65,7 @@ import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
+import com.tencent.qqmusic.qplayer.ui.activity.main.CopyableText
 import com.tencent.qqmusic.qplayer.ui.activity.player.QualityAlert
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
@@ -159,6 +160,8 @@ fun SongProfilePage(songInfo: SongInfo, modifier: Modifier) {
 
         SongSAView(songInfo, Modifier)
 
+        SongRightView(songInfo, Modifier)
+
         SongJsonSourceView(songInfo, Modifier)
     }
 }
@@ -168,44 +171,53 @@ fun BasicInfoView(songInfo: SongInfo, modifier: Modifier) {
     val context = LocalContext.current
     val activity = context as AppCompatActivity
     val clipboardManager = LocalClipboardManager.current
-    val downloadIcon = if (OpenApiSDK.getDownloadApi().isSongDownloaded(songInfo)) {
+    val downloadIcon = remember { mutableStateOf(
+        if (OpenApiSDK.getDownloadApi().isSongDownloaded(songInfo)) {
         R.drawable.icon_song_info_item_more_downloaded
     } else {
         R.drawable.icon_player_download_light
+    }) }
+    Row {
+        Image(painter = painterResource(id = downloadIcon.value),
+            contentDescription = null,
+            modifier = Modifier
+                .size(45.dp)
+                .clickable(enabled = true) {
+                    QualityAlert.showQualityAlert(
+                        activity = activity, isDownload = true, setBlock = {
+                            OpenApiSDK
+                                .getDownloadApi()
+                                .downloadSong(songInfo, it)
+                            UiUtils.showToast("开始下载")
+                            PlayDefine.PlayError.PLAY_ERR_NONE
+                        }, refresh = {
+                            if (OpenApiSDK.getDownloadApi().isSongDownloaded(songInfo)) {
+                                downloadIcon.value = R.drawable.icon_song_info_item_more_downloaded
+                            } else {
+                                downloadIcon.value = R.drawable.icon_player_download_light
+                            }
+                        }, songInfo = songInfo)
+                }
+        )
+        TextButton(onClick = {
+            activity.startActivity(
+                Intent(
+                    activity,
+                    DownloadActivity::class.java
+                ).apply {
+                    putExtra(DownloadActivity.FROM_DOWNLOAD_SONG_PAGE, true)
+                })
+        }) {
+            Text(text = "前往已下载歌曲")
+        }
     }
-    Image(painter = painterResource(id = downloadIcon),
-        contentDescription = null,
-        modifier = Modifier
-            .size(45.dp)
-            .clickable(enabled = true) {
-                QualityAlert.showQualityAlert(
-                    activity = activity, isDownload = true, {
-                        OpenApiSDK
-                            .getDownloadApi()
-                            .downloadSong(songInfo, it)
-                        UiUtils.showToast("开始下载")
-                        PlayDefine.PlayError.PLAY_ERR_NONE
-                    }, {})
-            }
-    )
-    TextButton(onClick = {
-        activity.startActivity(
-            Intent(
-                activity,
-                DownloadActivity::class.java
-            ).apply {
-                putExtra(DownloadActivity.FROM_DOWNLOAD_SONG_PAGE, true)
-            })
-    }) {
-        Text(text = "前往已下载歌曲")
-    }
+
     Card(
         modifier = modifier.fillMaxWidth().wrapContentHeight(),
         elevation = 4.dp
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp))  {
             Text(text = "基础信息", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-
             Row(modifier = Modifier.fillMaxWidth().height(50.dp), horizontalArrangement = Arrangement.End) {
                 Image(
                     painter = rememberImagePainter(songInfo.smallCoverUrl()),
@@ -215,46 +227,41 @@ fun BasicInfoView(songInfo: SongInfo, modifier: Modifier) {
                 )
                 Spacer(modifier = Modifier.width(10.dp))
             }
-
-            Row {
-                TabCell(text = "歌曲id", 0.3f)
-                TabCell(text = "${songInfo.songId}", 0.7f) { copyToClipboard("${songInfo.songId}", context, clipboardManager) }
+            CopyableText("歌曲id",songInfo.songId.toString())
+            CopyableText("歌曲mid",songInfo.songMid)
+            CopyableText("歌曲名",songInfo.songName)
+            CopyableText("歌手",songInfo.singerName)
+            songInfo.otherSingerList?.let {
+                CopyableText("其他歌手", songInfo.otherSingerList?.joinToString("/") { it.name })
             }
-            Row {
-                TabCell(text = "歌曲mid", 0.3f)
-                TabCell(text = songInfo.songMid, 0.7f) { copyToClipboard(songInfo.songMid, context, clipboardManager) }
-            }
-            Row {
-                TabCell(text = "歌曲名", 0.3f)
-                TabCell(text = songInfo.songName, 0.7f) { copyToClipboard(songInfo.songName, context, clipboardManager) }
-            }
-            Row {
-                TabCell(text = "歌手", 0.3f)
-                TabCell(text = songInfo.singerName, 0.7f) { copyToClipboard(songInfo.singerName, context, clipboardManager) }
-            }
-            Row {
-                TabCell(text = "歌曲专辑", 0.3f)
-                TabCell(text = songInfo.albumName, 0.7f) { copyToClipboard(songInfo.albumName, context, clipboardManager) }
-            }
+            CopyableText("歌曲专辑",songInfo.albumName)
         }
     }
 }
 
 @Composable
 fun SongSAView(songInfo: SongInfo, modifier: Modifier) {
-    val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
     Card(
         modifier = modifier.fillMaxWidth().wrapContentHeight(),
         elevation = 4.dp
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text = "内容安全限制(${songInfo.action?.sa})", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            CopyableText("AI作品", if (songInfo.isAISong()) "是" else "否")
+        }
+    }
+}
 
-            Row {
-                TabCell(text = "AI作品", 0.3f)
-                TabCell(text = if (songInfo.isAISong()) "是" else "否" , 0.7f) { copyToClipboard("${songInfo.action?.sa}", context, clipboardManager) }
-            }
+@Composable
+fun SongRightView(songInfo: SongInfo, modifier: Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth().wrapContentHeight(),
+        elevation = 4.dp
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = "歌曲权限", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            val msg = "纯人声:${songInfo.isForbidVocalAccomPureVocal().not()},纯伴奏:${songInfo.isForbidVocalAccomPureAccom().not()}"
+            CopyableText(title = "伴唱限制", content = msg)
         }
     }
 }
@@ -275,11 +282,7 @@ fun SongTagView(songInfo: SongInfo, modifier: Modifier) {
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text = "标签信息", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-
-            Row {
-                TabCell(text = "心情", 0.3f)
-                TabCell(text = songInfo.extraInfo?.mood , 0.7f) { copyToClipboard(songInfo.extraInfo?.mood, context, clipboardManager) }
-            }
+            CopyableText("心情",songInfo.extraInfo?.mood)
         }
     }
 }

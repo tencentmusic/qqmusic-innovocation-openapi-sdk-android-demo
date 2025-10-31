@@ -4,16 +4,28 @@ import android.app.Activity
 import android.content.Intent
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.ColorRes
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.*
-import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.runtime.*
+import androidx.compose.material.Button
+import androidx.compose.material.ScrollableTabRow
+import androidx.compose.material.Tab
+import androidx.compose.material.TabRowDefaults
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,6 +54,7 @@ import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import java.text.DecimalFormat
 
 /**
  * Created by tannyli on 2023/8/1.
@@ -222,6 +235,30 @@ fun LongAudioCategoryPageDetail(flow: Flow<PagingData<AreaShelf>>? = null, categ
     val width = UiUtils.getDisplayWidth(activity)
     val scrollState = rememberLazyListState()
     PerformanceHelper.MonitorListScroll(scrollState = scrollState, location = "LongAudioCategoryPageDetail_${categoryId}_${subCategoryId}")
+    val dataFormat = DecimalFormat("#.#")
+
+    /**
+     * 推荐tab下电台、有声书、歌单数量显示
+     * 当歌单播放量小于10万时，展开数字，比如1.2万，展开实际播放量，如12363
+     */
+    fun getFormattedNumString(num: Long): String {
+        var vNum = num
+        if (vNum < 0) {
+            vNum = 0
+        }
+        return when {
+            vNum in 10000..99999999 -> {
+                val tempNum = vNum.toFloat() / 10000
+                dataFormat.format(tempNum) + "万"
+            }
+            vNum >= 100000000 -> {
+                val tempNum = vNum.toFloat() / 100000000
+                dataFormat.format(tempNum) + "亿"
+            }
+            else -> vNum.toString()
+        }
+    }
+
     LazyColumn(state = scrollState, modifier = Modifier.fillMaxSize()) {
         this.items(shelfes) { shelf ->
             shelf?: return@items
@@ -314,7 +351,7 @@ fun LongAudioCategoryPageDetail(flow: Flow<PagingData<AreaShelf>>? = null, categ
                                 .wrapContentSize()
                                 .width(itemWidth)
                                 .padding(10.dp),
-                            text = "${(album.listenNum ?: 0) / 10000}万",
+                            text = getFormattedNumString((album.listenNum ?: 0).toLong()),
                             color = Color.Gray,
                             fontSize = 12.sp
                         )
@@ -325,4 +362,5 @@ fun LongAudioCategoryPageDetail(flow: Flow<PagingData<AreaShelf>>? = null, categ
             }
         }
     }
+
 }

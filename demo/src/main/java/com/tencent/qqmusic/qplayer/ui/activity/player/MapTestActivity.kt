@@ -9,6 +9,7 @@ import android.os.Looper
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
@@ -69,6 +70,7 @@ class MapTestActivity : ComponentActivity() {
             addExtra("int1", 1)
             addExtra("str2", "2")
         })
+        findViewById<ImageButton>(R.id.btn_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
     }
 
     // 登录
@@ -246,7 +248,7 @@ class MapTestActivity : ComponentActivity() {
             thread {
                 updateCustomSongListSquare()
                 val songListItemList =
-                    PlayerTestObj.customSongListSquare!!.filter { it.type in 1..2 }.toMutableList()
+                    (PlayerTestObj.customSongListSquare?.filter { it.type in 1..2 }?.toMutableList() ?: mutableListOf())
                         .apply { shuffle() }
                 songListItemList.forEach {
                     it.type?.let { it1 ->

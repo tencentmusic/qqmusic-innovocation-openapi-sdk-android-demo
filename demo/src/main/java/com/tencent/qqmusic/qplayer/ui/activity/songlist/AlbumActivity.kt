@@ -3,9 +3,8 @@ package com.tencent.qqmusic.qplayer.ui.activity.songlist
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
-import com.tencent.qqmusic.openapisdk.model.Album
-import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderViewModel
+import androidx.compose.material.Scaffold
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 
 
 class AlbumActivity : ComponentActivity() {
@@ -22,10 +21,12 @@ class AlbumActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            if (albumId.isNotEmpty()) {
-                AlbumPage(albums = listOf(albumViewModel.album))
+            Scaffold(topBar = { TopBar("专辑列表")}) {
+                if (albumId.isNotEmpty()) {
+                    AlbumListPage(albums = listOf(albumViewModel.album))
+                }
+                albumViewModel.fetchAlbumByAlbumId(albumId)
             }
-            albumViewModel.fetchAlbumByAlbumId(albumId)
         }
     }
 }

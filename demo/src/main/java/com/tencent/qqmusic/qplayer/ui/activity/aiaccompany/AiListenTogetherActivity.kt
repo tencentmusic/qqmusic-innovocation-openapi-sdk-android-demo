@@ -25,7 +25,6 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
-import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +49,7 @@ import com.tencent.qqmusic.openapisdk.model.aiaccompany.AIAccompanyRole
 import com.tencent.qqmusic.openapisdk.model.aiaccompany.AIVolumeData
 import com.tencent.qqmusic.openapisdk.model.aiaccompany.VoicePrompts
 import com.tencent.qqmusic.qplayer.baselib.util.QLogEx
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -74,10 +74,7 @@ class AiListenTogetherActivity: AppCompatActivity() {
     fun AiListenTogetherScreen(viewModel:AiAccompanyViewModel) { // 假设 MyViewModel 已经定义
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text(text = "AI伴听", fontSize = 18.sp) },
-                    contentColor = Color.White
-                )
+                TopBar("AI伴听")
             }
         ) {
             Column {
@@ -168,7 +165,7 @@ class AiListenTogetherActivity: AppCompatActivity() {
                     override fun onError() {
                         QLogEx.AI_LISTEN_TOGETHER.i(TAG, "onError")
                     }
-                })
+                }, needFadeIn = true, needFadeOut = true)
                 ToastUtils.showShort(status.msg)
             }, Modifier.background(Color.Green)) {
                 Text(text = "播报语音", color = Color.White, fontSize = 15.sp)

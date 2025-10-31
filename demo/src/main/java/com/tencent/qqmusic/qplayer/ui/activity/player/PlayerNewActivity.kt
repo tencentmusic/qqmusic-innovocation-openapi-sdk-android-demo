@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.ImageButton
 import android.widget.ImageView
 import com.tencent.qqmusic.openapisdk.playerui.viewmode.PlayerViewModel
 import com.tencent.qqmusic.openapisdk.playerui.viewmode.ViewportSize
@@ -38,6 +39,7 @@ class PlayerNewActivity : BaseActivity() {
             UiUtils.setUseNewPlayPage(false)
             startActivity(Intent(this, PlayerActivity::class.java))
         }
+        findViewById<ImageButton>(R.id.btn_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
     }
 
 

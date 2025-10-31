@@ -3,6 +3,7 @@ package com.tencent.qqmusic.qplayer.ui.activity.person
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -47,6 +48,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -69,6 +71,7 @@ import com.tencent.qqmusic.openapisdk.model.vip.CashierOffer
 import com.tencent.qqmusic.openapisdk.model.vip.CashierOfferProduct
 import com.tencent.qqmusic.openapisdk.model.vip.CashierOrderInfo
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.ui.activity.main.UrlSpanView
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -189,6 +192,8 @@ class CashierDialog: BottomSheetDialogFragment() {
                         val category = when (tab.groups?.firstOrNull()?.offers?.firstOrNull()?.categoryTag) {
                             "hhlz" -> "豪华绿钻"
                             "cjhy" -> "超级会员"
+                            "ffb"  -> "付费包"
+                            "lvhy" -> "情侣会员"
                             else -> ""
                         }
                         Text(text = tab.tabInfo?.title ?: category)
@@ -209,7 +214,7 @@ class CashierDialog: BottomSheetDialogFragment() {
 
             LaunchedEffect(page) {
                 val offer = offers.firstOrNull() ?: return@LaunchedEffect
-                viewModel.fetchCashierOrder(offer.id, offer.product!!, amount = 1)
+                viewModel.fetchCashierOrder(offer, amount = 1)
             }
 
             Column(verticalArrangement = Arrangement.Top, modifier = Modifier.fillMaxSize()) {
@@ -231,7 +236,12 @@ class CashierDialog: BottomSheetDialogFragment() {
                     item {
                         Spacer(modifier = Modifier.width(10.dp))
                     }
+
                 }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                CashierOfferAgreementView(viewModel = viewModel, offers = offers)
 
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -241,10 +251,50 @@ class CashierDialog: BottomSheetDialogFragment() {
     }
 
     @Composable
+    fun CashierOfferAgreementView(viewModel: CashierViewModel, offers: List<CashierOffer>) {
+        val orderState = viewModel.cashierOrderState.collectAsState()
+        val cashierGearState = viewModel.cashierGears.collectAsState()
+        val offer = offers.firstOrNull { it.product?.productId == orderState.value?.first }
+
+        val defaultUrl = "" // for test: https://y.qq.com/forest/ou5v6U56CuFum3Yz/index.html
+        val vipAgreementTag = "会员服务协议"
+        val vipAgreementUrl = cashierGearState.value?.vipAgreementUrl ?: defaultUrl
+
+        val autoRenewalTag = "自动续费协议"
+        val autoRenewalUrl = cashierGearState.value?.autoRenewalAgreementUrl ?: defaultUrl
+
+        val buttonText = offer?.incentive?.buttonText?.takeUnless { it.isEmpty() }
+
+        if (vipAgreementUrl.isNullOrEmpty() && autoRenewalUrl.isNullOrEmpty()) {
+            return
+        }
+
+        Column(verticalArrangement = Arrangement.Top, modifier = Modifier.wrapContentSize()) {
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.width(10.dp))
+
+                if (!vipAgreementUrl.isNullOrEmpty()) {
+                    UrlSpanView(vipAgreementTag, vipAgreementUrl, modifier = Modifier.wrapContentSize())
+                }
+
+                if (!autoRenewalUrl.isNullOrEmpty() && offer?.product?.payType == 1) {
+                    UrlSpanView(autoRenewalTag, autoRenewalUrl, modifier = Modifier.wrapContentSize())
+                }
+            }
+
+            buttonText?.let {
+                Text(text = buttonText, modifier = Modifier.padding(start = 10.dp))
+            }
+        }
+    }
+
+    @Composable
     fun CashierOrderView(viewModel: CashierViewModel) {
         val createOrderState = viewModel.cashierCreateOrderState.collectAsState()
         val orderState = viewModel.cashierOrderState.collectAsState()
         val orderPayState = viewModel.cashierOrderPayState.collectAsState()
+        val orderActivityIds = viewModel.cashierOrderActivityIds.collectAsState()
         val scope = rememberCoroutineScope()
         val bitmapState = remember { mutableStateOf<Bitmap?>(null) }
 
@@ -276,6 +326,8 @@ class CashierDialog: BottomSheetDialogFragment() {
                             Column(horizontalAlignment = Alignment.Start) {
                                 Spacer(modifier = Modifier.height(10.dp))
                                 Text(text = "订单号    ${orderInfo.orderId}")
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(text = "活动Id   ${orderActivityIds.value}")
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(text = "过期时间  ${formatter.format(Date(orderInfo.expireAt * 1000L))}")
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -314,7 +366,7 @@ class CashierDialog: BottomSheetDialogFragment() {
                         val offer = offers?.firstOrNull { offer->
                             offer.product?.productId == productId
                         } ?: return@OutlinedButton
-                        viewModel.fetchCashierOrder(offer.id, offer.product!!)
+                        viewModel.fetchCashierOrder(offer)
                     }
                 ) {
                     Text(text = "下单失败", modifier = Modifier.wrapContentSize())
@@ -336,7 +388,7 @@ class CashierDialog: BottomSheetDialogFragment() {
             border = if (isSelected) BorderStroke(1.dp, Color.Green) else BorderStroke(1.dp, Color.Gray),
             elevation = 4.dp,
             onClick = {
-                viewModel.fetchCashierOrder(offer.id, offer.product!!, amount = 1)
+                viewModel.fetchCashierOrder(offer, amount = 1)
             }
         ) {
             val type = when (offer.type) {
@@ -347,6 +399,8 @@ class CashierDialog: BottomSheetDialogFragment() {
             val category = when (offer.categoryTag) {
                 "hhlz" -> "豪华绿钻"
                 "cjhy" -> "超级会员"
+                "lvhy" -> "情侣会员"
+                "ffb"  -> "付费包"
                 else -> offer.categoryTag ?: ""
             }
 
@@ -370,11 +424,27 @@ class CashierDialog: BottomSheetDialogFragment() {
             val marketPrice = offer.product?.let { "￥${it.marketPrice / 100f}" } ?: ""
 
             Column(Modifier.wrapContentSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = offer.incentive?.mainOperateText ?: "")
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(text = "$category $type ${offer.id}")
                 Spacer(modifier = Modifier.height(4.dp))
+                offer.incentive?.mainText?.let {
+                    Text(text = it, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)
+                }
                 Text(text = price, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = marketPrice, fontSize = 8.sp, fontWeight = FontWeight.Normal, fontStyle = FontStyle.Italic)
+                Text( // 市场价
+                    text = marketPrice,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Normal,
+                    fontStyle = FontStyle.Italic,
+                    textDecoration = TextDecoration.combine(
+                        listOf(
+                            TextDecoration.LineThrough,
+                        )
+                    ),
+                    color = Color.Gray
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = offer.pack?.name ?: "", )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -383,6 +453,7 @@ class CashierDialog: BottomSheetDialogFragment() {
                 if (url.isNotEmpty()) {
                     Image(painter = rememberImagePainter(offer.pack?.image ?: ""), contentDescription = null, modifier = Modifier.size(60.dp))
                 }
+                Text(text = offer.incentive?.viceOperateText ?: "")
             }
         }
     }
@@ -411,6 +482,9 @@ class CashierViewModel: ViewModel() {
     private val _cashierOrderState: MutableStateFlow<Pair<String, CashierOrderInfo?>?> = MutableStateFlow(null)
     val cashierOrderState: StateFlow<Pair<String, CashierOrderInfo?>?> = _cashierOrderState.asStateFlow()
 
+    private val _cashierOrderActivityIds:MutableStateFlow<List<String>?> = MutableStateFlow(null)
+    var cashierOrderActivityIds: StateFlow<List<String>?> = _cashierOrderActivityIds.asStateFlow()
+
     private val _cashierOrderPayState = MutableStateFlow(-1)
     val cashierOrderPayState = _cashierOrderPayState.asStateFlow()
 
@@ -431,10 +505,13 @@ class CashierViewModel: ViewModel() {
         }
     }
 
-    fun fetchCashierOrder(offerId: String, product: CashierOfferProduct, amount: Int = 1) {
+    fun fetchCashierOrder(offer: CashierOffer, amount: Int = 1) {
         _cashierCreateOrderState.update { STATE_LOADING }
         _msg.value = null
         viewModelScope.launch(Dispatchers.IO) {
+            val offerId = offer.id
+            val product = offer.product ?: return@launch
+            val activities = offer.marketingActivity?.subscriptionActivity?.activityId?.let { listOf(it) }
             val item = CashierCreateOrderItem(
                 productId = product.productId,
                 skuId = product.skuId,
@@ -445,15 +522,18 @@ class CashierViewModel: ViewModel() {
                 items = listOf(item),
                 offerId = offerId,
                 totalAmount = product.price * amount,
+                activityIds = activities
             )
             OpenApiSDK.getOpenApi().fetchCashierPayUrl(params) { resp->
                 if (resp.isSuccess() && resp.data != null) {
                     _cashierCreateOrderState.update { STATE_LOAD_SUCCESS }
                     _cashierOrderState.update { product.productId to resp.data!! }
+                    _cashierOrderActivityIds.update { activities }
                 } else {
                     _cashierCreateOrderState.update { STATE_LOAD_FAIL }
                     _msg.value = "获取订单失败(${resp.subRet}) ${resp.errorMsg}"
                     _cashierOrderState.update { product.productId to null }
+                    _cashierOrderActivityIds.update { null }
                 }
             }
         }

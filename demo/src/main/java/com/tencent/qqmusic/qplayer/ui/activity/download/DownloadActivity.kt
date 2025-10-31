@@ -41,6 +41,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.download.DownloadTask
 import com.tencent.qqmusic.openapisdk.model.download.DownloadStatus
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.utils.QQMusicUtil
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.selects.select
@@ -81,10 +82,7 @@ class DownloadActivity: ComponentActivity() {
 
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text(text = "下载管理", fontSize = 18.sp) },
-                    contentColor = Color.White
-                )
+                TopBar("下载管理")
             }
         ) {
             Column {

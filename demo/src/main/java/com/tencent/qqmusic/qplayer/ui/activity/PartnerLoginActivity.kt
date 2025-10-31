@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Checkbox
+import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
@@ -33,6 +34,7 @@ import androidx.constraintlayout.compose.Dimension
 import com.tencent.qqmusic.openapisdk.core.login.IPartnerLogin
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 
 class PartnerLoginActivity : ComponentActivity() {
     private val impl = OpenApiSDK.getPartnerApi()
@@ -48,7 +50,11 @@ class PartnerLoginActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { PartnerLoginPage(impl, sharedPreferences) }
+        setContent {
+            Scaffold(topBar = { TopBar("三方登录") }) {
+                PartnerLoginPage(impl, sharedPreferences)
+            }
+        }
     }
 }
 
@@ -76,7 +82,9 @@ fun PartnerLoginPage(impl: IPartnerLogin? = null, sharedPreferences: SharedPrefe
         mutableStateOf(true)
     }
 
-    ConstraintLayout(modifier = Modifier.fillMaxSize().verticalScroll(state = rememberScrollState())) {
+    ConstraintLayout(modifier = Modifier
+        .fillMaxSize()
+        .verticalScroll(state = rememberScrollState())) {
         val (appIdView, appAccountView, appTokenView, loginView, writeAccount, bindView, deleteView, queryView, queryAccountIdView, resultView) = createRefs()
         TextField(value = appId.value, onValueChange = {
             appId.value = it

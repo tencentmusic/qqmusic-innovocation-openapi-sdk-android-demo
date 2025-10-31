@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Button
+import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.hologram.EdgeMvProvider
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.PlayListParams
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.itemUI
 import com.tencent.qqmusic.qplayer.utils.UiUtils
@@ -57,7 +59,9 @@ class SongCacheDemoActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            CachePage()
+            Scaffold(topBar = { TopBar("缓存测试页") }) {
+                CachePage()
+            }
         }
     }
 
@@ -73,7 +77,9 @@ class SongCacheDemoActivity : AppCompatActivity() {
         var songCacheResult by remember { mutableStateOf("") }
 
         Column(
-            modifier = Modifier.fillMaxWidth().background(color = Color.White),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(color = Color.White),
             verticalArrangement = Arrangement.Top
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {

@@ -42,6 +42,7 @@ import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.ai.entity.VocalItem
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.ui.activity.home.ai.cover.AIPersonalTimbreTAG
 import com.tencent.qqmusic.qplayer.ui.activity.home.ai.cover.AITimbreTAG
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 
@@ -74,6 +75,15 @@ fun AITimbrePage(
                 Text(text = "点击生成个人音色")
             } else {
                 Text(text = "重新录制个人音色")
+            }
+        }
+        if (aiViewModel.timbreList.value.findLast { it.isPrivate } != null) {
+
+            Button(onClick = {
+                navController?.navigate(AIPersonalTimbreTAG)
+            }) {
+                aiViewModel.refreshPersonalTimbreList()
+                Text(text = "查看个人音色列表")
             }
         }
 
@@ -176,6 +186,7 @@ fun AITimbrePage(
     //功能代码
     LaunchedEffect(Unit) {
         aiViewModel.refreshTimbreList()
+        aiViewModel.refreshPersonalTimbreList()
     }
 }
 

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.os.Build
 import android.widget.Toast
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.common.BitMatrix
@@ -12,7 +13,11 @@ import com.google.zxing.qrcode.QRCodeWriter
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
+import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
+import com.tencent.qqmusic.openapisdk.model.ProfitInfo
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.openapisdk.model.SuperQualityType
+import com.tencent.qqmusic.openapisdk.model.VipType
 import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
@@ -21,6 +26,9 @@ import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerNewActivity
 import java.math.BigDecimal
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 
 /**
@@ -168,6 +176,7 @@ object UiUtils {
             }
             PlayerEnums.Quality.DTSC -> R.drawable.action_icon_dtsc
             PlayerEnums.Quality.DTSX -> R.drawable.action_icon_dtsx
+            PlayerEnums.Quality.VOYAGE -> R.drawable.voyage
             else -> {
                 R.drawable.ic_lq
             }
@@ -260,4 +269,94 @@ object UiUtils {
     }
 
     fun getCurSoundEffectIsAI() = sharedPreferences?.getBoolean("curSoundEffectIsAI", false) ?: false
+
+    fun timestampToTime(timestamp: Long): String {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val instant = Instant.ofEpochSecond(timestamp)
+            val formatter = DateTimeFormatter
+                .ofPattern("yyyy-MM-dd HH:mm:ss")
+                .withZone(ZoneId.systemDefault()) // 使用系统时区
+            formatter.format(instant)
+        } else {
+            timestamp.toString()
+        }
+    }
+
+    fun getFormatNumber(number: Number?): String {
+        if (number == null) return number.toString()
+        val num = number.toDouble()
+        return when {
+            num < 10000 -> num.toString()
+            num < 100_000_000 -> format(num, 10_000, "万")
+            num < 1_000_000_000_000 -> format(num, 100_000_000, "亿")
+            else -> format(num, 1_000_000_000_000, "万亿")
+        }
+    }
+
+    fun getVipText(vipType: VipType): String{
+        return when(vipType){
+            VipType.GREEN_VIP -> "豪华绿钻"
+            VipType.SUPER_VIP -> "超级会员"
+            VipType.NONE -> "普通用户"
+        }
+    }
+
+    private fun format(num: Double, divisor: Long, suffix: String): String {
+        val divided = num / divisor
+        return if (divided % 1.0 == 0.0) {
+            "${divided.toInt()}$suffix"
+        } else {
+            "%.1f$suffix".format(divided)
+        }
+    }
+    fun Int.getQualityName(): String {
+        return when (this) {
+            Quality.LQ->"低品质"
+            Quality.STANDARD -> "标准"
+            Quality.HQ -> "高品质"
+            Quality.SQ -> "SQ"
+            Quality.SQ_SR -> "SQ省流版"
+            Quality.HIRES -> "Hires"
+            Quality.EXCELLENT -> "臻品2.0"
+            Quality.GALAXY -> "臻品全景声"
+            Quality.DOLBY -> "杜比全景声"
+            Quality.WANOS -> "Wanos"
+            Quality.VOCAL_ACCOMPANY -> "伴唱"
+            Quality.MASTER_TAPE -> "臻品母带"
+            Quality.MASTER_SR -> "臻品母带省流版"
+            Quality.VINYL -> "黑胶"
+            Quality.DTSC -> "DTSC音质"
+            Quality.DTSX -> "DTSX音质"
+            Quality.VOYAGE -> "臻品乐航"
+            else -> "未知音质->Quality=${this}"
+        }
+    }
+
+    fun getSuperQualityTypeName(type:Int):String {
+        return when (type) {
+            SuperQualityType.QUALITY_TYPE_EXCELLENT->"臻品音质权益"
+            SuperQualityType.QUALITY_TYPE_DOLBY->"杜比权益"
+            SuperQualityType.QUALITY_TYPE_GALAXY->"臻品全景声权益"
+            SuperQualityType.QUALITY_TYPE_MASTERTAPE->"臻品母带权益"
+            SuperQualityType.QUALITY_TYPE_ACCOM->"伴唱权益"
+            SuperQualityType.QUALITY_TYPE_WANOS->"Wanos权益"
+            SuperQualityType.QUALITY_TYPE_AI_LYRIC->"AI歌词背景"
+            SuperQualityType.QUALITY_TYPE_VOYAGE->"臻品乐航"
+            else -> "未知音质->$type"
+        }
+    }
+
+    fun getProfitTypeName(type:Int):String {
+        return when (type) {
+            ProfitInfo.QUALITY_TYPE_EXCELLENT->"臻品音质权益"
+            ProfitInfo.QUALITY_TYPE_DOLBY->"杜比权益"
+            ProfitInfo.QUALITY_TYPE_GALAXY->"臻品全景声权益"
+            ProfitInfo.QUALITY_TYPE_MASTERTAPE->"臻品母带/省流权益"
+            ProfitInfo.QUALITY_TYPE_ACCOM->"伴唱权益"
+            ProfitInfo.MUSIC_THERAPY_TYPE->"疗愈权益"
+            ProfitInfo.MUSIC_VOYAGE->"臻品乐航"
+            ProfitInfo.SOUND_EFFECT_TYPE->"音效权益"
+            else -> "无试听->$type"
+        }
+    }
 }

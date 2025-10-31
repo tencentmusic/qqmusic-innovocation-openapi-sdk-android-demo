@@ -3,5 +3,6 @@
     package="com.tencent.qqmusic.qplayer.debug">
     <application>
         <activity android:name=".DebugActivity" />
+        <activity android:name=".DebugPlayerAPiActivity"/>
     </application>
 </manifest>

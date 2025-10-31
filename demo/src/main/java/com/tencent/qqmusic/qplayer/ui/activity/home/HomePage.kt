@@ -2,7 +2,9 @@ package com.tencent.qqmusic.qplayer.ui.activity.home
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,10 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.Icon
+import androidx.compose.material.Scaffold
 import androidx.compose.material.ScrollableTabRow
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -33,10 +39,11 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.core.player.playlist.MusicPlayList
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderListActivity
 import com.tencent.qqmusic.qplayer.ui.activity.home.ai.AIFunctionPage
+import com.tencent.qqmusic.qplayer.ui.activity.home.other.ordersong.OrderSongPage
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVFunctionPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.isRadio
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.CommonProfileActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +56,7 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "HomePage"
 
+@RequiresApi(Build.VERSION_CODES.N)
 @Composable
 fun HomePage(homeViewModel: HomeViewModel) {
     Column(
@@ -56,16 +64,17 @@ fun HomePage(homeViewModel: HomeViewModel) {
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        homePageTabs(homeViewModel = homeViewModel)
+        HomePageTabs(homeViewModel = homeViewModel)
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.N)
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun homePageTabs(homeViewModel: HomeViewModel) {
+fun HomePageTabs(homeViewModel: HomeViewModel) {
     val pages = mutableListOf(
         "分类歌单", "首页推荐", "视频", "AI功能", "音乐馆",
-        "专区", "长音频",
+        "专区", "长音频", "其他"
     )
 
     val pagerState = rememberPagerState()
@@ -103,11 +112,11 @@ fun homePageTabs(homeViewModel: HomeViewModel) {
         PerformanceHelper.monitorPageScroll("Home_${index}")
 
         when (index) {
-            1 -> {
-                HomeRecommendPage(homeViewModel)
-            }
             0 -> {
                 categoryFoldersPage(homeViewModel)
+            }
+            1 -> {
+                HomeRecommendPage(homeViewModel)
             }
 
             2 -> {
@@ -129,10 +138,20 @@ fun homePageTabs(homeViewModel: HomeViewModel) {
             6 -> {
                 LongAudioPage(homeViewModel = homeViewModel)
             }
+
+            7 -> {
+                OrderSongPage()
+            }
         }
     }
 }
 
+@Composable
+fun categoryFoldersPageWithTitle(title: String, homeViewModel: HomeViewModel, fetchSceneSongList: Boolean = false, observer: PlayerObserver = PlayerObserver) {
+    Scaffold(topBar = { TopBar(title)}) {
+        categoryFoldersPage(homeViewModel, fetchSceneSongList, observer)
+    }
+}
 
 @Composable
 fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolean = false,observer: PlayerObserver = PlayerObserver) {
@@ -208,6 +227,24 @@ fun categoryFoldersPage(homeViewModel: HomeViewModel, fetchSceneSongList: Boolea
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun RefreshButton(viewModel: HomeViewModel, callback: () -> Unit){
+    if (viewModel.showRefreshButton){
+        Box(modifier = Modifier.fillMaxSize().clickable {
+            callback.invoke()
+            viewModel.showRefreshButton = false
+        }
+        ){
+            Column(modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Filled.Refresh, "Refresh")
+                Text(text="点击刷新")
             }
         }
     }

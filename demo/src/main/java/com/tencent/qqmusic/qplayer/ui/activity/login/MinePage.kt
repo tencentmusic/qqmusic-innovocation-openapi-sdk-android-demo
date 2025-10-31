@@ -2,13 +2,20 @@ package com.tencent.qqmusic.qplayer.ui.activity.login
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.Image
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,14 +24,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
+import androidx.compose.material.ButtonDefaults
+import androidx.compose.material.Checkbox
+import androidx.compose.material.Icon
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.ScrollableTabRow
+import androidx.compose.material.Switch
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRowDefaults
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -43,17 +58,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import coil.compose.rememberImagePainter
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
+import com.tencent.qqmusic.openapisdk.core.openapi.EditFolderParam
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
+import com.tencent.qqmusic.openapisdk.model.folder.FolderTagCategory
+import com.tencent.qqmusic.openapisdk.model.folder.FolderTagItem
 import com.tencent.qqmusic.qplayer.BaseFunctionManager
 import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
@@ -65,13 +83,12 @@ import com.tencent.qqmusic.qplayer.ui.activity.mv.MVResDetailPage
 import com.tencent.qqmusic.qplayer.ui.activity.person.MinePageNew
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.search.singerPage
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumPage
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumListPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.BuyAlbumPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPage
-import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import com.tencent.qqmusic.qplayer.utils.UiUtils
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
 
 private const val TAG = "MinePage"
 
@@ -110,116 +127,62 @@ fun MinePage(homeViewModel: HomeViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         MinePageNew(mineViewModel)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        LoginButton(activity, homeViewModel, mineViewModel, loginText)
-
-        Spacer(modifier = Modifier.height(16.dp))
-
+        Spacer(modifier = Modifier.height(10.dp))
+        LoginBotton(activity, mineViewModel, loginText)
+        Spacer(modifier = Modifier.height(10.dp))
         MineSongList(activity, homeViewModel)
     }
 }
 
+// 常驻按钮
 @Composable
-fun LoginButton(
-    activity: Activity,
-    vm: HomeViewModel,
-    mineViewModel: MineViewModel,
-    info: MutableState<String>
-) {
-    var isLogin by remember {
-        mutableStateOf(false)
+fun ResidentButton(activity: Activity){
+    MiniTextButton(
+        text = "第三方登录",
+        modifier = Modifier.padding(0.dp),
+        onClick = {
+            activity.startActivity(Intent(activity, PartnerLoginActivity::class.java))
+        }
+    )
+
+    MiniTextButton(
+        text = "token登录",
+        modifier = Modifier.padding(0.dp)
+    ) {
+        activity.startActivity(Intent(activity, TokenLoginActivity::class.java))
     }
-    var isBind by remember {
-        mutableStateOf(false)
-    }
+}
+
+// 登录栏
+@Composable
+fun LoginBotton(activity: Activity, mineViewModel: MineViewModel, info: MutableState<String>) {
+    var isLogin by remember { mutableStateOf(false) }
+    var isBind by remember { mutableStateOf(false) }
     val userInfo = mineViewModel.loginInfo.collectAsState()
     isLogin = userInfo.value != null
     isBind = userInfo.value != null && userInfo.value?.type == AuthType.PARTNER
     Column(modifier = Modifier.fillMaxWidth()) {
-        if (isLogin) {
+        if (!isLogin) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-
-                Button(onClick = {
-                    mineViewModel.logout()
-                    OpenApiSDK.getPlayerApi().setPreferSongQuality(Quality.HQ)
-                    HomeViewModel.clearRequestState()
-                }, modifier = Modifier.padding(8.dp, 0.dp, 0.dp, 0.dp)) {
-                    Text(text = "退出登录")
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Button(onClick = {
-                    OpenApiSDK.getLoginApi().qqLoginWeb(activity) { ret, msg ->
-                        activity.runOnUiThread {
-                            Log.i(TAG, "LoginPage: qq ret $ret, msg: $msg")
-                            if (ret.not()) {
-                                Toast.makeText(activity, "QQ登录失败: $msg", Toast.LENGTH_SHORT)
-                                    .show()
-                            }
-                            HomeViewModel.clearRequestState()
-                            mineViewModel.updateData()
-                            info.value = "QQ已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                        }
-                    }
-                }, modifier = Modifier.padding(0.dp)) {
-                    Text(text = "QQ登录")
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                // 三方登录成功 也给Q音独立登录的入口
-                Button(onClick = {
+                MiniTextButton(text = "扫码登录"){
                     OpenApiSDK.getLoginApi().qrCodeLogin(activity) { b, msg ->
                         if (b) {
-
                             info.value = "扫码已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
                             mineViewModel.updateData()
                         } else {
-                            Toast.makeText(activity, "登录失败: $msg", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(activity, "登录失败: $msg", Toast.LENGTH_SHORT)
+                                .show()
                         }
                         HomeViewModel.clearRequestState()
                         mineViewModel.updateData()
                     }
                     activity.startActivity(Intent(activity, OpiQRCodeActivity::class.java))
                     info.value = "扫码登录结果:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                }, modifier = Modifier.padding(0.dp)) {
-                    Text(text = "扫码登录")
                 }
-
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Button(
-                    onClick = {
-                        OpenApiSDK.getLoginApi()
-                            .wxLogin(activity, BaseFunctionManager.proxy.getWxAPPID()) { ret, msg ->
-                                Log.i(TAG, "LoginPage: wechat ret $ret")
-                                if (ret.not()) {
-                                    Toast.makeText(
-                                        activity,
-                                        "微信登录失败: $msg",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-
-                                info.value = "微信已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                                mineViewModel.updateData()
-                                HomeViewModel.clearRequestState()
-                            }
-                    },
-                    modifier = Modifier.padding(0.dp)
-                ) {
-                    Text(text = "微信登录")
-                }
-                Button(onClick = {
+                MiniTextButton(text = "QQ登录") {
                     OpenApiSDK.getLoginApi().qqLoginWeb(activity) { ret, msg ->
                         activity.runOnUiThread {
                             Log.i(TAG, "LoginPage: qq ret $ret, msg: $msg")
@@ -232,10 +195,25 @@ fun LoginButton(
                             info.value = "QQ已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
                         }
                     }
-                }, modifier = Modifier.padding(0.dp)) {
-                    Text(text = "QQ登录")
                 }
-                Button(onClick = {
+                MiniTextButton(text = "微信登录"){
+                    OpenApiSDK.getLoginApi()
+                        .wxLogin(activity, BaseFunctionManager.proxy.getWxAPPID()) { ret, msg ->
+                            Log.i(TAG, "LoginPage: wechat ret $ret")
+                            if (ret.not()) {
+                                Toast.makeText(
+                                    activity,
+                                    "微信登录失败: $msg",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+
+                            info.value = "微信已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
+                            mineViewModel.updateData()
+                            HomeViewModel.clearRequestState()
+                        }
+                }
+                MiniTextButton(text = "QQ音乐登录"){
                     OpenApiSDK.getLoginApi().qqMusicLogin(activity) { b, msg ->
                         if (b) {
 
@@ -246,76 +224,29 @@ fun LoginButton(
                         mineViewModel.updateData()
                         HomeViewModel.clearRequestState()
                     }
-                }, modifier = Modifier.padding(0.dp)) {
-                    Text(text = "QQ音乐登录")
                 }
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Button(onClick = {
-                    OpenApiSDK.getLoginApi().qrCodeLogin(activity) { b, msg ->
-                        if (b) {
-
-                            info.value = "扫码已登录:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                            mineViewModel.updateData()
-                        } else {
-                            Toast.makeText(activity, "登录失败: $msg", Toast.LENGTH_SHORT).show()
-                        }
-                        HomeViewModel.clearRequestState()
-                        mineViewModel.updateData()
-                    }
-                    activity.startActivity(Intent(activity, OpiQRCodeActivity::class.java))
-                    info.value = "扫码登录结果:\n${OpenApiSDK.getLoginApi().hasLogin()}"
-                }, modifier = Modifier.padding(0.dp)) {
-                    Text(text = "扫码登录")
-                }
-
+            Row(modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly){
                 val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
-                PhoneLoginDialog(
-                    mineViewModel,
-                    showDialog = showDialog,
-                    setShowDialog = setShowDialog
-                )
-                Button(onClick = {
-                    setShowDialog(true)
-                }, modifier = Modifier.padding(0.dp)) {
-                    Text(text = "手机登录")
-                }
-
+                PhoneLoginDialog(mineViewModel, showDialog = showDialog, setShowDialog = setShowDialog)
+                MiniTextButton(text = "手机登录"){ setShowDialog(true) }
                 val showOpenIdLoginDialog = remember { mutableStateOf(false) }
-                Button(onClick = {
-                    showOpenIdLoginDialog.value = true
-                }, modifier = Modifier.padding(0.dp)) {
-                    Text(text = "OpenId登录")
-                }
+                MiniTextButton(text = "OpenId登录"){ showOpenIdLoginDialog.value = true }
                 if (showOpenIdLoginDialog.value) {
                     OpenIdLoginDialog(mineViewModel, showOpenIdLoginDialog)
                 }
+                ResidentButton(activity)
             }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Button(
-                modifier = Modifier.padding(0.dp),
-                onClick = {
-                    activity.startActivity(Intent(activity, PartnerLoginActivity::class.java))
+        }else{
+            Row(modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly){
+                MiniTextButton(text = "退出登录") {
+                    mineViewModel.logout()
+                    OpenApiSDK.getPlayerApi().setPreferSongQuality(Quality.HQ)
+                    HomeViewModel.clearRequestState()
                 }
-            ) {
-                Text(text = "第三方登录")
-            }
-
-            Button(
-                modifier = Modifier.padding(0.dp),
-                onClick = {
-                    activity.startActivity(Intent(activity, TokenLoginActivity::class.java))
-                }
-            ) {
-                Text(text = "token登录")
+                ResidentButton(activity)
             }
         }
     }
@@ -459,7 +390,7 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
 
                 "收藏专辑" -> {
                     viewModel.fetchCollectedAlbum()
-                    AlbumPage(viewModel.favAlbums)
+                    AlbumListPage(viewModel.favAlbums)
                 }
 
                 "收藏歌单" -> {
@@ -473,7 +404,7 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
 
                 "最近播放专辑" -> {
                     viewModel.fetchRecentAlbums()
-                    AlbumPage(albums = viewModel.recentAlbums)
+                    AlbumListPage(albums = viewModel.recentAlbums)
                 }
 
                 "最近播放歌单" -> {
@@ -484,7 +415,7 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
 
                 "最近播放长音频" -> {
                     viewModel.fetchRecentLongRadios()
-                    AlbumPage(albums = viewModel.recentLongRadio)
+                    AlbumListPage(albums = viewModel.recentLongRadio)
                 }
 
                 "已购数专" -> {
@@ -519,12 +450,12 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
 
                 "收藏有声专辑" -> {
                     viewModel.fetchCollectedAlbum(1)
-                    AlbumPage(viewModel.favAlbums)
+                    AlbumListPage(viewModel.favAlbums)
                 }
 
                 "收藏有声播客" -> {
                     viewModel.fetchCollectedAlbum(2)
-                    AlbumPage(viewModel.favAlbums)
+                    AlbumListPage(viewModel.favAlbums)
                 }
 
                 "订阅歌手" -> {
@@ -566,86 +497,205 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
 
 @Composable
 fun NewFolder(viewModel: HomeViewModel) {
+    val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
+            .padding(2.dp).clickable {
+                setShowDialog(true)
+            }
     ) {
-        val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
-        FolderDialog(viewModel, showDialog = showDialog, setShowDialog = setShowDialog)
-        Image(
-            painter = rememberImagePainter(""),
-            contentDescription = null,
-            modifier = Modifier
-                .size(50.dp)
-                .padding(2.dp)
-                .clickable {
-                    setShowDialog(true)
-                }
-        )
-        Column(modifier = Modifier.clickable { setShowDialog(true) }) {
-            Text(text = "Click to Create New Folder")
-            Text(text = "点击创建新个人歌单")
-        }
+        FolderDialog(viewModel, showDialog = showDialog, isCreate = true, setShowDialog = setShowDialog)
+        Icon(Icons.Filled.Add, "新建歌单",
+            modifier = Modifier.size(30.dp))
+        Text(text = "点击创建新个人歌单")
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FolderDialog(
     viewModel: HomeViewModel,
     showDialog: Boolean,
+    isCreate: Boolean,
+    dissId: String = "",
     setShowDialog: (Boolean) -> Unit,
 ) {
     if (!showDialog) return
 
+    val context = LocalContext.current
+    var imagePath by remember { mutableStateOf("") }
+    var prevImageUrl by remember { mutableStateOf(imagePath) }
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val file = File.createTempFile(
+                    "local_image_",
+                    ".${context.contentResolver.getType(uri)?.substringAfterLast('/')}",
+                    context.cacheDir
+                )
+                inputStream?.use { it.copyTo(file.outputStream()) }
+                imagePath = file.absolutePath
+                prevImageUrl = "file://$imagePath"
+            } catch (e: Exception) {
+                // Handle error
+            }
+        }
+    }
+
     var foldName by rememberSaveable { mutableStateOf("") }
+    var folderDesc by rememberSaveable { mutableStateOf("") }
+    var isPublic by rememberSaveable { mutableStateOf(true) }
+
+    var tagCategories by remember { mutableStateOf(listOf<FolderTagCategory>()) }
+    var selectedTags by rememberSaveable { mutableStateOf<List<FolderTagItem>>(emptyList()) }
+
     Dialog(onDismissRequest = {
         Log.d(TAG, "FolderDialog Dismiss Request")
         setShowDialog(false)
     }) {
-        Column(
+        LazyColumn (
             modifier = Modifier
                 .background(Color.White)
                 .padding(5.dp)
         ) {
-            OutlinedTextField(
-                value = foldName,
-                onValueChange = {
-                    foldName = it
-                },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("输入歌单名字") }
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                OutlinedButton(onClick = { setShowDialog(false) }) {
-                    Text("取消")
-                }
+            item {
+                OutlinedTextField(
+                    value = foldName,
+                    onValueChange = { foldName = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("输入歌单名字") }
+                )
+                OutlinedTextField(
+                    value = folderDesc,
+                    onValueChange = { folderDesc = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("输入歌单描述") }
+                )
 
-                OutlinedButton(onClick = {
-                    Log.d(TAG, "New Folder: $foldName")
-                    if (foldName.isEmpty()) return@OutlinedButton
+                Text("选择标签:", modifier = Modifier.padding(top = 8.dp))
 
-                    OpenApiSDK.getOpenApi()
-                        .createFolder(foldName) {
+                Button(
+                    onClick = {
+                        OpenApiSDK.getOpenApi().getEditFolderTags {
                             if (it.isSuccess()) {
-                                Log.d(
-                                    TAG,
-                                    "succeeded to create folder: $foldName. ret: $it"
-                                )
-                                setShowDialog(false)
-                                HomeViewModel.clearRequestState()
-                                viewModel.fetchMineFolder()
-                                return@createFolder
-                            } else {
-                                Log.w(TAG, "failed to create folder: $foldName. ret: $it")
-                                foldName = ""
+                                tagCategories = it.data ?: emptyList()
                             }
                         }
-                }) {
-                    Text("确定")
+                    }
+                ) {
+                    Text("加载标签列表")
+                }
+            }
+            items(tagCategories.size) {
+                val category = tagCategories[it]
+                Text(
+                    text = category.categoryName ?: "",
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+
+                androidx.compose.foundation.layout.FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    category.tagList?.forEach { tag ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .clickable {
+                                    selectedTags = if (selectedTags.contains(tag)) {
+                                        selectedTags - tag
+                                    } else {
+                                        selectedTags + tag
+                                    }
+                                }
+                                .padding(2.dp)
+                        ) {
+                            Checkbox(
+                                checked = selectedTags.contains(tag),
+                                onCheckedChange = {
+                                    selectedTags = if (it) {
+                                        selectedTags + tag
+                                    } else {
+                                        selectedTags - tag
+                                    }
+                                }
+                            )
+                            Text(text = tag.tagName ?: "", modifier = Modifier.padding(start = 3.dp))
+                        }
+                    }
+                }
+            }
+            item {
+                Button(
+                    onClick = {
+                        galleryLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    }
+                ) {
+                    Text("选择封面")
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                ) {
+                    Text(text = "公开歌单", modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = isPublic,
+                        onCheckedChange = { isPublic = it }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    OutlinedButton(onClick = { setShowDialog(false) }) {
+                        Text("取消")
+                    }
+
+                    OutlinedButton(onClick = {
+                        if (foldName.isEmpty()) return@OutlinedButton
+                        val folderParam = EditFolderParam(
+                            folderName = foldName,
+                            folderDesc = folderDesc,
+                            folderId = dissId,
+                            folderTagList = selectedTags,
+                            folderPicPath = imagePath,
+                            isPublic = isPublic
+                        )
+                        if (isCreate) {
+                            OpenApiSDK.getOpenApi().createFolder(folderParam) {
+                                if (it.isSuccess()) {
+                                    setShowDialog(false)
+                                    HomeViewModel.clearRequestState()
+                                    viewModel.fetchMineFolder()
+                                } else {
+                                    foldName = ""
+                                }
+                            }
+                        } else {
+                            OpenApiSDK.getOpenApi().editFolder(folderParam) {
+                                if (it.isSuccess()) {
+                                    setShowDialog(false)
+                                    HomeViewModel.clearRequestState()
+                                    viewModel.fetchMineFolder()
+                                } else {
+                                    foldName = ""
+                                }
+                            }
+                        }
+                    }) {
+                        Text("确定")
+                    }
                 }
             }
         }
@@ -783,5 +833,26 @@ fun PhoneLoginDialog(model: MineViewModel, showDialog: Boolean, setShowDialog: (
                 Text("取消")
             }
         }
+    }
+}
+
+@Composable
+fun MiniTextButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.width(IntrinsicSize.Max),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = Color.White,
+            contentColor = Color.Black
+        ),
+        border = BorderStroke(1.dp, Color.Black),
+        shape = RoundedCornerShape(8.dp),
+        contentPadding = PaddingValues(1.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(horizontal = 2.dp, vertical = 1.dp)
+        )
     }
 }

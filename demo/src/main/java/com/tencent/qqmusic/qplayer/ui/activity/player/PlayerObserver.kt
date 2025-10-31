@@ -17,8 +17,6 @@ import com.bumptech.glide.request.target.SimpleTarget
 import com.bumptech.glide.request.transition.Transition
 import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.innovation.common.util.UtilContext
-import com.tencent.qqmusic.openapisdk.business_common.event.BaseBusinessEvent
-import com.tencent.qqmusic.openapisdk.business_common.event.BusinessEventHandler
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LargeModelEffectEvent
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.download.DownloadError
@@ -30,15 +28,17 @@ import com.tencent.qqmusic.openapisdk.core.player.IProgressChangeListener
 import com.tencent.qqmusic.openapisdk.core.player.OnPlayerErrorListener
 import com.tencent.qqmusic.openapisdk.core.player.OnVocalAccompanyStatusChangeListener
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
+import com.tencent.qqmusic.openapisdk.core.player.PlayErrorData
 import com.tencent.qqmusic.openapisdk.core.player.PlayLyricCallback
 import com.tencent.qqmusic.openapisdk.core.player.PlayProgressCallback
-import com.tencent.qqmusic.openapisdk.core.player.PlayErrorData
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEvent
 import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyConfig
+import com.tencent.qqmusic.openapisdk.core.player.ai.OnVoicePlayListener
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.core.player.PlayErrorUtils
+import com.tencent.qqmusic.qplayer.core.player.proxy.FromInfo
 import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiAccompanyHelper
 import kotlinx.coroutines.Dispatchers
@@ -59,10 +59,12 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
     var currentState: Int? by mutableStateOf<Int?>(null)
     var currentMode: Int by mutableStateOf(OpenApiSDK.getPlayerApi().getPlayMode())
     var mCurrentQuality: Int? by mutableStateOf<Int?>(null)
+    var mCurrentAiText: String? by mutableStateOf<String?>(null)
     var mPreferQuality: Int? by mutableStateOf<Int?>(OpenApiSDK.getPlayerApi().getPreferSongQuality())
     var curSongInfoChanged: Int by mutableStateOf(0)
     var curSentence: String by mutableStateOf("")
     var curPlayPos: Int? by mutableStateOf(null)
+    var currentPlayList: Pair<Int, Long> by mutableStateOf(Pair(0, 0))
 
     var playStateText: String by mutableStateOf<String>("播放状态: Idle")
     var playPosition: Float by mutableStateOf(0f)
@@ -100,8 +102,11 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
         null
     }
 
-    init {
-    }
+    private var pendingStartPlay: Boolean = false
+    private var hasStartPlay: Boolean = false
+
+    private val tryPauseFirst = sharedPreferences?.getBoolean("tryPauseFirst", false)
+    val needFade = sharedPreferences?.getBoolean("needFadeWhenPlay", true) != false
 
     private fun initProgressChangeListener() {
         // 伴唱状态回调
@@ -254,6 +259,11 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                         val list = OpenApiSDK.getPlayerApi().getPlayList()
                         list.contains(currentSong)
                     }
+                    val playListType = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_PLAY_LIST_TYPE)
+                    val playListTypeId = arg.getLong(PlayerEvent.Key.API_EVENT_KEY_PLAY_LIST_TYPE_ID)
+                    currentPlayList = playListType to playListTypeId
+                    Log.i(TAG, "playListType: $playListType, playListTypeId: $playListTypeId")
+                    checkLaunchAutoPlay()
                 }
                 PlayerEvent.Event.API_EVENT_PLAY_STATE_CHANGED -> {
                     val state = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_PLAY_STATE)
@@ -347,6 +357,22 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                     mPreferQuality = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_QUALITY)
                     Log.d(TAG, "API_EVENT_PREFER_SONG_QUALITY_CHANGE: $mPreferQuality")
                 }
+
+                PlayerEvent.Event.API_EVENT_PLAY_START -> {
+                    hasStartPlay = true
+                }
+
+                PlayerEvent.Event.API_EVENT_RESTORE_PLAY_LIST_END -> {
+                    val size = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_PLAY_LIST_SIZE, 0)
+                    Log.d(TAG, "API_EVENT_RESTORE_PLAY_LIST_END: size=$size")
+                    if (size > 0) {
+                        val sp = App.context.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+                        pendingStartPlay = sp?.getBoolean("launch_auto_play", true)  ?: true
+                    } else {
+                        pendingStartPlay = false
+                    }
+                }
+
                 else -> {
                 }
             }
@@ -378,6 +404,21 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
         }
     }
 
+    private val onVoicePlayListener = object : OnVoicePlayListener {
+        override fun onPlay() {
+            mCurrentAiText = OpenApiSDK.getAIGlobalListenTogetherApi().getCurrentRolePlayInfo()?.text
+        }
+
+        override fun onStop() {
+            mCurrentAiText = null
+        }
+
+        override fun onError() {
+            mCurrentAiText = null
+        }
+
+    }
+
     internal fun setPlayState(test: String) {
         playStateText = "播放状态: $test ${if (isRadio) "(个性电台)" else ""}"
     }
@@ -391,11 +432,13 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                 this@PlayerObserver.largeModelEffectEvent = event
             }
         }
+        OpenApiSDK.getAIGlobalListenTogetherApi().setVoicePlayerListener(onVoicePlayListener)
     }
 
     fun unregisterSongEvent() {
         OpenApiSDK.getPlayerObserverApi().removeOnPlayerErrorListener(onPlayerErrorListener)
         OpenApiSDK.getPlayerApi().unregisterEventListener(event)
+        OpenApiSDK.getAIGlobalListenTogetherApi().setVoicePlayerListener(null)
     }
 
     override fun onVocalAccompanyStatusChange(vocalScale: Int, enable: Boolean) {
@@ -432,8 +475,7 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
             }
         }
     }
-    private val tryPauseFirst = sharedPreferences?.getBoolean("tryPauseFirst", false)
-    private val needFade = sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
+
     fun tryPauseFirst(){
         if(tryPauseFirst==true){
             val result = OpenApiSDK.getPlayerApi().pause(needFade)
@@ -449,5 +491,13 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                 }
             }
         })
+    }
+
+    private fun checkLaunchAutoPlay(){
+        if (pendingStartPlay && !hasStartPlay) {
+            pendingStartPlay = false
+            Log.d(TAG, "checkLaunchAutoPlay: launch auto play")
+            OpenApiSDK.getPlayerApi().play(FromInfo.FROM_NORMAL)
+        }
     }
 }

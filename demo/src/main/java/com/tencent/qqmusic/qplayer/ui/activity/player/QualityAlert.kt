@@ -13,6 +13,7 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.playerinsight.util.coverErrorCode
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlin.concurrent.thread
@@ -57,9 +58,9 @@ object QualityAlert {
             )
     }
 
-    fun showQualityAlert(activity: Activity, isDownload: Boolean, setBlock: (Int)->Int, refresh: (Int)->Unit) {
+    fun showQualityAlert(activity: Activity, isDownload: Boolean, setBlock: (Int)->Int, refresh: (Int)->Unit, songInfo: SongInfo?=null) {
         initQualityOrderString()
-        val curSong = OpenApiSDK.getPlayerApi().getCurrentSongInfo()
+        val curSong = songInfo?:OpenApiSDK.getPlayerApi().getCurrentSongInfo()
         var realQuality: Int? = null
         curSong?.apply {
             if (OpenApiSDK.getPlayerApi().getSongHasQuality(curSong, Quality.WANOS)) {
@@ -72,8 +73,10 @@ object QualityAlert {
         }
 
         val stringArray = qualityOrderString.map {
-            val quality = qualityOrder.getOrNull(qualityOrderString.indexOf(it)) ?: kotlin.run {
-                realQuality ?: qualityOrder[2]
+            val quality = realQuality ?: kotlin.run {
+                qualityOrder.getOrNull(qualityOrderString.indexOf(it)) ?: kotlin.run {
+                    realQuality ?: qualityOrder[2]
+                }
             }
 
             val accessStr = UiUtils.getFormatAccessLabel(curSong, quality, isDownload)
@@ -144,7 +147,7 @@ object QualityAlert {
                         PlayDefine.PlayError.PLAY_ERR_NEED_PAY_ALBUM -> "需要专辑付费"
                         PlayDefine.PlayError.PLAY_ERR_NEED_PAY_TRACK -> "需要单曲付费"
                         PlayDefine.PlayError.PLAY_ERR_NEED_VIP_LONG_AUDIO -> "需要听书会员"
-                        else -> "切换歌曲品质失败, ret=$ret"
+                        else -> "ret=$ret,${coverErrorCode(ret)}"
                     }
                     activity.runOnUiThread {
                         if (!isDownload) {

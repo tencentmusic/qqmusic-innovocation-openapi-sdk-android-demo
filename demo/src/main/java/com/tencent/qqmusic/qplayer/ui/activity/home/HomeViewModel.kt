@@ -26,7 +26,6 @@ import com.tencent.qqmusic.openapisdk.hologram.EdgeMvProvider
 import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.Area
 import com.tencent.qqmusic.openapisdk.model.AreaId
-import com.tencent.qqmusic.openapisdk.model.AreaInfo
 import com.tencent.qqmusic.openapisdk.model.AreaShelf
 import com.tencent.qqmusic.openapisdk.model.AreaShelfType
 import com.tencent.qqmusic.openapisdk.model.Banner
@@ -34,24 +33,15 @@ import com.tencent.qqmusic.openapisdk.model.BuyType
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.Folder
 import com.tencent.qqmusic.openapisdk.model.HomepageRecommendation
-import com.tencent.qqmusic.openapisdk.model.HotKey
 import com.tencent.qqmusic.openapisdk.model.OtherPlatListeningList
 import com.tencent.qqmusic.openapisdk.model.RankGroup
-import com.tencent.qqmusic.openapisdk.model.SearchResult
-import com.tencent.qqmusic.openapisdk.model.SearchType
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.model.SuperQualityType
 import com.tencent.qqmusic.openapisdk.model.UserInfo
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPagingSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
 
 //
@@ -95,7 +85,9 @@ class HomeViewModel : ViewModel() {
 
     var mvFavList: List<MediaResDetail> by mutableStateOf(emptyList())
 
-    var showDialog by mutableStateOf(true)
+    var showWanosDialog by mutableStateOf(true)
+
+    var showRefreshButton by mutableStateOf(false)
 
     private var provider = OpenApiSDK.getProviderByClass(EdgeMvProvider::class.java)
 
@@ -137,7 +129,7 @@ class HomeViewModel : ViewModel() {
                             fetchSceneCategory()
                             fetchRecentFolders()
                             fetchRankGroup()
-                            getFreeLimitedTimeProfitInfo()
+                            getFreeLimitedTimeWanosProfitInfo()
                         }
                     }
                 }
@@ -251,13 +243,13 @@ class HomeViewModel : ViewModel() {
             viewModelScope.launch(Dispatchers.IO) {
                 OpenApiSDK.getOpenApi().fetchPersonalFolder {
                     mineFolders = if (it.isSuccess()) {
+                        myFolderRequested = true
                         it.data ?: emptyList()
                     } else {
                         emptyList()
                     }
                 }
             }
-            myFolderRequested = true
         }
     }
 
@@ -410,93 +402,92 @@ class HomeViewModel : ViewModel() {
         })
     }
 
-    fun fetchHiresSection(callback: (Area?) -> Unit) {
+    fun fetchHiresSection(callback: (Area?, String?) -> Unit) {
         QLog.i(TAG, "fetch hires")
         viewModelScope.launch(Dispatchers.IO) {
             OpenApiSDK.getOpenApi().fetchHiresSectionByShelfTypes(emptyList(), callback = {
                 if (it.isSuccess()) {
                     QLog.i(TAG, "fetch hires success")
-
-                    callback.invoke(it.data)
+                    callback.invoke(it.data,it.errorMsg)
                 } else {
-                    callback.invoke(null)
+                    callback.invoke(null, it.errorMsg)
                 }
             })
         }
     }
 
-    fun fetchDolbySection(callback: (Area?) -> Unit) {
+    fun fetchDolbySection(callback: (Area?, String?) -> Unit) {
         QLog.i(TAG, "fetch dolby")
         viewModelScope.launch(Dispatchers.IO) {
             OpenApiSDK.getOpenApi().fetchDolbySectionByShelfTypes(emptyList(), callback = {
                 if (it.isSuccess()) {
                     QLog.i(TAG, "fetch dolby success")
-                    callback.invoke(it.data)
+                    callback.invoke(it.data,it.errorMsg)
                 } else {
-                    callback.invoke(null)
+                    callback.invoke(null, it.errorMsg)
                 }
             })
         }
     }
 
-    fun fetchGalaxySection(callback: (Area?) -> Unit) {
+    fun fetchGalaxySection(callback: (Area?, String?) -> Unit) {
         QLog.i(TAG, "fetch galaxy")
         viewModelScope.launch(Dispatchers.IO) {
             OpenApiSDK.getOpenApi().fetchGalaxySectionByShelfTypes(emptyList(), callback = {
                 if (it.isSuccess()) {
                     QLog.i(TAG, "fetch galaxy success")
-                    callback.invoke(it.data)
+                    callback.invoke(it.data,it.errorMsg)
                 } else {
-                    callback.invoke(null)
+                    callback.invoke(null, it.errorMsg)
                 }
             })
         }
     }
 
-    fun fetchSection(areaId: Int, callback: (Area?) -> Unit) {
+    fun fetchSection(areaId: Int, callback: (Area?, String?) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             OpenApiSDK.getOpenApi().fetchAreaSectionByShelfTypes(areaId, arrayListOf(AreaShelfType.AreaShelfType_Song), callback = {
                 if (it.isSuccess()) {
-                    callback.invoke(it.data)
+                    callback.invoke(it.data,it.errorMsg)
                 } else {
-                    callback.invoke(null)
+                    callback.invoke(null, it.errorMsg)
                 }
             })
         }
     }
 
-    fun fetchVinylSection(callback: (Area?) -> Unit) {
+    fun fetchVinylSection(callback: (Area?, String?) -> Unit) {
         QLog.i(TAG, "fetch vinyl")
         viewModelScope.launch(Dispatchers.IO) {
             OpenApiSDK.getOpenApi().fetchAreaSectionByShelfTypes(AreaId.Vinly, arrayListOf(AreaShelfType.AreaShelfType_Album, AreaShelfType.AreaShelfType_Folder), callback = {
                 if (it.isSuccess()) {
                     QLog.i(TAG, "fetch vinyl success")
-                    callback.invoke(it.data)
+                    callback.invoke(it.data,it.errorMsg)
                 } else {
-                    callback.invoke(null)
+                    callback.invoke(null, it.errorMsg)
                 }
             })
         }
     }
 
-    fun fetchMasterSection(callback: (Area?) -> Unit) {
+    fun fetchMasterSection(callback: (Area?, String?) -> Unit) {
         QLog.i(TAG, "fetchMaster")
         viewModelScope.launch(Dispatchers.IO) {
             OpenApiSDK.getOpenApi().fetchAreaSectionByShelfTypes(AreaId.Master, arrayListOf(), callback = {
                 if (it.isSuccess()) {
                     QLog.i(TAG, "fetchMaster success")
-                    callback.invoke(it.data)
+                    callback.invoke(it.data,it.errorMsg)
                 } else {
-                    callback.invoke(null)
+                    callback.invoke(null, it.errorMsg)
                 }
             })
         }
     }
 
-    fun getFreeLimitedTimeProfitInfo() {
+    fun getFreeLimitedTimeWanosProfitInfo() {
         OpenApiSDK.getOpenApi().getFreeLimitedTimeProfitInfo(SuperQualityType.QUALITY_TYPE_WANOS) {
             MLog.i(TAG, "getFreeLimitedTimeProfitInfo ${it.data}")
-            showDialog = if (it.isSuccess()) {
+            showWanosDialog = if (it.isSuccess()) {
                 it.data?.status == 0 && it.data?.used == 0 && it.data?.canTry == true
             } else {
                 false
@@ -504,7 +495,7 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    fun openFreeLimitedTimeAuth(callback: OpenApiCallback<OpenApiResponse<Boolean>>? = null) {
+    fun openFreeLimitedTimeAuthWanos(callback: OpenApiCallback<OpenApiResponse<Boolean>>? = null) {
         OpenApiSDK.getOpenApi().openFreeLimitedTimeAuth(SuperQualityType.QUALITY_TYPE_WANOS, callback = callback)
     }
 
@@ -553,4 +544,8 @@ class HomeViewModel : ViewModel() {
         OrderedSingerPagingSource()
     }.flow.cachedIn(viewModelScope)
 
+    fun cleanData(){
+        showWanosDialog = true
+        showRefreshButton = false
+    }
 }

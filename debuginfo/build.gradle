@@ -3,10 +3,6 @@ plugins {
     id 'kotlin-android'
 }
 
-if (isLiteSDK.toBoolean()) {
-    apply plugin: 'openapi-sdk'
-}
-
 
 android {
     compileSdk 34
@@ -46,9 +42,6 @@ android {
 
 dependencies {
     api project(':base')
-    if (!isLiteSDK.toBoolean()) {
-        implementation "com.tencent.qqmusic.openapi:openapi-sdk:$sdk_version"
-    }
     implementation "com.squareup.okhttp3:okhttp:4.10.0"
 
     implementation 'com.google.android.material:material:1.4.0'

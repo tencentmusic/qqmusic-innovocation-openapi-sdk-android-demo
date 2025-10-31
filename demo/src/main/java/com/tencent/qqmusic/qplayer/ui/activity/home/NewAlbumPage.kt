@@ -30,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
 import com.tencent.qqmusic.qplayer.ui.activity.home.area.AreaViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.loadMoreItemUI
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import kotlinx.coroutines.CoroutineScope
 
 //
@@ -41,12 +42,14 @@ private const val TAG = "HomePage"
 
 @Composable
 fun NewAlbumPage(areaViewModel: AreaViewModel) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        albumPageTabs(areaViewModel = areaViewModel)
+    Scaffold(topBar = { TopBar("新碟专区")}) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            albumPageTabs(areaViewModel = areaViewModel)
+        }
     }
 }
 

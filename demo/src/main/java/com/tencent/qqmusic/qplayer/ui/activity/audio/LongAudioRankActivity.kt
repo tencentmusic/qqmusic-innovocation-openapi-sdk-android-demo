@@ -16,13 +16,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.pager.*
-import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumPage
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumListPage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -173,7 +172,7 @@ class LongAudioRankActivity : ComponentActivity() {
                     )
                     Column(Modifier.fillMaxSize()) {
                         Text(text = "first tab index:${index}, second tab index:${pagerState.currentPage}")
-                        AlbumPage(albums = vm.albums)
+                        AlbumListPage(albums = vm.albums)
                     }
                 }
             } else {
@@ -204,7 +203,7 @@ class LongAudioRankActivity : ComponentActivity() {
         )
         Column(Modifier.fillMaxSize()) {
             Text(text = "first tab index:${index}, second tab index null")
-            AlbumPage(albums = vm.albums)
+            AlbumListPage(albums = vm.albums)
         }
     }
 

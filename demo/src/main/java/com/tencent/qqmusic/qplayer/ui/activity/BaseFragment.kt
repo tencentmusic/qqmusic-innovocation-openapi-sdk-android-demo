@@ -12,4 +12,19 @@ class BaseFragment(private val widgetOwner: IViewWidgetOwner = ViewWidgetOwner()
     override fun isResume(): Boolean {
         return isResumed
     }
+
+    override fun onResume() {
+        super.onResume()
+        widgetOwner.onWidgetResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        widgetOwner.onWidgetPause()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        widgetOwner.onWidgetDestroy()
+    }
 }
