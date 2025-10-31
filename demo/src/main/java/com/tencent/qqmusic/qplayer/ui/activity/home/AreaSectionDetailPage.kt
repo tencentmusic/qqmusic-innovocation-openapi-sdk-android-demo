@@ -1,82 +1,101 @@
-package com.tencent.qqmusic.qplayer.ui.activity.main
+package com.tencent.qqmusic.qplayer.ui.activity.home
 
 import android.app.Activity
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.material.AlertDialog
+import androidx.compose.material.Scaffold
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
+import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
+import coil.transform.RoundedCornersTransformation
 import com.google.accompanist.flowlayout.FlowRow
-import com.tencent.qqmusic.openapisdk.model.*
+import com.tencent.qqmusic.openapisdk.model.Area
+import com.tencent.qqmusic.openapisdk.model.AreaId
+import com.tencent.qqmusic.openapisdk.model.AreaShelf
+import com.tencent.qqmusic.openapisdk.model.AreaShelfItem
+import com.tencent.qqmusic.openapisdk.model.AreaShelfType
+import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.area.AreaListActivity
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderListActivity
-import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
+import com.tencent.qqmusic.qplayer.ui.activity.login.WebViewActivity
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 
-private const val TAG = "DolbySectionPage"
+private const val TAG = "AreaSectionDetailPage"
 
+@Composable
+fun AreaSectionDetailPageWithTitle(title:String, areaId: Int, viewModel: HomeViewModel){
+    Scaffold(topBar = { TopBar(title)}) {
+        AreaSectionDetailPage(areaId, viewModel)
+    }
+}
+
+@OptIn(ExperimentalCoilApi::class)
 @Composable
 fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
     val activity = LocalContext.current as Activity
     var areaShelves: List<AreaShelf>? by remember {
         mutableStateOf(emptyList<AreaShelf>())
     }
-    var areaAreaTitle: String = ""
-    var areaAreaDesc: String = ""
-    var areaAreaCover: String = ""
-    val callback: (Area?) -> Unit = {
-        if (it != null) {
-            areaAreaTitle = it.title
-            areaAreaDesc = it.desc
-            areaAreaCover = it.cover
-            areaShelves = it.shelves
+    var areaAreaTitle = ""
+    var areaAreaDesc = ""
+    var areaAreaCover = ""
+    val callback: (Area?, String?) -> Unit = { area, msg->
+        if (area != null) {
+            viewModel.showRefreshButton = false
+            areaAreaTitle = area.title
+            areaAreaDesc = area.desc
+            areaAreaCover = area.cover
+            areaShelves = area.shelves
+        }else{
+            msg?.let{
+                UiUtils.showToast(it)
+                viewModel.showRefreshButton = true
+            }
         }
     }
 
-    when (areaId) {
-        AreaId.AreaDolby -> {
-            viewModel.fetchDolbySection(callback)
-        }
+    updateAreaData(areaId,viewModel,callback)
 
-        AreaId.AreaHires -> {
-            viewModel.fetchHiresSection(callback)
-        }
-
-        AreaId.AreaGalaxy -> {
-            viewModel.fetchGalaxySection(callback)
-        }
-
-        AreaId.Vinly -> {
-            viewModel.fetchVinylSection(callback)
-        }
-
-        AreaId.Master -> {
-            viewModel.fetchMasterSection(callback)
-        }
-
-        else -> {
-            viewModel.fetchSection(areaId, callback)
-        }
-    }
-
-    if (viewModel.showDialog) {
+    if (viewModel.showWanosDialog && areaId == AreaId.Wanos) {
         AlertDialog(
             onDismissRequest = {
-                viewModel.showDialog = false
+                viewModel.showWanosDialog = false
             },
             title = {
                 Text(text = "恭喜你！")
@@ -89,8 +108,8 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.openFreeLimitedTimeAuth() {
-                            viewModel.showDialog = !it.isSuccess()
+                        viewModel.openFreeLimitedTimeAuthWanos() {
+                            viewModel.showWanosDialog = !it.isSuccess()
                             Toast.makeText(activity, "WANOS试听权益领取成功！", Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -101,7 +120,7 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
             dismissButton = {
                 TextButton(
                     onClick = {
-                        viewModel.showDialog = false
+                        viewModel.showWanosDialog = false
                     }
                 ) {
                     Text("Dismiss")
@@ -110,12 +129,51 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
         )
     }
 
+    RefreshButton(viewModel) {
+        updateAreaData(areaId,viewModel,callback)
+    }
+
     LazyColumn {
         items(areaShelves?.count() ?: 0) { it ->
             val shelf: AreaShelf = areaShelves?.getOrNull(it) ?: return@items
             if (shelf.shelfItems.isEmpty()) return@items;
             val shelfItems: List<AreaShelfItem> = shelf.shelfItems
-
+            if(it==0){
+                Box(modifier = Modifier.height(100.dp)){
+                    Image(
+                        painter = rememberImagePainter(
+                            data = areaAreaCover,
+                            builder = {
+                                transformations(RoundedCornersTransformation())
+                            }
+                        ),
+                        contentScale = ContentScale.Crop,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp)
+                            .clickable {
+                                areaAreaCover.let {
+                                    WebViewActivity.start(activity, it)
+                                }
+                            }
+                    )
+                    Text(
+                        text = areaAreaTitle,
+                        modifier = Modifier
+                            .wrapContentSize()
+                            .background(color = Color.White.copy(alpha = 0.7f))
+                            .align(Alignment.TopStart),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold)
+                    Text(
+                        text = areaAreaDesc,
+                        modifier = Modifier
+                            .wrapContentSize()
+                            .background(color = Color.White.copy(alpha = 0.5f))
+                            .align(Alignment.BottomStart))
+                }
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -248,7 +306,6 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
             }
         }
     }
-
 }
 
 @Composable
@@ -315,5 +372,33 @@ fun PodcastItem(song: SongInfo?) {
             }
         }
 
+    }
+}
+
+private fun updateAreaData(areaId:@AreaId Int, viewModel: HomeViewModel, callback: (Area?, String?) -> Unit) {
+    when (areaId) {
+        AreaId.AreaDolby -> {
+            viewModel.fetchDolbySection(callback)
+        }
+
+        AreaId.AreaHires -> {
+            viewModel.fetchHiresSection(callback)
+        }
+
+        AreaId.AreaGalaxy -> {
+            viewModel.fetchGalaxySection(callback)
+        }
+
+        AreaId.Vinly -> {
+            viewModel.fetchVinylSection(callback)
+        }
+
+        AreaId.Master -> {
+            viewModel.fetchMasterSection(callback)
+        }
+
+        else -> {
+            viewModel.fetchSection(areaId, callback)
+        }
     }
 }

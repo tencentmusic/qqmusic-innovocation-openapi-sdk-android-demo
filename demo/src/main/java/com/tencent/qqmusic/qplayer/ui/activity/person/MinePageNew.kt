@@ -3,6 +3,7 @@ package com.tencent.qqmusic.qplayer.ui.activity.person
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,14 +24,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
+import com.tencent.qqmusic.qplayer.ui.activity.mv.MvBuyQRDialog.showTextDialog
+import com.tencent.qqmusic.qplayer.utils.UiUtils.getSuperQualityTypeName
+import com.tencent.qqmusic.qplayer.utils.getAllSuperQualityList
 
 
+@OptIn(ExperimentalCoilApi::class)
 @Composable
 fun MinePageNew(model: MineViewModel) {
     model.updateData()
     val sheetState = remember { mutableStateOf(false) }
     val context: AppCompatActivity = LocalContext.current as AppCompatActivity
+    val vip = model.userVipInfo.collectAsState().value
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
@@ -47,9 +54,20 @@ fun MinePageNew(model: MineViewModel) {
                         .size(60.dp)
                         .padding(10.dp)
                         .clip(RoundedCornerShape(50))
+                        .clickable{
+                            var msg = ""
+                            getAllSuperQualityList().forEach { type ->
+                                if (type>0){
+                                    msg += "${getSuperQualityTypeName(type)}:\n" +
+                                            "可试听=${vip?.getProfitInfoByType(type)?.canTry()}," +
+                                            "试听过=${vip?.isProfitTriedByType(type)}," +
+                                            "剩余时间=${vip?.getProfitInfoByType(type)?.remainTime}s\n"
+                                }
+                            }
+                            showTextDialog(context = context, title = "用户权益", message = msg)
+                        }
                 )
                 Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 0.dp), verticalArrangement = Arrangement.Center) {
-                    val vip = model.userVipInfo.collectAsState().value
                     val isVip = vip?.isVip() ?: false
                     val vipText = model.getVipText(vip).joinToString(" ")
                     val vipLevelText = "会员 Level : ${vip?.vipLevel}级"

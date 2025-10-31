@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -14,6 +15,7 @@ import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.PlayerStyleData
+import com.tencent.qqmusic.openapisdk.model.StyleData
 import com.tencent.qqmusic.openapisdk.model.VipLevel
 import com.tencent.qqmusic.openapisdk.playerui.PlayerStyleManager
 import com.tencent.qqmusic.qplayer.R
@@ -35,6 +37,7 @@ class PlayerStyleActivity : BaseActivity() {
 
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = customAdapter
+        findViewById<ImageButton>(R.id.btn_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
     }
 
     class CustomAdapter : RecyclerView.Adapter<CustomAdapter.ViewHolder>() {
@@ -124,18 +127,21 @@ class PlayerStyleActivity : BaseActivity() {
                 val block = {
                     PlayerStyleManager.setPlayerStyle(playerStyleData,
                         object : PlayerStyleManager.PlayerStyleLoaderListener {
-                            override fun onStart() {
+                            override fun onStart(playerStyleData: PlayerStyleData) {
                                 MLog.i("PlayerStyleActivity", "onStart")
                             }
 
-                            override fun onDownloading(progress: Float) {
+                            override fun onDownloading(
+                                playerStyleData: StyleData,
+                                progress: Float
+                            ) {
                                 AppScope.launchUI {
                                     val progress = String.format("%.2f", progress)
                                     viewHolder.btnUse.text = "下载中:$progress"
                                 }
                             }
 
-                            override fun onSuccess(playerStyleData: PlayerStyleData) {
+                            override fun onSuccess(styleData: StyleData) {
                                 MLog.i("PlayerStyleActivity", "setStyle success $playerStyleData")
                                 AppScope.launchUI {
                                     ToastUtils.showShort("设置成功")
@@ -143,7 +149,10 @@ class PlayerStyleActivity : BaseActivity() {
                                 }
                             }
 
-                            override fun onFailed(errMsg: String?) {
+                            override fun onFailed(
+                                playerStyleData: PlayerStyleData,
+                                errMsg: String?
+                            ) {
                                 ToastUtils.showShort("失败($errMsg)")
                                 MLog.i("PlayerStyleActivity", "setStyle fail $errMsg")
                             }

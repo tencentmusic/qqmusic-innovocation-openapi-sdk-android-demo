@@ -13,6 +13,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -22,22 +23,25 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.lifecycleScope
 import androidx.activity.result.contract.ActivityResultContracts
 import com.tencent.protocal.PlayDefine.PlayMode
+import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
-import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.openapisdk.hologram.EdgeMvProvider
 import com.tencent.qqmusic.openapisdk.model.PlaySpeedType
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.playerinsight.util.coverErrorCode
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.needFade
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListViewModel
 import com.tencent.qqmusic.qplayer.utils.UiUtils
+import com.tencent.qqmusic.qplayer.utils.UiUtils.getQualityName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -72,6 +76,7 @@ class PlayerTestActivity : ComponentActivity() {
         setContentView(
             R.layout.activity_player_test
         )
+        val btnBack = findViewById<ImageButton>(R.id.btn_back)
         val edt = findViewById<EditText>(R.id.edt_song)
         val btnPlay = findViewById<Button>(R.id.btn_play)
         val btnQuality = findViewById<Button>(R.id.btn_change_quality)
@@ -83,6 +88,8 @@ class PlayerTestActivity : ComponentActivity() {
         val mvID = findViewById<EditText>(R.id.play_mv_id).apply {
             hint = "a0040pizz4a"
         }
+
+        btnBack.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
         findViewById<Button>(R.id.mv_test_button).apply {
             setOnClickListener {
@@ -138,7 +145,16 @@ class PlayerTestActivity : ComponentActivity() {
         findViewById<Button>(R.id.btn_add_to_next).setOnClickListener {
             getSongList {
                 if (it.isSuccess()) {
-                    OpenApiSDK.getPlayerApi().addToNext(it.data!!)
+                    it.data?.let { songs ->
+                        when(songs.size){
+                            0 -> UiUtils.showToast("没有歌曲")
+                            1 -> {
+                                val ret = OpenApiSDK.getPlayerApi().addToNext(songs.first())
+                                UiUtils.showToast("${coverErrorCode(ret?:-1)},下一曲:${songs.first().songName}")
+                            }
+                            else -> OpenApiSDK.getPlayerApi().addToNext(it.data!!)
+                        }
+                    }
                     finish()
                     Handler(Looper.getMainLooper()).postDelayed(Runnable {
                         startActivity(Intent(this, PlayerActivity::class.java))
@@ -226,9 +242,9 @@ class PlayerTestActivity : ComponentActivity() {
         }
 
         btnQuality.setOnClickListener {
-            QualityAlert.showQualityAlert(this, false, {
+            QualityAlert.showQualityAlert(activity = this, isDownload = false, setBlock = {
                 OpenApiSDK.getPlayerApi().setPreferSongQuality(it)
-            }, {
+            }, refresh={
                 runOnUiThread {
                     refresh()
                 }
@@ -322,7 +338,9 @@ class PlayerTestActivity : ComponentActivity() {
             Log.d(TAG, "ret=${ret},setPlayMode=${setPlayMode}")
             val playMode = OpenApiSDK.getPlayerApi().getPlayMode()
             Log.d(TAG, "playMode=${playMode}")
-            assert(setPlayMode==playMode)
+            if(setPlayMode!=playMode) {
+                ToastUtils.showLong("设置的播放模式和获取的不一致！！！")
+            }
 //            OpenApiSDK.getPlayerApi().seek()
 
 
@@ -359,65 +377,7 @@ class PlayerTestActivity : ComponentActivity() {
     @SuppressLint("SetTextI18n")
     private fun refresh() {
         val textQuality = findViewById<TextView>(R.id.text_prefre_quality)
-
-        val qualityStr = when (PlayerObserver.mPreferQuality) {
-            Quality.HQ -> {
-                "hq"
-            }
-
-            Quality.SQ -> {
-                "sq"
-            }
-
-            Quality.SQ_SR -> {
-                "SQ省流"
-            }
-
-            Quality.STANDARD -> {
-                "standard"
-            }
-
-            Quality.LQ -> {
-                "LQ"
-            }
-
-            PlayerEnums.Quality.DOLBY -> {
-                "杜比"
-            }
-
-            Quality.HIRES -> {
-                "HiRes"
-            }
-
-            Quality.EXCELLENT -> {
-                "臻品音质2.0"
-            }
-
-            Quality.GALAXY -> {
-                "臻品全景声"
-            }
-
-            Quality.MASTER_TAPE -> {
-                "臻品母带"
-            }
-
-            Quality.MASTER_SR -> {
-                "臻品母带省流"
-            }
-
-            Quality.DTSC -> {
-                "DTSC"
-            }
-
-            Quality.DTSX -> {
-                "DTSX"
-            }
-
-            else -> {
-                "未知"
-            }
-        }
-        textQuality.text = "当前默认音质：${qualityStr}"
+        textQuality.text = "当前默认音质：${PlayerObserver.mPreferQuality?.getQualityName()}"
     }
 
 
@@ -490,7 +450,6 @@ class PlayerTestActivity : ComponentActivity() {
         var playerFuncIndex:Int = sharedPreferences?.getInt("playerFuncIndex", 0) ?: 0
         val funcMap = mutableMapOf<String,()->Any?>()
         val params1 = findViewById<EditText>(R.id.edt_params1).text.toString()
-        val needFade = PlayerObserver.sharedPreferences?.getBoolean("needFadeWhenPlay", false) ?: false
         funcMap["seekToPlay"] = {
             OpenApiSDK.getPlayerApi().seekToPlay(params1.toLongOrNull() ?: 60000L, needFade)
         }

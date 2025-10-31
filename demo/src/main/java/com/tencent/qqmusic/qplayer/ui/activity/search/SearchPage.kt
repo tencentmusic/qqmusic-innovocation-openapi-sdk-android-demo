@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -73,7 +72,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderListPage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HOTKEY_TYPE_LIST
 import com.tencent.qqmusic.qplayer.ui.activity.home.SearchViewModel
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumPage
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumListPage
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListPage
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import kotlinx.coroutines.Dispatchers
@@ -287,7 +286,7 @@ fun SearchResultTabs(viewModel: SearchViewModel) {
                 val loadMoreState = LoadMoreItem(needLoadMore = viewModel.loadMoreStateFlow(SearchType.ALBUM).collectAsState(), onLoadMore = {
                     viewModel.loadMore(SearchType.ALBUM)
                 })
-                AlbumPage(dataState.value, loadMoreItem = loadMoreState)
+                AlbumListPage(dataState.value, loadMoreItem = loadMoreState)
             }
 
             SearchType.FOLDER -> {
@@ -327,7 +326,7 @@ fun SearchResultTabs(viewModel: SearchViewModel) {
                 val loadMoreState = LoadMoreItem(needLoadMore = viewModel.loadMoreStateFlow(SearchType.RADIO).collectAsState(), onLoadMore = {
                     viewModel.loadMore(SearchType.RADIO)
                 })
-                AlbumPage(dataState.value, loadMoreItem = loadMoreState)
+                AlbumListPage(dataState.value, loadMoreItem = loadMoreState)
             }
         }
     }

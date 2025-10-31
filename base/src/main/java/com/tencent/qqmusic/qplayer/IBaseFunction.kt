@@ -11,5 +11,6 @@ interface IBaseFunction {
     fun getMatchID(): String
     fun getQQAPPID(): String
     fun gotoDebugActivity(activity: Activity)
-    fun initDebug()
+    fun initDebug(isDebug: Boolean)
+    fun getChannelId(): String
 }

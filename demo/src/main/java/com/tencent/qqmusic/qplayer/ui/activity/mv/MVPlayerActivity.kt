@@ -3,6 +3,7 @@ package com.tencent.qqmusic.qplayer.ui.activity.mv
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -42,6 +43,7 @@ class MVPlayerActivity : AppCompatActivity() {
         adapter = MvFragmentViewAdapter(supportFragmentManager, this)
         viewPager.adapter = adapter
         handleIntent(intent)
+        findViewById<ImageButton>(R.id.btn_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
     }
 
     @SuppressLint("NotifyDataSetChanged")

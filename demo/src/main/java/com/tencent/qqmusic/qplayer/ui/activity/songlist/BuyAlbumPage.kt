@@ -29,7 +29,7 @@ fun BuyAlbumScreen(albums: List<Album>) {
     Scaffold(
         topBar = { TopBar() }
     ) {
-        AlbumPage(albums = albums)
+        AlbumListPage(albums = albums)
     }
 }
 

@@ -154,6 +154,8 @@ dependencies {
     implementation 'com.yuyh.json:jsonviewer:1.0.6'
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
 
+    
+
     if (!rootProject.ext.isDebugBuild()) {
         debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.8.1'
     }

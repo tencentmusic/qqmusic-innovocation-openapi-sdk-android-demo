@@ -34,7 +34,11 @@ class DefaultBaseFunction : IBaseFunction {
 
     }
 
-    override fun initDebug() {
+    override fun initDebug(isDebug: Boolean) {
 
+    }
+
+    override fun getChannelId(): String {
+        return ""
     }
 }

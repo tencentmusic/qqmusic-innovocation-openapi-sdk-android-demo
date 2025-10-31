@@ -18,9 +18,11 @@ import com.tencent.qqmusic.ai.entity.AITryLinkResponse
 import com.tencent.qqmusic.ai.entity.AIWorkLinkResponse
 import com.tencent.qqmusic.ai.entity.AccInfo
 import com.tencent.qqmusic.ai.entity.CollectInfo
+import com.tencent.qqmusic.ai.entity.EmTimbreModStatus
 import com.tencent.qqmusic.ai.entity.GetSongStyleReq
 import com.tencent.qqmusic.ai.entity.HotCreateWorkInfo
 import com.tencent.qqmusic.ai.entity.LikeInfo
+import com.tencent.qqmusic.ai.entity.PersonalTimbreItem
 import com.tencent.qqmusic.ai.entity.PicSongStyle
 import com.tencent.qqmusic.ai.entity.SongStyle
 import com.tencent.qqmusic.ai.entity.TimbreRecordData
@@ -55,6 +57,7 @@ class AIViewModel : ViewModel() {
     val fileDir = App.context.cacheDir.absolutePath + "/ai"
 
     val timbreList = mutableStateOf(mutableListOf<VocalItem>())
+    val timbrePersonalList = mutableStateOf(mutableListOf<PersonalTimbreItem>())
     var songStyleList: List<SongStyle> by mutableStateOf(emptyList())
     var songImageStyleList: List<PicSongStyle> by mutableStateOf(emptyList())
     var hotAiCreateSongList: List<HotCreateWorkInfo> by mutableStateOf(emptyList())
@@ -133,6 +136,14 @@ class AIViewModel : ViewModel() {
         }
     }
 
+    fun refreshPersonalTimbreList() {
+        aiFunction?.getPersonalTimbreList("0", 50) { re ->
+            timbrePersonalList.value = (re.data ?: emptyList())
+                .toMutableList()
+            Log.d(TAG, "(${this.hashCode()})refreshPersonalTimbreList: ${timbrePersonalList.value}")
+        }
+    }
+
     fun getSongStyleList(req: GetSongStyleReq = GetSongStyleReq()) {
         if (Utils.isFastDoubleClick(TAG + "getSongStyleList", 500)) {
             return
@@ -142,7 +153,7 @@ class AIViewModel : ViewModel() {
         }
     }
 
-    fun getImageSongStyleList(req: GetSongStyleReq = GetSongStyleReq()) {
+    fun getImageSongStyleList(req: GetSongStyleReq = GetSongStyleReq(1)) {
         if (Utils.isFastDoubleClick(TAG + "getImageSongStyleList", 500)) {
             return
         }
@@ -304,7 +315,7 @@ class AIViewModel : ViewModel() {
     }
 
 
-    fun generateTimbre(fileName: String, fileDir: String) {
+    fun generateTimbre(fileName: String, name: String?, type: Int?, fileDir: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val dir = "$fileDir/$fileName"
             if (File(fileDir).exists().not()) {
@@ -312,7 +323,7 @@ class AIViewModel : ViewModel() {
             }
             aiFunction?.uploadPersonalRecordFile(dir) { fileId ->
                 Log.d(TAG, "generateTimbre: ${fileId.fileId}")
-                aiFunction.generatePersonalTimbre(listOf(TimbreRecordData(fileId = fileId.fileId))) { _ ->
+                aiFunction.generatePersonalTimbre(listOf(TimbreRecordData(fileId = fileId.fileId)), name, type) { _ ->
 
                 }
             }
@@ -464,5 +475,30 @@ class AIViewModel : ViewModel() {
 
     fun seek(toInt: Int) {
         aiCommonPlayer?.seek(toInt)
+    }
+
+    fun selectTimbre(timbre: PersonalTimbreItem) {
+        aiFunction?.selectPersonalTimbre(timbre.timbreID) {
+            if (it.isSuccess() && it.data == true) {
+                ToastUtils.showShort("已切换音色")
+                refreshPersonalTimbreList()
+            } else {
+                ToastUtils.showShort("切换音色失败:${it.errorMsg}")
+            }
+        }
+    }
+
+    fun editTimbre(id: Long, name: String, type: Int) {
+        aiFunction?.setPersonalTimbre(
+            id, name, type
+        ) { response ->
+            if (response.isSuccess() && response.data == true) {
+                // 更新成功，刷新列表
+                refreshPersonalTimbreList()
+                ToastUtils.showShort("音色信息更新成功")
+            } else {
+                ToastUtils.showShort("音色信息更新失败: ${response.errorMsg}")
+            }
+        }
     }
 }

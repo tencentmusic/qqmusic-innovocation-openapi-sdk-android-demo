@@ -1,7 +1,9 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player.widget
 
+import android.Manifest
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.os.Build
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.SeekBar
@@ -11,14 +13,17 @@ import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.view.lyric.MultiLineLyricView
 import com.tencent.qqmusic.openapisdk.playerui.utils.Utils
+import com.tencent.qqmusic.openapisdk.playerui.view.AITemplateBackgroundViewWidget
 import com.tencent.qqmusic.openapisdk.playerui.view.PlayerBackgroundViewWidget
 import com.tencent.qqmusic.openapisdk.playerui.view.PlayerSpectrumViewWidget
 import com.tencent.qqmusic.openapisdk.playerui.view.PlayerSpectrumViewWidget.Companion.STYLE_SPECTRUM_BAR
 import com.tencent.qqmusic.openapisdk.playerui.view.PlayerVinylStyleViewWidget
 import com.tencent.qqmusic.openapisdk.playerui.view.ViewWidget
 import com.tencent.qqmusic.openapisdk.playerui.viewmode.PlayerViewModel
+import com.tencent.qqmusic.openapisdk.playerui.viewmodel.EffectPlayerInfoViewModel
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.player.CustomVisualizer
+import com.tencent.qqmusic.qplayer.ui.activity.player.DemoEffectViewModel
 
 
 class PlayerNewViewWidget(private val viewModel: PlayerViewModel, private val container: ViewGroup) : ViewWidget() {
@@ -26,6 +31,7 @@ class PlayerNewViewWidget(private val viewModel: PlayerViewModel, private val co
     private val playAPI = OpenApiSDK.getPlayerApi()
 
     private val visualizer = CustomVisualizer()
+    var resourceDir = "/sdcard/Android/data/com.tencent.qqmusicrecognition/Resource/Effect/qm_ai_template/"
 
     override fun onBind() {
 
@@ -34,6 +40,11 @@ class PlayerNewViewWidget(private val viewModel: PlayerViewModel, private val co
 
         val backgroundView = container.findViewById<ViewGroup>(R.id.player_background)
         bindWidget(PlayerBackgroundViewWidget(viewModel, backgroundView))
+        val effectViewModel = EffectPlayerInfoViewModel(DemoEffectViewModel(viewModel)).apply {
+            bind()
+        }
+
+        bindWidget(AITemplateBackgroundViewWidget(effectViewModel, resourceDir, backgroundView))
         bindWidget(PlayerSpectrumViewWidget(viewModel, STYLE_SPECTRUM_BAR, container.findViewById(R.id.player_spectrum_bg)))
 
         initPlayerState()
@@ -107,7 +118,6 @@ class PlayerNewViewWidget(private val viewModel: PlayerViewModel, private val co
         viewModel.playerStyleLiveData.observe(this, Observer {
             container.setBackgroundColor(Utils.parseColor(it.styleConfig?.vinyl?.color?.magicColor, 0))
         })
-
     }
 
     override fun onUnbind() {

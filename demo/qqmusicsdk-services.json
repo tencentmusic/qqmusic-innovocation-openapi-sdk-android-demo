@@ -1,8 +1,0 @@
-{
-  "disableFeature": [
-  ],
-  "enableFeature": [
-    "playerkit",
-    "matrix-traffic"
-  ]
-}

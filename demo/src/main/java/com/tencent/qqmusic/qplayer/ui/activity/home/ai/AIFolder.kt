@@ -67,10 +67,13 @@ fun AIFolder(homeViewModel: HomeViewModel = viewModel(), backPrePage: () -> Unit
     })
 
 
-
     when (aiIndex.value) {
         AIFloderHomePage -> {
             Column {
+                Button(onClick = {
+                    dispatcher?.onBackPressed()
+                }) { Text(text = "返回") }
+
                 Text(text = "全类型 AI 歌单", modifier = Modifier
                     .height(40.dp)
                     .clickable {
@@ -98,7 +101,12 @@ fun AIFolder(homeViewModel: HomeViewModel = viewModel(), backPrePage: () -> Unit
 @Composable
 fun newAiFolder(homeViewModel: HomeViewModel) {
     val activity = LocalContext.current as Activity
+    val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+
     Column {
+        Button(onClick = {
+            dispatcher?.onBackPressed()
+        }) { Text(text = "返回") }
         LazyColumn {
             val data = homeViewModel.newAiFolder
             Log.d("wmy", "newAiFolder: ${data.size}")
@@ -149,7 +157,12 @@ fun newAiFolder(homeViewModel: HomeViewModel) {
 @Composable
 fun oldAiFolder(data: List<Folder>) {
     val activity = LocalContext.current as Activity
+    val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+
     Column {
+        Button(onClick = {
+            dispatcher?.onBackPressed()
+        }) { Text(text = "返回") }
         Text(text = "歌单数量 ${data.size}")
         LazyColumn {
             items(data) {

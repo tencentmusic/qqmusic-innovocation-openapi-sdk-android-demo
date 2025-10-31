@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.player.playlist.MusicPlayList
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import kotlinx.coroutines.*
 
 //
@@ -78,20 +80,31 @@ class SongListActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            mainView()
+            Scaffold(topBar = { TopBar(title = "歌曲列表") }) {
+                mainView()
+            }
         }
     }
 
     @Composable
     fun mainView() {
-                Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
             if (loadingText.value.isNullOrEmpty().not()) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
-                    Text(text = loadingText.value, color = Color.Red, fontSize = 32.sp, textAlign = TextAlign.Center)
+                    Text(
+                        text = loadingText.value,
+                        color = Color.Red,
+                        fontSize = 32.sp,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
             if (!folderId.isNullOrEmpty()) {
-                playlistHeader(songs = songList.value, playListType = MusicPlayList.PLAY_LIST_FOLDER_TYPE, playListTypeId = folderId.toLongOrNull() ?: 0)
+                playlistHeader(
+                    songs = songList.value,
+                    playListType = MusicPlayList.PLAY_LIST_FOLDER_TYPE,
+                    playListTypeId = folderId.toLongOrNull() ?: 0
+                )
 
                 DisposableEffect(Unit) {
                     val job = lifecycleScope.launch(Dispatchers.IO) {
@@ -119,15 +132,24 @@ class SongListActivity : ComponentActivity() {
                 SongListPage(songList.value, false)
             } else if (!albumId.isNullOrEmpty()) {
                 songListViewModel.fetchAlbumDetail(albumId)
-                SongListScreen(songListViewModel.pagingAlbumSongs(albumId), album = songListViewModel.albumDetail, type = SONG_TYPE_ALBUM,
-                    playListType = MusicPlayList.PLAY_LIST_ALBUM_TYPE, playListTypeId = albumId.toLong()
+                SongListScreen(
+                    songListViewModel.pagingAlbumSongs(albumId),
+                    album = songListViewModel.albumDetail,
+                    type = SONG_TYPE_ALBUM,
+                    playListType = MusicPlayList.PLAY_LIST_ALBUM_TYPE,
+                    playListTypeId = albumId.toLong()
                 )
             } else if (songId != 0L) {
                 SongListScreen(songListViewModel.pagingSongIds(listOf(songId)))
             } else if (rankId != 0) {
                 SongListScreen(songListViewModel.pagingRankSongList(rankId))
             } else if (categoryIds.isNotEmpty()) {
-                SongListScreen(songListViewModel.pagingSongListScene(categoryIds[0], categoryIds[1]))
+                SongListScreen(
+                    songListViewModel.pagingSongListScene(
+                        categoryIds[0],
+                        categoryIds[1]
+                    )
+                )
             } else {
                 QLog.e(TAG, "err prams")
             }

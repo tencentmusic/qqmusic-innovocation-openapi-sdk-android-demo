@@ -1,12 +1,19 @@
 package com.tencent.qqmusic.qplayer.ui.activity.login
 
-import android.app.Activity
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.webkit.*
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.ImageButton
+import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
+import androidx.core.net.toUri
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 
@@ -14,7 +21,7 @@ import com.tencent.qqmusic.qplayer.baselib.util.QLog
 // Created by clydeazhang on 2022/1/4 11:30 上午.
 // Copyright (c) 2022 Tencent. All rights reserved.
 // 
-class WebViewActivity : Activity() {
+class WebViewActivity : ComponentActivity() {
 
     private var webView: WebView? = null
 
@@ -29,12 +36,15 @@ class WebViewActivity : Activity() {
         }
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        onBackPressedDispatcher.addCallback(this, backPressedCallback)
         setContentView(R.layout.activity_web)
+        findViewById<ImageButton>(R.id.btn_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
         val url = intent.getStringExtra("url") ?: "null"
         QLog.i(TAG, "load url:$url")
-        webView = findViewById<WebView>(R.id.web)
+        webView = findViewById(R.id.web)
         webView?.loadUrl(url)
         webView?.settings?.apply {
             this.javaScriptEnabled = true
@@ -55,9 +65,13 @@ class WebViewActivity : Activity() {
                 Log.d(TAG, "shouldOverrideUrlLoading 1, url=$url")
                 if (url?.startsWith("weixin://wap/pay") == true) {  // 微信支付 deeplink
                     val intent = Intent(Intent.ACTION_VIEW).apply {
-                        setData(Uri.parse(url))
+                        setData(url.toUri())
                     }
                     startActivity(intent)
+                    return true
+                }
+                if (url?.startsWith("qqmusic://qq.com/ui/closeWebview") == true) {  // qq音乐关闭webview
+                    this@WebViewActivity.finish()
                     return true
                 }
                 return false
@@ -69,11 +83,16 @@ class WebViewActivity : Activity() {
 
     }
 
-    override fun onBackPressed() {
-        if (webView?.canGoBack() == true) {
-            webView?.goBack()
-        } else {
-            super.onBackPressed()
+    private val backPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (webView?.canGoBack() == true) {
+                webView?.goBack()
+            } else {
+                // 如果WebView无法返回，则执行默认的返回操作
+                isEnabled = false  // 临时禁用回调以允许默认行为
+                onBackPressedDispatcher.onBackPressed()
+                isEnabled = true   // 重新启用回调
+            }
         }
     }
 

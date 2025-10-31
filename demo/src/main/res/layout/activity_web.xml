@@ -4,6 +4,20 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- 返回按钮 (缩小版) -->
+    <ImageButton
+        android:id="@+id/btn_back"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_margin="10dp"
+        android:adjustViewBounds="true"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="back_button"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_back_dark" />
+
     <WebView
         android:id="@+id/web"
         android:layout_width="match_parent"

@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.grid.items
 //import androidx.compose.foundation.lazy.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
+import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -24,6 +25,7 @@ import androidx.lifecycle.ViewModelStoreOwner
 import com.tencent.qqmusic.edgemv.data.MediaGroupRes
 import com.tencent.qqmusic.edgemv.data.MediaSimpleRes
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.mv.PlayerViewModel
 
 class MVAreaFragment(viewModelStoreOwner: ViewModelStoreOwner, val groupRes: MediaGroupRes? = null) : Fragment() {
@@ -45,7 +47,9 @@ class MVAreaFragment(viewModelStoreOwner: ViewModelStoreOwner, val groupRes: Med
         super.onViewCreated(view, savedInstanceState)
         composeView = view.findViewById(R.id.mv_list_compose_view)
         composeView?.setContent {
-            ContentView(playerViewModel, groupRes)
+            Scaffold(topBar = { TopBar("MV")}){
+                ContentView(playerViewModel, groupRes)
+            }
         }
     }
 

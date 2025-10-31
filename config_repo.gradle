@@ -24,6 +24,7 @@ ext {
             maven { url 'https://mirrors.tencent.com/nexus/repository/maven-public/' }
             maven { url "https://mirrors.tencent.com/repository/maven/QQMusicSnapshots" }
             maven { url "https://mirrors.tencent.com/repository/maven/QQMusicRelease" }
+            maven { url "https://mirrors.tencent.com/repository/maven/MLivePlatform" }
         }
     }
 
@@ -36,7 +37,7 @@ ext {
 
     sdk_version = project.hasProperty('edge_version') && "${edge_version}" != ""
             ? "${edge_version}"
-            : "3.5.0"
+            : "3.9.0"
 
     println "apk demo sdk_version:$sdk_version"
 

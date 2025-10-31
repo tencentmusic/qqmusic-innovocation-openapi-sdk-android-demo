@@ -16,10 +16,12 @@ import com.tencent.qqmusic.ai.function.base.IAIFunction
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
+import com.tencent.qqmusic.openapisdk.model.MusicSkillSlotItem
 import com.tencent.qqmusic.openapisdk.model.SearchType
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.model.vip.CashierCreateOrderItem
 import com.tencent.qqmusic.openapisdk.model.vip.CashierCreateOrderParams
+import com.tencent.qqmusic.openapisdk.model.vip.GetVipGuideConfigParam
 import com.tencent.qqmusic.qplayer.BaseFunctionManager
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.GsonHelper
@@ -212,6 +214,8 @@ class OpenApiDemoActivity : AppCompatActivity() {
 
         }
         setupMethodNameToBlock()
+
+        findViewById<ImageButton>(R.id.btn_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
         findViewById<Button>(R.id.btn_send).setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {
@@ -469,17 +473,20 @@ class OpenApiDemoActivity : AppCompatActivity() {
         methodNameToBlock["fetchCashierPayUrl"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
+            val productInfo = paramStr4!!.split(",")
+            val marketingActivities = paramStr5?.split(",")
             val param = CashierCreateOrderParams(
                 cOrder = paramStr1!!,
                 offerId = paramStr2!!,
                 totalAmount = paramStr3!!.toLong(),
                 items = listOf(
                     CashierCreateOrderItem(
-                        productId = paramStr4!!,
-                        skuId = paramStr5!!,
+                        productId = productInfo.getOrNull(0) ?: "",
+                        skuId = productInfo.getOrNull(1) ?: "",
                         quantity = 1,
                     )
-                )
+                ),
+                activityIds = marketingActivities
             )
             openApi.fetchCashierPayUrl(param, commonCallback)
         }
@@ -566,7 +573,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
             openApi.deleteFolder(paramStr1!!) { callback ->
-                createdFolderDeleted = callback.data!!
+                createdFolderDeleted = callback.data == true
                 commonCallback.invoke(callback)
             }
         }
@@ -962,77 +969,10 @@ class OpenApiDemoActivity : AppCompatActivity() {
         //    openApi.reportRecentPlay(paramStr1!!.toLong(), paramStr2!!.toInt(), commonCallback)
         //}
         methodNameToBlock["musicSkill"] = {
-            val commonCallback = CallbackWithName(it)
-            fillDefaultParamIfNull(it)
-
-            val slotsMap = mutableMapOf<String, String>()
-            val kvStrList = paramStr2?.split(",") ?: emptyList()
-            for (kvStr in kvStrList) {
-                val kv = kvStr.split(":")
-                if (kv.size > 1) {
-                    slotsMap[kv.first()] = kv[1]
-                }
-            }
-
-            openApi.musicSkill(
-                paramStr1 ?: "",
-                slotsMap,
-                paramStr3 ?: "",
-                paramStr4?.toLong(),
-                paramStr5?.toInt() ?: 20,
-                callback = object : OpenApiCallback<OpenApiResponse<String>> {
-                    override fun invoke(data: OpenApiResponse<String>) {
-                        when (paramStr1) {
-                            null, "SearchSong" -> {
-                                if (data.isSuccess()) {
-                                    val jsonObj = GsonHelper.safeToJsonObj(data.data)
-                                    val speakCommand = jsonObj?.getAsJsonObject("speak_command")
-                                    val speakText = speakCommand?.get("text")?.asString
-                                    if (speakText != null) {
-                                        Toast.makeText(this@OpenApiDemoActivity, speakText, Toast.LENGTH_SHORT).show()
-                                    }
-                                    val playCommand = jsonObj?.getAsJsonObject("play_command")
-                                    val playList = playCommand?.getAsJsonArray("play_list")
-                                    val songIds = playList?.mapNotNull {
-                                        it.asJsonObject?.get("song_id")?.asLong
-                                    } ?: emptyList()
-                                    val playListOperType = playCommand?.get("play_type")?.asInt ?: 0 // 默认插入
-                                    val suggestPlayListSize = playCommand?.get("suggest_cnt")?.asInt ?: songIds.size
-                                    lifecycleScope.launch(Dispatchers.IO) {
-                                        OpenApiSDK.getOpenApi().fetchSongInfoBatch(
-                                            songIds.take(suggestPlayListSize),
-                                            callback = object : OpenApiCallback<OpenApiResponse<List<SongInfo>>> {
-                                                override fun invoke(data: OpenApiResponse<List<SongInfo>>) {
-                                                    if (!data.isSuccess() || data.data == null) {
-                                                        Toast.makeText(this@OpenApiDemoActivity, "歌曲信息拉取失败", Toast.LENGTH_SHORT).show()
-                                                        return
-                                                    }
-                                                    lifecycleScope.launch(Dispatchers.IO) {
-                                                        when (playListOperType) {
-                                                            0 -> {
-                                                                val pos = OpenApiSDK.getPlayerApi().getCurPlayPos()
-                                                                val ret = OpenApiSDK.getPlayerApi().appendSongToPlaylist(data.data!!, pos + 1)
-                                                                if (ret == PlayDefine.PlayError.PLAY_ERR_NONE) {
-                                                                    delay(200L)
-                                                                    OpenApiSDK.getPlayerApi().next()
-                                                                }
-                                                            }
-
-                                                            1 -> {
-                                                                OpenApiSDK.getPlayerApi().playSongs(data.data!!, 0)
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            })
-                                    }
-                                }
-                            }
-                        }
-                        commonCallback(data)
-                    }
-                }
-            )
+            testMusicSkill(it, "musicSkill")
+        }
+        methodNameToBlock["musicSkillWithSlots"] = {
+            testMusicSkill(it, "musicSkillWithSlots")
         }
         methodNameToBlock["reportRecentPlay"] = {
             val commonCallback = CallbackWithName(it)
@@ -1237,6 +1177,15 @@ class OpenApiDemoActivity : AppCompatActivity() {
             val type = paramStr4?.toIntOrNull()
             OpenApiSDK.getOpenApi().fetchNewAlbum(area, pageIndex, pageSize, type, commonCallback)
         }
+
+        methodNameToBlock["getVipGuideConfig"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            val param = paramStr1?.split(",")?.map {
+                GetVipGuideConfigParam(it.toIntOrNull() ?: 0)
+            } ?: listOf()
+            OpenApiSDK.getOpenApi().getVipGuideConfig(param, commonCallback)
+        }
     }
 
     private fun initMethodNameList() {
@@ -1325,7 +1274,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
 
         methodNameWithParamList.add(
             MethodNameWidthParam(
-                "fetchCashierPayUrl", listOf("cOrder", "offerID(套餐ID)", "totalAmount(订单总金额)", "productId(商品ID)", "skuId"), listOf("", "", "", "", "")
+                "fetchCashierPayUrl", listOf("cOrder", "offerID(套餐ID)", "totalAmount(订单总金额)", "productId(商品ID),skuId", "activityIds(活动id列表,`,`分隔)"), listOf("", "", "", "", "")
             )
         )
         methodNameWithParamList.add(
@@ -1703,6 +1652,14 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
+                "musicSkillWithSlots",
+                listOf("意图", "槽位值(kv以:分隔，多个槽位值逗号分隔)", "原始语音", "当前在播歌曲id(可不传)", "返回数量（可不传）"),
+                // listOf("点歌播放", "歌手名:周杰伦,歌曲语言:中文", "播放感伤的歌曲", null, null)
+                listOf(null, "", "", null, null)
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
                 "reportRecentPlay", listOf("歌曲id"), listOf("316868744")
             )
         )
@@ -1777,8 +1734,114 @@ class OpenApiDemoActivity : AppCompatActivity() {
         methodNameWithParamList.add(
             MethodNameWidthParam("getAICoverPersonalCreateData", listOf("songmid", "分页大小", "分页起始id"), listOf(null, null, null))
         )
+        methodNameWithParamList.add(
+            MethodNameWidthParam("getVipGuideConfig", listOf("点位id，多个点位用英文,分隔"), listOf(null))
+        )
         methodNameWithParamList.sortBy {
             it.name
+        }
+    }
+
+    private fun testMusicSkill(param: MethodNameWidthParam, method: String) {
+        val commonCallback = CallbackWithName(param)
+        fillDefaultParamIfNull(param)
+
+        val doMusicSkillResponse: (data: OpenApiResponse<String>) -> Unit = { data->
+            when (paramStr1) {
+                null, "SearchSong" -> {
+                    if (data.isSuccess()) {
+                        val jsonObj = GsonHelper.safeToJsonObj(data.data)
+                        val speakCommand = jsonObj?.getAsJsonObject("speak_command")
+                        val speakText = speakCommand?.get("text")?.asString
+                        if (speakText != null) {
+                            Toast.makeText(this@OpenApiDemoActivity, speakText, Toast.LENGTH_SHORT).show()
+                        }
+                        val playCommand = jsonObj?.getAsJsonObject("play_command")
+                        val playList = playCommand?.getAsJsonArray("play_list")
+                        val songIds = playList?.mapNotNull {
+                            it.asJsonObject?.get("song_id")?.asLong
+                        } ?: emptyList()
+                        val playListOperType = playCommand?.get("play_type")?.asInt ?: 0 // 默认插入
+                        val suggestPlayListSize = playCommand?.get("suggest_cnt")?.asInt ?: songIds.size
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            OpenApiSDK.getOpenApi().fetchSongInfoBatch(
+                                songIds.take(suggestPlayListSize),
+                                callback = object : OpenApiCallback<OpenApiResponse<List<SongInfo>>> {
+                                    override fun invoke(data: OpenApiResponse<List<SongInfo>>) {
+                                        if (!data.isSuccess() || data.data == null) {
+                                            Toast.makeText(this@OpenApiDemoActivity, "歌曲信息拉取失败", Toast.LENGTH_SHORT).show()
+                                            return
+                                        }
+                                        lifecycleScope.launch(Dispatchers.IO) {
+                                            when (playListOperType) {
+                                                0 -> {
+                                                    val pos = OpenApiSDK.getPlayerApi().getCurPlayPos()
+                                                    val ret = OpenApiSDK.getPlayerApi().appendSongToPlaylist(data.data!!, pos + 1)
+                                                    if (ret == PlayDefine.PlayError.PLAY_ERR_NONE) {
+                                                        delay(200L)
+                                                        OpenApiSDK.getPlayerApi().next()
+                                                    }
+                                                }
+
+                                                1 -> {
+                                                    OpenApiSDK.getPlayerApi().playSongs(data.data!!, 0)
+                                                }
+                                            }
+                                        }
+                                    }
+                                })
+                        }
+                    }
+                }
+            }
+            commonCallback(data)
+        }
+
+        val respCallback = object : OpenApiCallback<OpenApiResponse<String>> {
+            override fun invoke(data: OpenApiResponse<String>) {
+                doMusicSkillResponse(data)
+            }
+        }
+
+        when (method) {
+            "musicSkill" -> {
+                val slotsMap = mutableMapOf<String, String>()
+                val kvStrList = paramStr2?.split(",") ?: emptyList()
+                for (kvStr in kvStrList) {
+                    val kv = kvStr.split(":")
+                    if (kv.size > 1) {
+                        slotsMap[kv.first()] = kv[1]
+                    }
+                }
+
+                openApi.musicSkill(
+                    paramStr1 ?: "",
+                    slotsMap,
+                    paramStr3 ?: "",
+                    paramStr4?.toLong(),
+                    paramStr5?.toInt() ?: 20,
+                    callback = respCallback
+                )
+            }
+            "musicSkillWithSlots" -> {
+                val slotItem = mutableListOf<MusicSkillSlotItem>()
+                val kvStrList = paramStr2?.split(",") ?: emptyList()
+                for (kvStr in kvStrList) {
+                    val kv = kvStr.split(":")
+                    slotItem.add(
+                        MusicSkillSlotItem(kv.first(), kv.getOrNull(1) ?: "", kv.getOrNull(2)?.toIntOrNull() ?: 0)
+                    )
+                }
+
+                openApi.musicSkill(
+                    paramStr1 ?: "",
+                    slotItem,
+                    paramStr3 ?: "",
+                    paramStr4?.toLong(),
+                    paramStr5?.toInt() ?: 20,
+                    callback = respCallback
+                )
+            }
         }
     }
 

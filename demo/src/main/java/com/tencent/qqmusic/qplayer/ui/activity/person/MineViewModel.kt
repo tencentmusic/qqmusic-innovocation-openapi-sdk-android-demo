@@ -1,5 +1,7 @@
 package com.tencent.qqmusic.qplayer.ui.activity.person
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.runtime.collectAsState
@@ -15,6 +17,7 @@ import com.tencent.qqmusic.openapisdk.model.OperationsInfo
 import com.tencent.qqmusic.openapisdk.model.UserInfo
 import com.tencent.qqmusic.openapisdk.model.VipInfo
 import com.tencent.qqmusic.openapisdk.model.vip.CheckNeedRenewalInfo
+import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -76,9 +79,15 @@ class MineViewModel : ViewModel() {
                 _loginInfo.value = Global.getLoginModuleApi().openIdInfo
                 _partnerAccountInfo.value = OpenApiSDK.getPartnerApi().queryThirdPartyAccountID()
             })
-
+            val sharedPreferences: SharedPreferences? = try {
+                App.context.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+            } catch (e: Exception) {
+                QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
+                null
+            }
+            val isPartnerAccountIndependent = sharedPreferences?.getBoolean("accountModePartner", false) ?: false
             // 第三方独立登录。获取会员的接口使用独立接口
-            if (Global.getLoginModuleApi().openIdInfo?.type == AuthType.PARTNER) {
+            if (isPartnerAccountIndependent) {
                 OpenApiSDK.getOpenApi().fetchPartnerMemberInformation {
                     _userVipInfo.value = it.data
                 }

@@ -12,7 +12,6 @@ import androidx.lifecycle.Observer
 import com.tencent.config.ProcessUtil
 import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.innovation.common.util.ToastUtils
-import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LogEvent
 import com.tencent.qqmusic.openapisdk.core.DeviceType
 import com.tencent.qqmusic.openapisdk.core.IAPPCallback
@@ -28,16 +27,12 @@ import com.tencent.qqmusic.qplayer.baselib.util.Md5Utils
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.player.DefaultImageLoader
-import com.tencent.qqmusic.qplayer.utils.FireEyeMonitorConfigImpl
 import com.tencent.qqmusic.qplayer.utils.PrivacyManager
 import com.tencent.qqmusic.qplayer.utils.SettingsUtil
-import com.tencent.qqmusiccommon.SimpleMMKV
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-import kotlin.random.Random
 
 /**
  * Created by tannyli on 2021/8/31.
@@ -124,7 +119,7 @@ class App : Application() {
                 null
             }
 
-            BaseFunctionManager.proxy.initDebug()
+            BaseFunctionManager.proxy.initDebug(BuildConfig.IS_DEBUG)
 
             val isUseForegroundService = sharedPreferences?.getBoolean("isUseForegroundService", true) ?: true
             val logFileDir = sharedPreferences?.getString("logFileDir", "")
@@ -185,7 +180,6 @@ class App : Application() {
 
                 needWnsPushService = sharedPreferences?.getBoolean("enableWns", true) ?: true
             }
-            Global.setMonitorConfigApi(FireEyeMonitorConfigImpl())
             val start = System.currentTimeMillis()
             OpenApiSDK.init(initConfig)
             OpenApiSDK.setAppForeground(true)

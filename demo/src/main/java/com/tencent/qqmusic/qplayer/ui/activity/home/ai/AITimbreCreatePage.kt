@@ -27,9 +27,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -121,6 +123,17 @@ fun AITimbreCreatePage(backPrePage: () -> Unit) {
         mutableStateOf(0L)
     }
 
+
+    var showEditDialog by remember { mutableStateOf(false) }
+
+    // 编辑对话框
+    if (showEditDialog) {
+        PersonalTimbreEditDialog("", 0, { name, type ->
+            aiViewModel.generateTimbre(FILE_NAME, name, type, aiViewModel.fileDir)
+        }) {
+            showEditDialog = false
+        }
+    }
 
     LaunchedEffect(accinfo.value) {
         aiViewModel.getWorkLink(accinfo.value?.songMid, null) {
@@ -239,7 +252,7 @@ fun AITimbreCreatePage(backPrePage: () -> Unit) {
                 end.linkTo(record.end)
                 bottom.linkTo(parent.bottom)
             }, onClick = {
-                aiViewModel.generateTimbre(FILE_NAME, aiViewModel.fileDir)
+                showEditDialog = true
             }) {
                 if (taskStatus.value == 0) {
                     Text("未生成过音色，生成音色")

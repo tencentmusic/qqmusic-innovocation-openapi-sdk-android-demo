@@ -45,7 +45,7 @@ import com.tencent.qqmusic.openapisdk.model.JumpInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
-import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumPage
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.AlbumListPage
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -237,7 +237,7 @@ class LongAudioCategoryActivity : ComponentActivity() {
                 val loadMoreState = vm.hasMoreState.collectAsState()
                 Column(Modifier.fillMaxSize()) {
                     Text(text = "first tab index:${index}, second tab index:${pagerState.currentPage}")
-                    AlbumPage(albums = vm.albums, loadMoreItem = LoadMoreItem(loadMoreState, onLoadMore = {
+                    AlbumListPage(albums = vm.albums, loadMoreItem = LoadMoreItem(loadMoreState, onLoadMore = {
                         vm.fetchCategoryDetail(fid, sid) // 翻页
                     }))
                 }
