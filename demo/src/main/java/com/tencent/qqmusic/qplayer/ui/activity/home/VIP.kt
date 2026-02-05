@@ -50,7 +50,12 @@ fun VIPSuccessDialog(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally ) {
-                val titleText = if ((data?.vipType ?: 1L) == 1L) "豪华绿钻" else "超级会员"
+                val titleText = when(data?.vipType){
+                    1L -> "豪华绿钻"
+                    2L -> "超级会员"
+                    3L -> "联合会员"
+                    else -> "未知类型：${data?.vipType}"
+                }
                 CopyableText("购买成功",titleText)
                 CopyableText("昵称",categoryViewModel.userInfo.collectAsState().value?.nickName)
                 Image(
@@ -77,7 +82,7 @@ fun VIPSuccessDialog(
                     else -> data?.autoType.toString()
                 }
                 CopyableText(title = "续费周期", content = autoTypeText)
-                CopyableText(title = "续费类型", content = if (data?.autoFeeFlag == 1L) "首次开通" else "续费")
+                CopyableText(title = "续费类型", content = if (data?.autoFeeFlag == 1L) "主动开通" else "自动续费")
                 CopyableText(title = "支付金额", content = "%.2f ¥".format((data?.price?.toDouble() ?: 0.0) / 100))
                 CopyableText(title = "购买单号", content = data?.innerOrderID?.trim())
                 CopyableText(

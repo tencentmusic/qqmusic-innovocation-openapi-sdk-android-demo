@@ -38,6 +38,7 @@ import com.tencent.qqmusic.openapisdk.model.RankGroup
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.model.SuperQualityType
 import com.tencent.qqmusic.openapisdk.model.UserInfo
+import com.tencent.qqmusic.openapisdk.model.vip.UnionVipOrderInfo
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -72,6 +73,8 @@ class HomeViewModel : ViewModel() {
     var songOfMyLikeHasMore = mutableStateOf(false)
     var songOfOther: OtherPlatListeningList by mutableStateOf(OtherPlatListeningList())
     var songOfMyLike = mutableStateOf<List<SongInfo>>(emptyList())
+
+    var unionVipOrderList = mutableStateOf<List<UnionVipOrderInfo>>(emptyList())
 
     var sourceType: Int? = null
     var loginState = MutableLiveData<Pair<Boolean, Boolean>>()
@@ -265,6 +268,29 @@ class HomeViewModel : ViewModel() {
             }
             mFetchOtherPlayList = true
         }
+    }
+
+    fun fetchAllUnionVipOrderList() {
+        val allOrders = mutableListOf<UnionVipOrderInfo>() // Temporary list to accumulate all orders
+
+        fun fetchNextPage(nextPageToken: String?) {
+            OpenApiSDK.getOpenApi().getUnionVipOrderList(nextPageToken = nextPageToken, pageSize = 2) { response ->
+                if (response.isSuccess()) {
+                    response.data?.orders?.let { orders ->
+                        allOrders.addAll(orders) // Add current page orders to the list
+                    }
+                    val newNextPageToken = response.passBack // Get token for next page
+
+                    if (newNextPageToken.isNullOrEmpty()) {
+                        unionVipOrderList.value = allOrders // No more pages, update LiveData
+                    } else {
+                        fetchNextPage(newNextPageToken) // Fetch next page
+                    }
+                }
+            }
+        }
+
+        fetchNextPage(null) // Start fetching from the first page
     }
 
     private val lasFetchFavMVListTime = AtomicLong(0)

@@ -28,9 +28,11 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.BlendMode
@@ -39,6 +41,8 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -73,9 +77,11 @@ import kotlin.concurrent.thread
 
 private const val TAG = "PlayerPage"
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun PlayerScreen(observer: PlayerObserver) {
-    Scaffold(topBar = { TopBar(title = "播放页") }) {
+    Scaffold(topBar = { TopBar(title = "播放页") },
+        modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
         PlayerPage(observer)
     }
 }
@@ -195,7 +201,7 @@ fun PlayerPage(observer: PlayerObserver) {
                             setBlock = {
                                 OpenApiSDK
                                     .getPlayerApi()
-                                    .setCurrentPlaySongQuality(it)
+                                    .setCurrentPlaySongQuality(it,observer.autoPlaySwitchQuality)
                             },
                             refresh = {
                                 quality = it
@@ -494,7 +500,7 @@ fun PlayerPage(observer: PlayerObserver) {
                             } else {
                                 OpenApiSDK
                                     .getPlayerApi()
-                                    .play()
+                                    .play(observer.needFade)
                             }
                             Log.d(TAG, "play or pause, ret=$ret")
                             if (ret != 0) {

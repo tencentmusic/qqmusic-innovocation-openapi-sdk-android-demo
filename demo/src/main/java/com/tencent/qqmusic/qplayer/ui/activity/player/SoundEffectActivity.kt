@@ -21,9 +21,12 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
@@ -74,9 +77,11 @@ class SoundEffectActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     fun SoundEffectScreen(flow: Flow<PagingData<SoundEffectItem>>) {
-        Scaffold(topBar = { TopBar(vm.currentSelectSoundEffectItem.value?.name ?: "音效设置") }) {
+        Scaffold(topBar = { TopBar(vm.currentSelectSoundEffectItem.value?.name ?: "音效设置") },
+            modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
 
             AnimatedVisibility(visible = (vm.currentSelectSoundEffectItem.value?.canSetSoundEffectParam() != true )) {
                 soundEffectList(flow)

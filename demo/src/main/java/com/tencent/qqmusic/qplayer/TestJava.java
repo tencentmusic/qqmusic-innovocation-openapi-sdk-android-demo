@@ -9,6 +9,7 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK;
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApi;
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse;
 import com.tencent.qqmusic.openapisdk.core.player.ISDKSpecialNeedInterface;
+import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums;
 import com.tencent.qqmusic.openapisdk.model.Album;
 import com.tencent.qqmusic.openapisdk.model.SongInfo;
 
@@ -33,5 +34,6 @@ class TestJava {
                 });
 
 
+        OpenApiSDK.getPlayerApi().setCurrentPlaySongQuality(PlayerEnums.Quality.HQ);
     }
 }

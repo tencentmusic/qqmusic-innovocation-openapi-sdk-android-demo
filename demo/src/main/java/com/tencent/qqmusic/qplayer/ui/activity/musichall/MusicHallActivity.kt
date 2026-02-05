@@ -10,6 +10,10 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tencent.qqmusic.qplayer.ui.activity.BaseComposeActivity
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
@@ -59,6 +63,7 @@ class MusicHallActivity: BaseComposeActivity() {
         }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     fun MusicHallScreen(type: Int) {
         val title = when (type) {
@@ -73,6 +78,7 @@ class MusicHallActivity: BaseComposeActivity() {
                 topBar = {
                     TopBar(title)
                 },
+                modifier = Modifier.semantics{ testTagsAsResourceId=true },
                 bottomBar = {
                     FloatingPlayerPage()
                 }

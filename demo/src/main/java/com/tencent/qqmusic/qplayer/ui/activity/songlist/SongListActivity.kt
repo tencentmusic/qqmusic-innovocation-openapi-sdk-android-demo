@@ -12,8 +12,11 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
@@ -77,10 +80,12 @@ class SongListActivity : ComponentActivity() {
 
     private val loadingText = mutableStateOf("")
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            Scaffold(topBar = { TopBar(title = "歌曲列表") }) {
+            Scaffold(topBar = { TopBar(title = "歌曲列表") },
+                modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
                 mainView()
             }
         }

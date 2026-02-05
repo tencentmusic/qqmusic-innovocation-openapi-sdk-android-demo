@@ -14,8 +14,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
@@ -24,10 +27,12 @@ import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
 import com.tencent.qqmusic.qplayer.ui.activity.loadMoreItemUI
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun BuyAlbumScreen(albums: List<Album>) {
     Scaffold(
-        topBar = { TopBar() }
+        topBar = { TopBar() },
+        modifier = Modifier.semantics{ testTagsAsResourceId=true }
     ) {
         AlbumListPage(albums = albums)
     }

@@ -180,8 +180,8 @@ data class SongQualityInfo(val songInfo: SongInfo, @Quality  val quality: Int){
         Quality.VINYL -> songInfo.canDownloadVinyl()
         else -> songInfo.canDownloadFile(quality)
     }
-    val downloadNeedVip = SongQualityManager.getAccessByQuality(songInfo.action?.downloadAccess, quality)?.getNeedVip()
-    val cacheNeedVip = SongQualityManager.getAccessByQuality(songInfo.action?.cacheAccess, quality)?.getNeedVip()
+    val downloadNeedVip = SongQualityManager.getDownloadAccessByQuality(songInfo, quality)?.getNeedVip()
+    val cacheNeedVip = SongQualityManager.getCacheAccessByQuality(songInfo, quality)?.getNeedVip()
 
     val hasQuality = SongQualityManager.getSongHasQuality(songInfo,quality)
 
@@ -233,6 +233,9 @@ data class SongQualityInfo(val songInfo: SongInfo, @Quality  val quality: Int){
             Quality.DTSC,
             Quality.DTSX -> {
                 canDownloadDts()
+            }
+            Quality.CUSTOM_QUALITY_1 -> {
+                canDownloadCustom1()
             }
 
             else -> {

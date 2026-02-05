@@ -8,6 +8,7 @@ import android.view.MotionEvent
 import android.widget.Toast
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.tencent.qqmusic.openapisdk.business_common.config.SongQualityManager.getSongHasQuality
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
@@ -20,6 +21,7 @@ import com.tencent.qqmusic.openapisdk.voyage.VoyageMotionEffectWidget
 import com.tencent.qqmusic.playerinsight.util.coverErrorCode
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.BaseActivity
+import com.tencent.qqmusic.qplayer.ui.activity.player.CustomPlayerViewMode
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusic.qplayer.utils.UiUtils.getQualityName
@@ -85,8 +87,9 @@ class PlayerVoyageActivity : BaseActivity() {
         }
     }
 
+    val viewModel = ViewModelProvider(this)[CustomPlayerViewMode::class.java]
 
-    private val widget by lazy { VoyageMotionEffectWidget(owner = this, rootView = rootView.voyageView) }
+    private val widget by lazy { VoyageMotionEffectWidget(viewModel, rootView = rootView.voyageView) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

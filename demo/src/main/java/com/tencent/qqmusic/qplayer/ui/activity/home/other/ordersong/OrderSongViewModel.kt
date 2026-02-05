@@ -188,9 +188,9 @@ class OrderSongViewModel: ViewModel() {
     }
 
     @RequiresApi(Build.VERSION_CODES.N)
-    fun addRandomSong(isBatch:Boolean=false) {
-        if (testSongList.isEmpty()) {
-            updateTestSongs().apply { addRandomSong(isBatch) }
+    fun addRandomSong(isBatch:Boolean=false, isReTry: Boolean=false) {
+        if (testSongList.isEmpty() && isReTry.not()) {
+            updateTestSongs().apply { addRandomSong(isBatch=isBatch, isReTry=true) }
         }else{
             val songIdsToAdd = if (isBatch) testSongList.map { it.songId } else listOf(testSongList.random().songId)
             addSongList(songIdsToAdd){ resp ->

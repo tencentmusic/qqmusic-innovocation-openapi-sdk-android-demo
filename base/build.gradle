@@ -49,8 +49,11 @@ dependencies {
     if (!isLiteSDK.toBoolean()) {
         api "com.tencent.qqmusic.openapi:openapi-sdk:$sdk_version"
         api "com.tencent.qqmusic.openapi:playerkit:$sdk_version"
+        api "com.tencent.qqmusic.openapi:voyage:$sdk_version"
 
     }
+    implementation 'com.tencent.qqmusic.openapi:effect-pack:0.0.8-1894236933-SNAPSHOT'
+
     implementation "androidx.constraintlayout:constraintlayout-compose:1.1.0"
     implementation "androidx.navigation:navigation-compose:2.5.0"
     implementation "androidx.activity:activity-compose:1.3.1"

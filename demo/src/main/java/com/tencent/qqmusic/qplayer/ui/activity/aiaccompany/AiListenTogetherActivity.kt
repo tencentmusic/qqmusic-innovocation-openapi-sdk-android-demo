@@ -31,8 +31,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
@@ -70,12 +73,14 @@ class AiListenTogetherActivity: AppCompatActivity() {
             }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     @Composable
     fun AiListenTogetherScreen(viewModel:AiAccompanyViewModel) { // 假设 MyViewModel 已经定义
         Scaffold(
             topBar = {
                 TopBar("AI伴听")
-            }
+            },
+            modifier = Modifier.semantics{ testTagsAsResourceId=true }
         ) {
             Column {
                 OpenAIListenTogether(viewModel)

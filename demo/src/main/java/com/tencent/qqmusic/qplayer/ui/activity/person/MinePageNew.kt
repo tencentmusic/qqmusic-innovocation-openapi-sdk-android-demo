@@ -69,7 +69,7 @@ fun MinePageNew(model: MineViewModel) {
                 )
                 Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 0.dp), verticalArrangement = Arrangement.Center) {
                     val isVip = vip?.isVip() ?: false
-                    val vipText = model.getVipText(vip).joinToString(" ")
+                    val vipText = model.getVipText(vip).joinToString("\n")
                     val vipLevelText = "会员 Level : ${vip?.vipLevel}级"
                     Text(text = "用户昵称：${model.userInfo.collectAsState().value?.nickName ?: " "}")
                     Text(text = vipLevelText)

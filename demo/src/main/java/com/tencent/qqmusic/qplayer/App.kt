@@ -9,15 +9,16 @@ import android.util.Log
 import android.widget.Toast
 import androidx.annotation.Keep
 import androidx.lifecycle.Observer
-import com.tencent.config.ProcessUtil
 import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LogEvent
+import com.tencent.qqmusic.openapisdk.business_common.utils.ProcessUtil
 import com.tencent.qqmusic.openapisdk.core.DeviceType
 import com.tencent.qqmusic.openapisdk.core.IAPPCallback
 import com.tencent.qqmusic.openapisdk.core.InitConfig
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.network.INetworkCheckInterface
+import com.tencent.qqmusic.openapisdk.core.network.InitNetworkConfig
 import com.tencent.qqmusic.openapisdk.core.network.NetworkTimeoutConfig
 import com.tencent.qqmusic.openapisdk.hologram.PlayerUIProvider
 import com.tencent.qqmusic.openapisdk.playerui.PlayerStyleManager
@@ -132,6 +133,8 @@ class App : Application() {
             val demoHardwareInfo = sharedPreferences?.getString("demoHardwareInfo", "L9") ?: "L9"
             val demoBrand = sharedPreferences?.getString("demoBrand", "Xiaomi") ?: "Xiaomi"
             val demoOpiDeviceId = sharedPreferences?.getString("demoOpiDeviceId", "123456789") ?: "123456789"
+            val showAudioEffectToast = sharedPreferences?.getBoolean("demoAudioEffectToast", true) ?: true
+            val printPlayStuckTrack = sharedPreferences?.getBoolean("demoPrintPlayStuckTrack",false)?:false
             val initConfig = InitConfig(
                 context.applicationContext,
                 MustInitConfig.APP_ID,
@@ -151,7 +154,7 @@ class App : Application() {
                         else -> DeviceType.CAR
                     }
                 }
-                this.insightConfig = CustomInsightConfig(true, true, false)
+                this.insightConfig = CustomInsightConfig(true, showAudioEffectToast, printPlayStuckTrack)
                 this.enableBluetoothListener = false
                 this.useMediaPlayerWhenPlayDolby = sharedPreferences?.getBoolean("useMediaPlayerWhenPlayDolby", false) ?: false
                 this.logFileDir = logFileDir
@@ -179,6 +182,7 @@ class App : Application() {
                 }
 
                 needWnsPushService = sharedPreferences?.getBoolean("enableWns", true) ?: true
+                initNetworkConfig = InitNetworkConfig(enableQuic = true)
             }
             val start = System.currentTimeMillis()
             OpenApiSDK.init(initConfig)

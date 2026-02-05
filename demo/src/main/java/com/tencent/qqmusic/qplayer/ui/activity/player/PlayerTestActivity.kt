@@ -38,6 +38,7 @@ import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVPlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.needFade
+import com.tencent.qqmusic.qplayer.ui.activity.songlist.CommonProfileActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListViewModel
 import com.tencent.qqmusic.qplayer.utils.UiUtils
@@ -83,6 +84,9 @@ class PlayerTestActivity : ComponentActivity() {
         val edtFolder = findViewById<EditText>(R.id.edt_folder)
         val btnFolder = findViewById<Button>(R.id.btn_folder)
         val btnUseDolby = findViewById<Button>(R.id.btn_use_dolby)
+        val btnFolderDetail = findViewById<Button>(R.id.btn_folder_detail)
+
+        val btnAlbumDetail = findViewById<Button>(R.id.btn_album_detail)
 
 
         val mvID = findViewById<EditText>(R.id.play_mv_id).apply {
@@ -265,13 +269,32 @@ class PlayerTestActivity : ComponentActivity() {
 
         edtFolder.setTextIsSelectable(true)
         btnFolder.setOnClickListener {
-            val albumIdText = edtFolder.text.toString()
+            val folderIdText = edtFolder.text.toString()
             startActivity(Intent(
                 this@PlayerTestActivity, SongListActivity::class.java
             ).apply {
-                putExtra(SongListActivity.KEY_FOLDER_ID, albumIdText)
+                putExtra(SongListActivity.KEY_FOLDER_ID, folderIdText)
             })
         }
+        btnFolderDetail.setOnClickListener {
+            val folderIdText = edtFolder.text.toString()
+            startActivity(
+                Intent(this@PlayerTestActivity, CommonProfileActivity::class.java).apply {
+                    putExtra(SongListActivity.KEY_FOLDER_ID, folderIdText)
+                    putExtra(SongListActivity.KEY_IS_MY_LIKE_FOLDER, folderIdText == "0")
+                }
+            )
+        }
+
+        btnAlbumDetail.setOnClickListener {
+            val albumIdText = edtFolder.text.toString()
+            startActivity(
+                Intent(this@PlayerTestActivity, CommonProfileActivity::class.java).apply {
+                    putExtra(SongListActivity.KEY_ALBUM_ID, albumIdText)
+                }
+            )
+        }
+
         val activityResult =
             registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 if (result.resultCode == RESULT_CODE_GO_PlayPage) {

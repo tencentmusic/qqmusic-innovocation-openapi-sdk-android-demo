@@ -12,17 +12,20 @@ import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.openapisdk.model.ProfitInfo
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.model.SuperQualityType
 import com.tencent.qqmusic.openapisdk.model.VipType
+import com.tencent.qqmusic.playerinsight.util.coverErrorCode
 import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
+import com.tencent.qqmusic.qplayer.core.report.PlayErr
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerNewActivity
 import java.math.BigDecimal
@@ -76,6 +79,9 @@ object UiUtils {
         if (access.payAlbum) {
             sb.append("payAlbum").append("•")
         }
+        if (access.unionVip) {
+            sb.append("unionVip").append("•")
+        }
         if (sb.isNotEmpty()) {
             sb.deleteAt(sb.length - 1)
             return "[${sb.toString()}]"
@@ -93,6 +99,24 @@ object UiUtils {
     fun showToast(msg: String, isLong: Boolean = false) {
         AppScope.launchUI {
             Toast.makeText(UtilContext.getApp(), msg, if (isLong) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun showPlayErrToast(errCode:Int, currSongInfo: SongInfo?=null){
+        when(errCode){
+            PlayDefine.PlayError.PLAY_ERR_NONE -> return
+            PlayDefine.PlayError.PLAY_ERR_CANNOT_PLAY -> {
+                val songInfo = currSongInfo?: OpenApiSDK.getPlayerApi().getCurrentSongInfo()
+                val msg = if(songInfo?.unplayableMsg.isNullOrEmpty()){
+                    "播放错误:$errCode, ${coverErrorCode(errCode)}"
+                }else{
+                    "播放错误:$errCode, ${songInfo?.unplayableMsg}"
+                }
+                showToast(msg = msg)
+            }
+            else -> {
+                showToast(msg = "播放错误:$errCode, ${coverErrorCode(errCode)}")
+            }
         }
     }
 
@@ -132,7 +156,7 @@ object UiUtils {
         // 播放模式
         val icQuality: Int = when (quality) {
             PlayerEnums.Quality.HQ -> {
-                R.drawable.action_icon_quality_hq
+                R.drawable.hq_icon
             }
 
             PlayerEnums.Quality.SQ, PlayerEnums.Quality.SQ_SR -> {
@@ -177,6 +201,7 @@ object UiUtils {
             PlayerEnums.Quality.DTSC -> R.drawable.action_icon_dtsc
             PlayerEnums.Quality.DTSX -> R.drawable.action_icon_dtsx
             PlayerEnums.Quality.VOYAGE -> R.drawable.voyage
+            PlayerEnums.Quality.CUSTOM_QUALITY_1 -> R.drawable.icon_quality_custom1
             else -> {
                 R.drawable.ic_lq
             }
@@ -328,6 +353,7 @@ object UiUtils {
             Quality.DTSC -> "DTSC音质"
             Quality.DTSX -> "DTSX音质"
             Quality.VOYAGE -> "臻品乐航"
+            Quality.CUSTOM_QUALITY_1 -> "定制音质1"
             else -> "未知音质->Quality=${this}"
         }
     }
@@ -342,6 +368,7 @@ object UiUtils {
             SuperQualityType.QUALITY_TYPE_WANOS->"Wanos权益"
             SuperQualityType.QUALITY_TYPE_AI_LYRIC->"AI歌词背景"
             SuperQualityType.QUALITY_TYPE_VOYAGE->"臻品乐航"
+            SuperQualityType.QUALITY_TYPE_CUSTOM_QUALITY_1->"定制音质1"
             else -> "未知音质->$type"
         }
     }

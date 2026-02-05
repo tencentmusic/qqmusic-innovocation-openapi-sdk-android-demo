@@ -8,9 +8,9 @@ if (localPropertiesFile.exists()) {
     def localProperties = new Properties()
     localProperties.load(new FileInputStream(localPropertiesFile))
     useSdkSource = localProperties.getProperty("useSdkSource", "false").toBoolean()
-    ext.useDebugInfoSource = localProperties.getProperty("useDebugInfoSource", "false").toBoolean()
+    ext.useDebugInfoSource = localProperties.getProperty("useDebugInfoSource", "true").toBoolean()
 } else {
-    ext.useDebugInfoSource = false
+    ext.useDebugInfoSource = true
 }
 
 if (useSdkSource) {

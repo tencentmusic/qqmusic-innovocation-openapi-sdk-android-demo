@@ -48,6 +48,7 @@ object MediaQualityDialog {
         return when (identity) {
             UserIdentity.NORMAL-> return "普通"
             UserIdentity.VIP -> return "豪华绿钻"
+            UserIdentity.IOT_VIP -> return "IOT会员"
             UserIdentity.SUPER_VIP -> return "超会"
             UserIdentity.PAY_FOR_MEDIA -> return "购买"
             else -> null

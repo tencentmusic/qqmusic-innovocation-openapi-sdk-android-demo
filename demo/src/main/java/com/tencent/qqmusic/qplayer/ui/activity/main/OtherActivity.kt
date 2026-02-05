@@ -40,9 +40,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
@@ -51,11 +54,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.edit
+import com.tencent.qqmusic.innovation.common.util.Global
 import com.tencent.qqmusic.innovation.common.util.GsonHelper
 import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.network.NetworkTimeoutConfig
+import com.tencent.qqmusic.openapisdk.core.player.transition.PlayerTransition
+import com.tencent.qqmusic.playerinsight.util.coverErrorCode
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.report.report.LaunchReport
@@ -76,10 +82,12 @@ import java.util.Locale
 
 class OtherActivity : ComponentActivity() {
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            Scaffold(topBar = { TopBar("其他设置页") }) {
+            Scaffold(topBar = { TopBar("其他设置页") },
+                modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
                 OtherScreen()
             }
         }
@@ -407,6 +415,44 @@ fun OtherScreen() {
             Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
         }
 
+        val autoPlaySwitchQuality: MutableState<Boolean> = remember {
+            mutableStateOf(sharedPreferences?.getBoolean("autoPlaySwitchQuality", true) != false)
+        }
+        SingleItem(title = "切换音质是否自动播放", item = if(autoPlaySwitchQuality.value) "打开" else "关闭") {
+            val nextValue = autoPlaySwitchQuality.value.not()
+            sharedPreferences?.edit { putBoolean("autoPlaySwitchQuality", nextValue) }
+            autoPlaySwitchQuality.value = nextValue
+            Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
+        }
+
+        // 智能混音
+        val autoMixNameMap = mapOf(
+            PlayerTransition.NONE to "无",
+            PlayerTransition.AUTO_MIX to "自动混音",
+            PlayerTransition.SEAMLESS to "无缝播放",
+            PlayerTransition.CROSS_FADE to "淡入淡出"
+        )
+        val currAutoMixStatus = remember {
+            mutableStateOf(OpenApiSDK.getPlayerTransitionApi().getPlayerTransition())
+        }
+        var showAutoMixDialog by remember { mutableStateOf(false) }
+        if (showAutoMixDialog) {
+            MyMultiSelectDialog(
+                options = autoMixNameMap.values.toList(),
+                onOptionsSelected = { options ->
+                    val indexOptions = autoMixNameMap.values.toList().indexOf(options)
+                    val choice = autoMixNameMap.keys.toList()[indexOptions]
+                    val ret = OpenApiSDK.getPlayerTransitionApi().setPlayerTransition(choice)
+                    currAutoMixStatus.value = OpenApiSDK.getPlayerTransitionApi().getPlayerTransition()
+                    UiUtils.showToast("智能混音:${ret},${coverErrorCode(ret)}")
+                },
+                onDismissRequest = { showAutoMixDialog = false }
+            )
+        }
+        SingleItem(title = "智能混音AutoMix", item = autoMixNameMap.getOrDefault(currAutoMixStatus.value,"未知")) {
+            showAutoMixDialog = true
+        }
+
         Button(onClick = {
             LaunchReport.coldLaunch().report()
         }, modifier = Modifier.padding(padding)) {
@@ -448,7 +494,7 @@ fun OtherScreen() {
                     ToastUtils.showLong("错误码请输入数字")
                     return@Button
                 }
-                OpenApiSDK.getOpenApi().getCheckoutUrl("demoCheckoutOrderId", value) {
+                OpenApiSDK.getOpenApi().getCheckoutUrl("demoCheckoutOrderId", value, scene = textScene.text) {
                     if (it.isSuccess()) {
                         WebViewActivity.start(activity, it.data?.payUrl ?: "")
                     } else {

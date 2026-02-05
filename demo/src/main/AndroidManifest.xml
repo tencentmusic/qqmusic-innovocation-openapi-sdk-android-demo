@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
     <application
         android:name=".App"
@@ -54,6 +55,8 @@
         </activity>
         <activity android:name=".ui.activity.OpenApiDemoActivity" />
         <activity android:name=".ui.activity.player.PlayerStyleActivity" />
+        <activity android:name=".ui.activity.player.lyric.PlayerImmersionLyricStyleActivity" />
+        <activity android:name=".ui.activity.player.lyric.PlayerImmersionLyricActivity" />
         <activity android:name=".ui.activity.SongCacheDemoActivity" />
         <activity android:name=".ui.activity.songlist.SongListActivity" />
         <activity
@@ -94,6 +97,9 @@
         <activity android:name=".ui.activity.songlist.CommonProfileActivity" />
         <activity android:name=".ui.activity.musichall.MusicHallActivity" />
         <activity android:name=".ui.activity.player.voyage.PlayerVoyageActivity" />
+        <activity
+            android:name=".ui.activity.main.LocalMatchActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

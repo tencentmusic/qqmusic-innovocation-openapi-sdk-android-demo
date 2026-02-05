@@ -28,10 +28,13 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -48,16 +51,19 @@ import com.tencent.qqmusic.openapisdk.business_common.utils.IPCSdkManager
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.BaseFunctionManager
 import com.tencent.qqmusic.qplayer.baselib.util.deviceid.DeviceInfoManager
+import com.tencent.qqmusic.qplayer.qqmusiccommon.ConfigPreferences
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.login.WebViewActivity
 import com.tencent.qqmusic.qplayer.utils.UiUtils
-import com.tencent.qqmusiccommon.ConfigPreferences
 
 class AboutActivity : ComponentActivity() {
+    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            Scaffold(topBar = { TopBar("关于") }) {
+            Scaffold(topBar = { TopBar("关于") },
+                modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
                 AboutScreen()
             }
         }

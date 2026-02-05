@@ -23,9 +23,12 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,10 +50,12 @@ import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 // Copyright (c) 2021 Tencent. All rights reserved.
 //
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun FolderListScreen(folders: List<Folder>, loadMore: LoadMoreItem? = null) {
     Scaffold(
-        topBar = { TopBar("歌单列表") }
+        topBar = { TopBar("歌单列表") },
+        modifier = Modifier.semantics{ testTagsAsResourceId=true }
     ) {
         ConstraintLayout(modifier = Modifier.fillMaxSize()) {
             val (folder, player) = createRefs()

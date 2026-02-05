@@ -18,6 +18,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,11 @@ fun AppSetting() {
             }
             BaseFunctionManager.proxy.gotoDebugActivity(activity = activity)
         }
+        SingleItem(title = "本地匹配页面", item = "") {
+            activity.startActivity(Intent(activity, LocalMatchActivity::class.java).apply{
+                flags = flags xor Intent.FLAG_ACTIVITY_NEW_TASK
+            })
+        }
         val privacyTips = if (!isGrant()) "-协议有更新！" else ""
         SingleItem(title = "关于${privacyTips}", item = "") {
             activity.startActivity(Intent(activity, AboutActivity::class.java))
@@ -71,19 +77,19 @@ fun SingleItem(title: String, item: String?, block: () -> Unit) {
             top.linkTo(parent.top)
             bottom.linkTo(parent.bottom)
             start.linkTo(parent.start, 20.dp)
-        })
+        }.testTag(title))
 
         Text(text = item ?: "", modifier = Modifier.constrainAs(itemText) {
             top.linkTo(parent.top)
             bottom.linkTo(parent.bottom)
             end.linkTo(image.start, 5.dp)
-        })
+        }.testTag("${title}_value"))
 
         Image(painter = painterResource(com.tencent.qqmusic.qplayer.base.R.drawable.ic_right_arrow), contentDescription = "", modifier = Modifier.constrainAs(image) {
             top.linkTo(parent.top)
             bottom.linkTo(parent.bottom)
             end.linkTo(parent.end, 10.dp)
-        })
+        }.testTag("${title}_arrow"))
     }
 }
 
@@ -112,6 +118,7 @@ fun MyMultiSelectDialog(
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                             .clickable {
                                 onOptionsSelected(option)
+                                onDismissRequest()
                             }
                     ) {
                         Text(

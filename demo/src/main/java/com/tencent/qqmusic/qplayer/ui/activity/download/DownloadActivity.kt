@@ -30,10 +30,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,6 +72,7 @@ class DownloadActivity: ComponentActivity() {
         }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     @Preview
     @Composable
     fun DownloadView() {
@@ -83,7 +87,8 @@ class DownloadActivity: ComponentActivity() {
         Scaffold(
             topBar = {
                 TopBar("下载管理")
-            }
+            },
+            modifier = Modifier.semantics{ testTagsAsResourceId=true }
         ) {
             Column {
                 if (downloadTask.isNotEmpty()) {

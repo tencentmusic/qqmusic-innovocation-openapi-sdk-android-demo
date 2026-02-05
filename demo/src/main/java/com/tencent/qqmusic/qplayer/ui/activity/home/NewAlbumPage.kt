@@ -27,6 +27,9 @@ import kotlinx.coroutines.launch
 
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
 import com.tencent.qqmusic.qplayer.ui.activity.home.area.AreaViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.loadMoreItemUI
@@ -40,9 +43,11 @@ import kotlinx.coroutines.CoroutineScope
 
 private const val TAG = "HomePage"
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NewAlbumPage(areaViewModel: AreaViewModel) {
-    Scaffold(topBar = { TopBar("新碟专区")}) {
+    Scaffold(topBar = { TopBar("新碟专区")},
+        modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Top,

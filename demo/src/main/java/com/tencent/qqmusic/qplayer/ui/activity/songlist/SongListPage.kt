@@ -50,6 +50,7 @@ import androidx.paging.compose.items
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.innovation.common.util.ToastUtils
+import com.tencent.qqmusic.openapisdk.business_common.config.SongQualityManager
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
@@ -69,6 +70,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import com.tencent.qqmusic.qplayer.utils.UiUtils
+import com.tencent.qqmusic.qplayer.utils.UiUtils.getQualityName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -214,7 +216,7 @@ fun playlistHeader(songs: List<SongInfo>, playListType: Int = 0, playListTypeId:
                 val playParams = PlayParam(playListType, playListTypeId, songs, -1, playMode, startPlay = true)
                 val ret = OpenApiSDK.getPlayerApi().playSongs(playParams)
                 if (ret != PlayDefine.PlayError.PLAY_ERR_NONE) {
-                    UiUtils.showToast("播放失败:ret:${ret}")
+                    UiUtils.showPlayErrToast(ret,songs.firstOrNull())
                 } else {
                      val resType = when (playListType) {
                          MusicPlayList.PLAY_LIST_ALBUM_TYPE -> 3
@@ -387,7 +389,16 @@ fun itemUI(params: PlayListParams) {
                         val playMode = OpenApiSDK.getPlayerApi().getPlayMode()
                         OpenApiSDK
                             .getPlayerApi()
-                            .playSongs(PlayParam(params.playListType, params.playListTypeId, params.songList, startPos, playMode, startPlay = true))
+                            .playSongs(
+                                PlayParam(
+                                    params.playListType,
+                                    params.playListTypeId,
+                                    params.songList,
+                                    startPos,
+                                    playMode,
+                                    startPlay = true
+                                )
+                            )
                     }
                     if (result == 0) {
                         PerformanceHelper.monitorClick("SongItemUI_PlayerActivity")
@@ -398,21 +409,14 @@ fun itemUI(params: PlayListParams) {
                                 MusicPlayList.PLAY_LIST_FOLDER_TYPE -> 4
                                 else -> return@launch
                             }
-                            OpenApiSDK.getOpenApi().reportRecentPlay("${params.playListTypeId}", resType) { resp->
-                                Log.i("itemUI", "reportRecentPlay resp: $resp")
-                            }
+                            OpenApiSDK.getOpenApi()
+                                .reportRecentPlay("${params.playListTypeId}", resType) { resp ->
+                                    Log.i("itemUI", "reportRecentPlay resp: $resp")
+                                }
                         }
                     } else {
                         coroutineScope.launch(Dispatchers.Main) {
-                            val toastTxt =
-                                if (result == PlayDefine.PlayError.PLAY_ERR_CANNOT_PLAY) {
-                                    "播放失败 错误码：$result， 错误信息：${params.startSong?.unplayableMsg}"
-                                } else {
-                                    "播放失败 错误码：$result"
-                                }
-                            Toast
-                                .makeText(activity, toastTxt, Toast.LENGTH_SHORT)
-                                .show()
+                            UiUtils.showPlayErrToast(result,params.startSong)
                         }
                     }
                 }
@@ -448,92 +452,111 @@ fun itemUI(params: PlayListParams) {
                 Color.Gray
             }
             Text(text = params.startSong?.songName?.let {
-                if (it.length > 15) it.substring(0, 15)+"..." else it
+                if (it.length > 15) it.substring(0, 15) + "..." else it
             } ?: "", color = txtColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             Text(
                 text = buildString {
                     val mainSinger = params.startSong?.singerName ?: "未知"
-                    if (params.startSong?.otherSingerList.isNullOrEmpty()){
+                    if (params.startSong?.otherSingerList.isNullOrEmpty()) {
                         append(mainSinger)
-                    }else{
-                        val otherSingers = params.startSong?.otherSingerList?.joinToString("/") { it.title ?: it.name }
+                    } else {
+                        val otherSingers = params.startSong?.otherSingerList?.joinToString("/") {
+                            it.title ?: it.name
+                        }
                         val allSingers = "$mainSinger/$otherSingers"
                         if (allSingers.length < 12) {
                             append(allSingers)
-                        } else if (mainSinger.length > 12 && (otherSingers?.length ?: 0) > 6){
+                        } else if (mainSinger.length > 12 && (otherSingers?.length ?: 0) > 6) {
                             append("${mainSinger.substring(0..7)}/${otherSingers?.substring(0..5)}...")
-                        }else{
+                        } else {
                             append("${allSingers.substring(0..10)}...")
                         }
                     }
                 },
                 color = Color.Gray, fontSize = 10.sp
             )
-            Row(verticalAlignment = Alignment.CenterVertically)  {
-                if (params.startSong?.vip == 1) {
-                    Image(
-                        painter = painterResource(R.drawable.pay_icon_in_cell_old),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .padding(end = 2.dp)
-                            .width(18.dp)
-                            .height(10.dp)
+            // label标签
+            params.startSong?.let { songInfo ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (songInfo.vip == 1) {
+                        Image(
+                            painter = painterResource(R.drawable.pay_icon_in_cell_old),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(end = 1.dp)
+                                .width(18.dp)
+                                .height(10.dp)
+                        )
+                    }
+                    if (songInfo.longAudioVip == 1) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_long_audio_vip_new),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(end = 1.dp)
+                                .width(18.dp)
+                                .height(10.dp)
+                        )
+                    }
+                    if (songInfo.isFreeLimit()) {
+                        Image(
+                            painter = painterResource(R.drawable.free_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .width(18.dp)
+                                .height(10.dp)
+                        )
+                    }
+                    // 按音质优先级展示icon, 杜比、全景声、母带同级。
+                    ShowIconWithPriority(
+                        songInfo = songInfo,
+                        qualityPriority = listOf(Quality.DOLBY)
                     )
-                }
-                if (params.startSong?.longAudioVip == 1) {
-                    Image(
-                        painter = painterResource(R.drawable.ic_long_audio_vip_new),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .padding(end = 2.dp)
-                            .width(18.dp)
-                            .height(10.dp)
+                    ShowIconWithPriority(
+                        songInfo = songInfo,
+                        qualityPriority = listOf(Quality.GALAXY, Quality.HIRES, Quality.EXCELLENT, Quality.SQ, Quality.HQ, Quality.STANDARD)
                     )
-                }
-                if (params.startSong?.hasQualityHQ() == true) {
-                    Image(
-                        painter = painterResource(R.drawable.hq_icon), contentDescription = null, modifier = Modifier
-                            .width(18.dp)
-                            .height(10.dp)
+                    ShowIconWithPriority(
+                        songInfo = songInfo,
+                        qualityPriority = listOf(Quality.WANOS, Quality.VINYL, Quality.MASTER_TAPE)
                     )
-                }
-                if(params.startSong?.isFreeLimit() == true){
-                    Image(
-                        painter = painterResource(R.drawable.free_icon), contentDescription = null, modifier = Modifier
-                            .width(18.dp)
-                            .height(10.dp)
+                    ShowIconWithPriority(
+                        songInfo = songInfo,
+                        qualityPriority = listOf(Quality.VOCAL_ACCOMPANY)
                     )
-
-                } else if (params.startSong != null && OpenApiSDK.getPlayerApi().getSongHasQuality(params.startSong, Quality.WANOS)) {
-                    Image(
-                        painter = painterResource(R.drawable.acion_icon_quality_wanos), contentDescription = null, modifier = Modifier
-                            .width(18.dp)
-                            .height(10.dp)
-                    )
-                } else if (params.startSong != null && OpenApiSDK.getPlayerApi().getSongHasQuality(params.startSong, Quality.VINYL)) {
-                    Image(
-                        painter = painterResource(R.drawable.action_icon_quality_vinyl), contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .width(18.dp)
-                            .height(10.dp)
-                    )
-                }
-                val pd = android.graphics.Color.parseColor("#1FCF91")
-                if (params.startSong != null && params.startSong.isAISong()) {
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(text = "AI", fontSize = 8.sp, color = Color(pd), modifier = Modifier.padding(2.dp).wrapContentWidth().height(10.dp))
-                }
-                if (params.startSong?.extraInfo?.mood?.isNotEmpty() == true) {
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(text = params.startSong.extraInfo?.mood ?: "", fontSize = 8.sp, color = Color(pd), modifier = Modifier.padding(2.dp).wrapContentWidth().height(10.dp))
+                    val pd = android.graphics.Color.parseColor("#1FCF91")
+                    if (songInfo.isAISong()) {
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "AI",
+                            fontSize = 8.sp,
+                            color = Color(pd),
+                            modifier = Modifier
+                                .padding(1.dp)
+                                .wrapContentWidth()
+                                .height(10.dp)
+                        )
+                    }
+                    if (songInfo.extraInfo?.mood?.isNotEmpty() == true) {
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = songInfo.extraInfo?.mood ?: "",
+                            fontSize = 8.sp,
+                            color = Color(pd),
+                            modifier = Modifier
+                                .wrapContentWidth()
+                                .height(10.dp)
+                        )
+                    }
                 }
             }
         }
 
         if (currentSong?.songId == params.startSong?.songId) {
             Image(
-                painter = painterResource(R.drawable.list_icon_playing), contentDescription = null, modifier = Modifier
+                painter = painterResource(R.drawable.list_icon_playing),
+                contentDescription = null,
+                modifier = Modifier
                     .padding(start = 8.dp)
                     .width(30.dp)
                     .height(30.dp)
@@ -601,13 +624,14 @@ fun itemUI(params: PlayListParams) {
         )
 
         if (params.displayOnly.not()) {
-            Column(modifier = Modifier
-                .fillMaxHeight()
-                .constrainAs(next) {
-                    top.linkTo(parent.top)
-                    bottom.linkTo(parent.bottom)
-                    end.linkTo(parent.end)
-                }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .constrainAs(next) {
+                        top.linkTo(parent.top)
+                        bottom.linkTo(parent.bottom)
+                        end.linkTo(parent.end)
+                    }) {
                 TextButton(
                     modifier = Modifier.height(18.dp),
                     contentPadding = PaddingValues(0.dp),
@@ -615,25 +639,27 @@ fun itemUI(params: PlayListParams) {
                         val result = OpenApiSDK.getPlayerApi().addToNext(params.startSong, true)
                         coroutineScope.launch(Dispatchers.Main) {
                             Toast.makeText(
-                                    activity,
-                                    "添加下一曲:${coverErrorCode(result?:-1)}",
-                                    Toast.LENGTH_SHORT
-                                )
+                                activity,
+                                "添加下一曲:${coverErrorCode(result ?: -1)}",
+                                Toast.LENGTH_SHORT
+                            )
                                 .show()
                         }
                     }) {
                     Text(text = "添加下一曲", fontSize = 10.sp)
                 }
-                TextButton(modifier = Modifier.height(18.dp),
+                TextButton(
+                    modifier = Modifier.height(18.dp),
                     contentPadding = PaddingValues(0.dp),
                     onClick = {
                         params.startSong ?: return@TextButton
-                        val result = OpenApiSDK.getPlayerApi().appendSongToPlaylist(listOf(params.startSong))
+                        val result =
+                            OpenApiSDK.getPlayerApi().appendSongToPlaylist(listOf(params.startSong))
                         coroutineScope.launch(Dispatchers.Main) {
                             Toast
                                 .makeText(
                                     activity,
-                                    "添加末尾:${coverErrorCode(result?:-1)}",
+                                    "添加末尾:${coverErrorCode(result ?: -1)}",
                                     Toast.LENGTH_SHORT
                                 )
                                 .show()
@@ -642,7 +668,8 @@ fun itemUI(params: PlayListParams) {
                 ) {
                     Text(text = "添加末尾", fontSize = 10.sp)
                 }
-                TextButton(modifier = Modifier.height(18.dp),
+                TextButton(
+                    modifier = Modifier.height(18.dp),
                     contentPadding = PaddingValues(0.dp),
                     onClick = {
                         val intent = Intent(activity, SongProfileActivity::class.java)
@@ -658,11 +685,21 @@ fun itemUI(params: PlayListParams) {
 }
 
 @Composable
-fun SongListPage(songs: List<SongInfo>, displayOnly: Boolean = false, needPlayer: Boolean = true, loadMoreItem: LoadMoreItem? = null) {
+fun SongListPage(
+    songs: List<SongInfo>,
+    displayOnly: Boolean = false,
+    needPlayer: Boolean = true,
+    loadMoreItem: LoadMoreItem? = null
+) {
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Bottom) {
-        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+        Box(modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f)) {
             val scrollState = rememberLazyListState()
-            PerformanceHelper.MonitorListScroll(scrollState = scrollState, location = "SongListPage")
+            PerformanceHelper.MonitorListScroll(
+                scrollState = scrollState,
+                location = "SongListPage"
+            )
             LazyColumn(state = scrollState, modifier = Modifier.fillMaxSize()) {
                 items(songs) { song ->
                     itemUI(PlayListParams(songs, song, displayOnly = displayOnly))
@@ -676,4 +713,29 @@ fun SongListPage(songs: List<SongInfo>, displayOnly: Boolean = false, needPlayer
             }
         }
     }
+}
+
+@Composable
+fun ShowIconWithPriority(songInfo: SongInfo, qualityPriority: List<Int>): Int? {
+    """按音质优先级展示icon"""
+    var shouldShowQuality: Int? = null
+    for (q in qualityPriority) {  // 这几个品质仅展示一种
+        if (SongQualityManager.getSongHasQuality(songInfo, q)) {
+            shouldShowQuality = q
+            break
+        }
+    }
+    shouldShowQuality?.let {
+        val icon = UiUtils.getQualityIcon(it)
+        if (icon != R.drawable.ic_lq) {
+            Image(
+                painter = painterResource(icon), contentDescription = it.getQualityName(),
+                Modifier
+                    .wrapContentHeight()
+                    .width(26.dp)
+                    .padding(end = 1.dp)
+            )
+        }
+    }
+    return shouldShowQuality
 }

@@ -36,6 +36,7 @@ object QualityAlert {
             PlayerEnums.Quality.MASTER_SR,
             PlayerEnums.Quality.DTSC,
             PlayerEnums.Quality.DTSX,
+            PlayerEnums.Quality.CUSTOM_QUALITY_1,
         )
 
     var qualityOrderString = arrayOf("")
@@ -54,7 +55,8 @@ object QualityAlert {
                 "MASTER_TAPE",
                 "MASTER_SR",
                 "DTSC",
-                "DTSX"
+                "DTSX",
+                "CUSTOM_QUALITY_1"
             )
     }
 
@@ -113,6 +115,9 @@ object QualityAlert {
                 }
                 "MASTER_SR" -> {
                     "臻品母带省流版"+ UiUtils.getFormatSize(qualitySize) + accessStr + tryPlayQualityLabel
+                }
+                "CUSTOM_QUALITY_1" -> {
+                    "定制音质1" + UiUtils.getFormatSize(qualitySize) + accessStr + tryPlayQualityLabel
                 }
                 else -> {
                     it + UiUtils.getFormatSize(qualitySize) + accessStr

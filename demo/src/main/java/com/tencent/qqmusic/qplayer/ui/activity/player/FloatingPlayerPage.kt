@@ -179,7 +179,7 @@ fun FloatingPlayerPage(observer: PlayerObserver = PlayerObserver) {
                                     pause(observer.needFade)
                                 } else {
                                     tryPauseFirst()
-                                    play()
+                                    play(observer.needFade)
                                 }
                                 val song = getCurrentSongInfo()
                                 if (song == null) {

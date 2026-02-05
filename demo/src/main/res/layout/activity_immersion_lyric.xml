@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/lyric_fragment_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <FrameLayout
+        android:id="@+id/mv_surface_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/ktv_show_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center">
+
+        <com.tencent.qqmusic.openapisdk.core.view.lyric.TwoLineLyricLayout
+            android:id="@+id/twoline_lyric_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:layout_marginLeft="34dp"
+            android:layout_marginRight="34dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_gravity="bottom"
+            app:hiLightColor="#57FF5B"
+            app:hiLightSize="16sp"
+            app:textThinColor="@color/white"
+            app:textColor="@color/white"
+            app:hasShadow="true"
+            app:ShadowColor="#BF000000"
+            app:ShadowRadius="5"
+            app:ShadowDx="0"
+            app:ShadowDy="1"
+            app:isBondText="true"
+            app:textSize="16sp" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</FrameLayout>

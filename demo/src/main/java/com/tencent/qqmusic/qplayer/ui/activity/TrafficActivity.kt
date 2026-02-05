@@ -14,7 +14,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
@@ -24,11 +27,13 @@ import kotlinx.coroutines.launch
 
 class TrafficActivity: ComponentActivity() {
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            Scaffold(topBar = { TopBar("流量测试页")}) {
+            Scaffold(topBar = { TopBar("流量测试页")},
+                modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
                 TrafficPage()
             }
         }

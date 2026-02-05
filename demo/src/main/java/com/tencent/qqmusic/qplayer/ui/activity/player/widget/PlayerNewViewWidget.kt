@@ -8,10 +8,13 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.lifecycle.Observer
 import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.view.lyric.LyricStateInterface
 import com.tencent.qqmusic.openapisdk.core.view.lyric.MultiLineLyricView
+import com.tencent.qqmusic.openapisdk.playerui.LyricStyleManager
 import com.tencent.qqmusic.openapisdk.playerui.utils.Utils
 import com.tencent.qqmusic.openapisdk.playerui.view.AITemplateBackgroundViewWidget
 import com.tencent.qqmusic.openapisdk.playerui.view.PlayerBackgroundViewWidget
@@ -19,16 +22,20 @@ import com.tencent.qqmusic.openapisdk.playerui.view.PlayerSpectrumViewWidget
 import com.tencent.qqmusic.openapisdk.playerui.view.PlayerSpectrumViewWidget.Companion.STYLE_SPECTRUM_BAR
 import com.tencent.qqmusic.openapisdk.playerui.view.PlayerVinylStyleViewWidget
 import com.tencent.qqmusic.openapisdk.playerui.view.ViewWidget
+import com.tencent.qqmusic.openapisdk.playerui.view.lyric.PlayerWaveEffectLyricStyleWidget
 import com.tencent.qqmusic.openapisdk.playerui.viewmode.PlayerViewModel
 import com.tencent.qqmusic.openapisdk.playerui.viewmodel.EffectPlayerInfoViewModel
 import com.tencent.qqmusic.qplayer.R
+import com.tencent.qqmusic.qplayer.core.internal.lyric.LyricLoadInterface
 import com.tencent.qqmusic.qplayer.ui.activity.player.CustomVisualizer
 import com.tencent.qqmusic.qplayer.ui.activity.player.DemoEffectViewModel
+import com.tencent.qqmusictvsdk.internal.lyric.LyricManager
 
 
 class PlayerNewViewWidget(private val viewModel: PlayerViewModel, private val container: ViewGroup) : ViewWidget() {
 
     private val playAPI = OpenApiSDK.getPlayerApi()
+    val multiLineLyricView = container.findViewById<MultiLineLyricView>(R.id.scroll_lyric)
 
     private val visualizer = CustomVisualizer()
     var resourceDir = "/sdcard/Android/data/com.tencent.qqmusicrecognition/Resource/Effect/qm_ai_template/"
@@ -49,6 +56,32 @@ class PlayerNewViewWidget(private val viewModel: PlayerViewModel, private val co
 
         initPlayerState()
 
+        val lyricStyle = LyricStyleManager.getLyricStyle()
+        /**
+         * 沉浸式动感光波和背景互斥
+         */
+        if (lyricStyle.id.toInt() == 8000031) {
+            container.findViewById<MultiLineLyricView>(R.id.scroll_lyric).apply {
+                alpha = 0.1f
+            }
+            bindWidget(PlayerWaveEffectLyricStyleWidget(viewModel, backgroundView))
+        } else {
+            bindWidget(PlayerBackgroundViewWidget(viewModel, backgroundView))
+        }
+    }
+
+    val loadInterface: LyricStateInterface = object : LyricStateInterface {
+        override fun onLoadLyric(
+            isSuccess: Boolean,
+            hasLyric: Boolean,
+            hasTransLyric: Boolean,
+            hasRomaLyric: Boolean
+        ) {
+            MLog.i("PlayerNewViewWidget", "onLoadLyric $isSuccess")
+            multiLineLyricView.post {
+                multiLineLyricView.isVisible = isSuccess
+            }
+        }
     }
 
     private fun initPlayerState() {
@@ -74,7 +107,6 @@ class PlayerNewViewWidget(private val viewModel: PlayerViewModel, private val co
         playButtonNext.setOnClickListener {
             playAPI.next()
         }
-        val multiLineLyricView = container.findViewById<MultiLineLyricView>(R.id.scroll_lyric)
         val seekBar: SeekBar? = container.findViewById<SeekBar>(R.id.seek_bar)
         val songNameView = container.findViewById<TextView>(R.id.song_name)
         viewModel.magicColorLiveData.observe(this, Observer {
@@ -89,6 +121,8 @@ class PlayerNewViewWidget(private val viewModel: PlayerViewModel, private val co
             songNameView.setTextColor(it.highlightColor)
             multiLineLyricView.setColor((it.foregroundColor and 16777215 or (128 shl 24)))
         })
+
+        multiLineLyricView.addLyricStateInterface(loadInterface)
 
         seekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -122,6 +156,7 @@ class PlayerNewViewWidget(private val viewModel: PlayerViewModel, private val co
 
     override fun onUnbind() {
         super.onUnbind()
+        multiLineLyricView.removeLyricStateInterface(loadInterface)
     }
 
 }

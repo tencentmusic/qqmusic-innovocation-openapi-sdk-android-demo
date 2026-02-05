@@ -158,6 +158,11 @@ class MineViewModel : ViewModel() {
         if (vipInfo?.longAudioVip == 1) {
             ret.add("听书会员用户")
         }
+
+        if (vipInfo?.unionVipFlag == 1) {
+            ret.add("联合会员")
+        }
+
         if (OpenApiSDK.getLoginApi().isQQMusicLoginUserSame()) {
             ret.add("Q音手机端登录相同账号")
         }
@@ -170,12 +175,14 @@ class MineViewModel : ViewModel() {
     fun getVipTimeStartText(vipInfo: VipInfo?): String {
         return if (vipInfo?.isVip() == false && !vipInfo.isLongAudioVip()) {
             ""
-        } else if (vipInfo?.greenVipFlag == 1) {
-            vipInfo.greenVipStartTime
-        } else if (vipInfo?.superGreenVipFlag == 1) {
-            vipInfo.superGreenVipStartTime
+        } else if (vipInfo?.unionVipFlag == 1) {
+            vipInfo.unionVipStartTime ?: ""
         } else if (vipInfo?.hugeVipFlag == 1) {
             vipInfo.hugeVipStartTime
+        } else if (vipInfo?.superGreenVipFlag == 1) {
+            vipInfo.superGreenVipStartTime
+        } else if (vipInfo?.greenVipFlag == 1) {
+            vipInfo.greenVipStartTime
         } else if (vipInfo?.twelveFlag == 1) {
             vipInfo.twelveStartTime
         } else if (vipInfo?.eightFlag == 1) {
@@ -184,7 +191,7 @@ class MineViewModel : ViewModel() {
             vipInfo.longAudioVipStartTime
         } else if (vipInfo?.partnerVipFlag == 1) {
             vipInfo.partnerVipStartTime
-        } else {
+        }  else {
             "信息获取不明"
         }
     }
@@ -192,12 +199,14 @@ class MineViewModel : ViewModel() {
     fun getVipEndTimeText(vipInfo: VipInfo?): String {
         return if (vipInfo?.isVip() == false && !vipInfo.isLongAudioVip()) {
             ""
-        } else if (vipInfo?.greenVipFlag == 1) {
-            vipInfo.greenVipEndTime
-        } else if (vipInfo?.superGreenVipFlag == 1) {
-            vipInfo.superGreenVipEndTime
+        } else if (vipInfo?.unionVipFlag == 1) {
+            vipInfo.unionVipEndTime ?: ""
         } else if (vipInfo?.hugeVipFlag == 1) {
             vipInfo.hugeVipEndTime
+        } else if (vipInfo?.superGreenVipFlag == 1) {
+            vipInfo.superGreenVipEndTime
+        } else if (vipInfo?.greenVipFlag == 1) {
+            vipInfo.greenVipEndTime
         } else if (vipInfo?.twelveFlag == 1) {
             vipInfo.twelveEndTime
         } else if (vipInfo?.eightFlag == 1) {

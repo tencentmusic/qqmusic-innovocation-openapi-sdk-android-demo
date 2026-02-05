@@ -16,6 +16,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -50,10 +51,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -116,8 +120,8 @@ class DemoActivity : BaseComposeActivity() {
         super.onCreate(savedInstanceState)
         PrivacyManager.init(this) {
             initView()
-            bindWidget(PlayerSpectrumViewWidget(getViewModel(), STYLE_SPECTRUM_BAR, container = window.decorView as ViewGroup))
         }
+
         val fileName = "ai_image_ai_song_demo2.png"
         val imagePath = File(dir, fileName).absolutePath
         FileUtils.copyAssets(this, fileName, imagePath)
@@ -126,6 +130,7 @@ class DemoActivity : BaseComposeActivity() {
     private fun initView() {
         initPlay()
         initGlobalEvent()
+        bindWidget(PlayerSpectrumViewWidget(getViewModel(), STYLE_SPECTRUM_BAR, container = window.decorView as ViewGroup))
         setContent {
             val scope = rememberCoroutineScope()
             MainScreen()
@@ -389,6 +394,7 @@ fun loginExpiredDialog(showDialog: Boolean, setShowDialog: (Boolean) -> Unit) {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.N)
 @Composable
 fun Navigation(navController: NavHostController, homeViewModel: HomeViewModel) {
     NavHost(navController, startDestination = NavigationItem.Home.route) {
@@ -486,6 +492,8 @@ fun BottomNavigationBar(navController: NavController) {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.N)
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun MainScreen(homeViewModel: HomeViewModel = viewModel(), mineViewModel: MineViewModel = viewModel()) {
     val navController = rememberNavController()
@@ -523,7 +531,7 @@ fun MainScreen(homeViewModel: HomeViewModel = viewModel(), mineViewModel: MineVi
     }
 
     ConstraintLayout(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize().semantics{ testTagsAsResourceId=true }
     ) {
         val (host, playerPage, bottomNavigationBar) = createRefs()
         Box(modifier = Modifier.constrainAs(host) {

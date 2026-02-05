@@ -486,13 +486,7 @@ fun OrderSongInfo(params: PlayListParams, roomSong: RoomSongInfo, viewModel: Ord
                         }
                     } else {
                         coroutineScope.launch(Dispatchers.Main) {
-                            val toastTxt =
-                                if (result == PlayDefine.PlayError.PLAY_ERR_CANNOT_PLAY) {
-                                    "播放失败 错误码：$result， 错误信息：${params.startSong?.unplayableMsg}"
-                                } else {
-                                    "播放失败 错误码：$result"
-                                }
-                            UiUtils.showToast(toastTxt)
+                            UiUtils.showPlayErrToast(result,params.startSong)
                         }
                     }
                 }

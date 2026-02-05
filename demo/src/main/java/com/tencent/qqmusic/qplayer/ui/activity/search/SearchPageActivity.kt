@@ -11,7 +11,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
@@ -24,11 +27,13 @@ class SearchPageActivity : ComponentActivity() {
         const val searchType = "searchtype"
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val type = intent.getStringExtra(searchType)
         setContent {
-            Scaffold(topBar = { TopBar("歌词详情") }) {
+            Scaffold(topBar = { TopBar("歌词详情") },
+                modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
                 when (type) {
                     lyricIntentTag -> {
                         val data = intent.getStringExtra(lyricIntentTag) ?: ""
