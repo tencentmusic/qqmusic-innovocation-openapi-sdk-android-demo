@@ -1,5 +1,7 @@
 package com.tencent.qqmusic.qplayer.ui.activity.main
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +23,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.home.SearchViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.login.MinePage
 import com.tencent.qqmusic.qplayer.ui.activity.search.SearchPage
 
+@RequiresApi(Build.VERSION_CODES.N)
 @Composable
 fun HomeScreen(categoryViewModel: HomeViewModel) {
     HomePage(categoryViewModel)

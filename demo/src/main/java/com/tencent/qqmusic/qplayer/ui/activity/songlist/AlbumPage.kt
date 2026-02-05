@@ -25,10 +25,13 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,10 +46,12 @@ import com.tencent.qqmusic.qplayer.ui.activity.loadMoreItemUI
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.utils.UiUtils.getFormatNumber
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AlbumScreen(albums: List<Album>) {
     Scaffold(
-        topBar = { TopBar("专辑列表") }
+        topBar = { TopBar("专辑列表") },
+        modifier = Modifier.semantics{ testTagsAsResourceId=true }
     ) {
         AlbumListPage(albums = albums)
     }

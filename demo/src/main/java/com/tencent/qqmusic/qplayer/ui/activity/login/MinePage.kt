@@ -25,7 +25,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Checkbox
@@ -285,7 +288,8 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
         ),
         "其他" to listOf(
             "订阅歌手",
-            "其他端播放列表"
+            "其他端播放列表",
+            "联合会员订单列表"
         )
     )
 
@@ -490,6 +494,22 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
                         }
                     }
                 }
+
+                "联合会员订单列表" -> {
+                    viewModel.fetchAllUnionVipOrderList()
+                    Column {
+                        val orderList = viewModel.unionVipOrderList.value
+                        if (orderList.isNullOrEmpty()) {
+                            Text(text = "未获取到订单")
+                        } else {
+                            LazyColumn {
+                                items(orderList.size) {
+                                    UnionVipOrderItem(orderList[it])
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -583,6 +603,8 @@ fun FolderDialog(
                         OpenApiSDK.getOpenApi().getEditFolderTags {
                             if (it.isSuccess()) {
                                 tagCategories = it.data ?: emptyList()
+                            }else{
+                                UiUtils.showToast(it.errorMsg?:"加载标签失败")
                             }
                         }
                     }
@@ -680,6 +702,7 @@ fun FolderDialog(
                                     viewModel.fetchMineFolder()
                                 } else {
                                     foldName = ""
+                                    UiUtils.showToast(it.errorMsg?:"创建歌单失败")
                                 }
                             }
                         } else {
@@ -690,6 +713,7 @@ fun FolderDialog(
                                     viewModel.fetchMineFolder()
                                 } else {
                                     foldName = ""
+                                    UiUtils.showToast(it.errorMsg?:"修改歌单失败")
                                 }
                             }
                         }

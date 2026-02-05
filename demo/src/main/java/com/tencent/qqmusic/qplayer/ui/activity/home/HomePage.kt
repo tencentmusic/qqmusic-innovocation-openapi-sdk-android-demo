@@ -25,9 +25,12 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.accompanist.flowlayout.FlowRow
@@ -39,6 +42,7 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.qplayer.core.player.playlist.MusicPlayList
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderListActivity
 import com.tencent.qqmusic.qplayer.ui.activity.home.ai.AIFunctionPage
+import com.tencent.qqmusic.qplayer.ui.activity.home.other.custom_song_list.CustomSongListPage
 import com.tencent.qqmusic.qplayer.ui.activity.home.other.ordersong.OrderSongPage
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVFunctionPage
@@ -74,7 +78,7 @@ fun HomePage(homeViewModel: HomeViewModel) {
 fun HomePageTabs(homeViewModel: HomeViewModel) {
     val pages = mutableListOf(
         "分类歌单", "首页推荐", "视频", "AI功能", "音乐馆",
-        "专区", "长音频", "其他"
+        "专区", "长音频", "多人点歌", "运营歌单"
     )
 
     val pagerState = rememberPagerState()
@@ -142,13 +146,19 @@ fun HomePageTabs(homeViewModel: HomeViewModel) {
             7 -> {
                 OrderSongPage()
             }
+
+            8 -> {
+                CustomSongListPage()
+            }
         }
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun categoryFoldersPageWithTitle(title: String, homeViewModel: HomeViewModel, fetchSceneSongList: Boolean = false, observer: PlayerObserver = PlayerObserver) {
-    Scaffold(topBar = { TopBar(title)}) {
+    Scaffold(topBar = { TopBar(title)},
+        modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
         categoryFoldersPage(homeViewModel, fetchSceneSongList, observer)
     }
 }

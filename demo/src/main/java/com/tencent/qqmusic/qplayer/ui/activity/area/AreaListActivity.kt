@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement.Bottom
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,12 +20,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,11 +38,15 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
 import coil.compose.rememberImagePainter
+import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.AreaShelfItem
 import com.tencent.qqmusic.openapisdk.model.AreaShelfType
+import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.home.PodcastItem
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -75,11 +85,13 @@ class AreaListActivity: ComponentActivity() {
        }
    }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            Scaffold(topBar = { TopBar(title)}) {
+            Scaffold(topBar = { TopBar(title)},
+                modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
                 val vm: AreaListViewModel = viewModel()
                 val flow = vm.areaListPageDetail(areaId, shelfId)
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -94,89 +106,102 @@ class AreaListActivity: ComponentActivity() {
     fun AreaListScreen(vm: AreaListViewModel, flow: Flow<PagingData<AreaShelfItem>>? = null) {
         val albums = flow!!.collectAsLazyPagingItems()
         val activity = LocalContext.current as Activity
-
+        val songInfoList = mutableListOf<SongInfo>()
         Log.i(TAG, "AreaListScreen:areaId:$areaId, shelfId:$shelfId")
-
-        LazyColumn(state = rememberLazyListState(),  modifier = Modifier.fillMaxSize()) {
-            this.items(albums) { shelf ->
-                if (areaShelfType == AreaShelfType.AreaShelfType_Album) {
-                    val album = shelf?.album ?: return@items
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                            .clickable {
-                                activity.startActivity(
-                                    Intent(activity, SongListActivity::class.java)
-                                        .putExtra(SongListActivity.KEY_ALBUM_ID, album.id)
-                                )
-                            }
-                    ) {
-                        Image(
-                            painter = rememberImagePainter(album.pic),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(50.dp)
-                                .padding(2.dp)
-                        )
-                        Column {
-                            Text(text = album.name)
-                            Text(text = "${album.songNum?.toString() ?: 0}首")
-                        }
+        Column {
+            if(areaShelfType==AreaShelfType.AreaShelfType_Song){
+                Button(onClick = {
+                    OpenApiSDK.getPlayerApi().playSongs(songInfoList).apply {
+                        UiUtils.showToast("播放歌曲数:${songInfoList.size}")
                     }
-                } else if (areaShelfType == AreaShelfType.AreaShelfType_Folder) {
-                    val folder = shelf?.folder ?: return@items
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                            .clickable {
-                                activity.startActivity(
-                                    Intent(activity, SongListActivity::class.java)
-                                        .putExtra(SongListActivity.KEY_FOLDER_ID, folder.id)
-                                )
-                            }
-                    ) {
-                        Image(
-                            painter = rememberImagePainter(folder.picUrl),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(50.dp)
-                                .padding(2.dp)
-                        )
-                        Column {
-                            Text(text = folder.name)
-                            Text(text = "${folder.songNum?.toString() ?: 0}首")
-                        }
-                    }
-                } else if (areaShelfType == AreaShelfType.AreaShelfType_Song) {
-                    val song = shelf?.songInfo ?: return@items
-                    val title = song.songName.toString()
-                    val songId: Long = song.songId ?: 0
-                    Box(
-                        modifier = Modifier
-                            .wrapContentWidth()
-                            .padding(16.dp)
-                            .clickable {
-                                activity.startActivity(
-                                    Intent(activity, SongListActivity::class.java)
-                                        .putExtra(SongListActivity.KEY_SONG, songId)
-                                )
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column {
-                            if (song.isLongAudioSong()) {
-                                PodcastItem(song = song)
-                            } else {
-                                Text(text = title, fontSize = 16.sp)
-                            }
-
-                            Text(text = "Vip ：${if (song.vip == 1) "VIP" else "普通"}")
-                        }
-                    }
+                }){
+                    Text(text = "播放全部")
                 }
+            }
+            LazyColumn(state = rememberLazyListState(),  modifier = Modifier.fillMaxSize()) {
+                this.items(albums) { shelf ->
+                    if (areaShelfType == AreaShelfType.AreaShelfType_Album) {
+                        val album = shelf?.album ?: return@items
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                                .clickable {
+                                    activity.startActivity(
+                                        Intent(activity, SongListActivity::class.java)
+                                            .putExtra(SongListActivity.KEY_ALBUM_ID, album.id)
+                                    )
+                                }
+                        ) {
+                            Image(
+                                painter = rememberImagePainter(album.pic),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .padding(2.dp)
+                            )
+                            Column {
+                                Text(text = album.name)
+                                Text(text = "${album.songNum?.toString() ?: 0}首")
+                            }
+                        }
+                    } else if (areaShelfType == AreaShelfType.AreaShelfType_Folder) {
+                        val folder = shelf?.folder ?: return@items
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                                .clickable {
+                                    activity.startActivity(
+                                        Intent(activity, SongListActivity::class.java)
+                                            .putExtra(SongListActivity.KEY_FOLDER_ID, folder.id)
+                                    )
+                                }
+                        ) {
+                            Image(
+                                painter = rememberImagePainter(folder.picUrl),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .padding(2.dp)
+                            )
+                            Column {
+                                Text(text = folder.name)
+                                Text(text = "${folder.songNum?.toString() ?: 0}首")
+                            }
+                        }
+                    } else if (areaShelfType == AreaShelfType.AreaShelfType_Song) {
+                        val song = shelf?.songInfo ?: return@items
+                        val title = song.songName
+                        val songId: Long = song.songId
+                        songInfoList.add(song)
+                        Box(
+                            modifier = Modifier
+                                .wrapContentWidth()
+                                .padding(16.dp)
+                                .clickable {
+                                    activity.startActivity(
+                                        Intent(activity, SongListActivity::class.java)
+                                            .putExtra(SongListActivity.KEY_SONG, songId)
+                                    )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column {
+                                if (song.isLongAudioSong()) {
+                                    PodcastItem(song = song)
+                                } else {
+                                    Text(text = title, fontSize = 16.sp, color =if (song.canPlay()) Color.Black else Color.Gray)
+                                }
+                                Row {
+                                    Text(text = "Vip ：${if (song.vip == 1) "VIP" else "普通"}  ", color =if (song.canPlay()) Color.Black else Color.Gray)
+                                    Text(text = "playWhole:${song.canPlayWhole()}  playTry:${song.canPlayTry()}", color =if (song.canPlay()) Color.Black else Color.Gray)
+                                }
+                            }
+                        }
+                    }
 
+                }
             }
         }
     }

@@ -17,8 +17,11 @@ import androidx.compose.material.Button
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
@@ -43,11 +46,13 @@ class MVAreaFragment(viewModelStoreOwner: ViewModelStoreOwner, val groupRes: Med
 
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         composeView = view.findViewById(R.id.mv_list_compose_view)
         composeView?.setContent {
-            Scaffold(topBar = { TopBar("MV")}){
+            Scaffold(topBar = { TopBar("MV")},
+                modifier = Modifier.semantics{ testTagsAsResourceId=true }){
                 ContentView(playerViewModel, groupRes)
             }
         }

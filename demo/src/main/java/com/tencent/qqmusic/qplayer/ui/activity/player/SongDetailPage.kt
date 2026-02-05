@@ -29,10 +29,13 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.annotation.ExperimentalCoilApi
@@ -53,6 +56,7 @@ private val plachImageID: Int = R.drawable.musicopensdk_icon_light
 
 private const val TAG = "SongDetailPage"
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun SongDetailPage(observer: PlayerObserver) {
 
@@ -64,7 +68,8 @@ fun SongDetailPage(observer: PlayerObserver) {
                 actions = {
                 }
             )
-        }
+        },
+        modifier = Modifier.semantics{ testTagsAsResourceId=true }
     ) {
         DetailPage(observer = observer)
     }
@@ -194,6 +199,7 @@ fun DetailPage(observer: PlayerObserver? = null) {
                         songInfo.isGalaxy714Type() -> "7.1.4声道"
                         songInfo.isGalaxyEffectType() -> "立体声 算法"
                         songInfo.isGalaxyStereoType() -> "双通道"
+                        songInfo.isGalaxy916Type() -> "9.1.6声道"
                         else -> "未知类型"
                     }
                     Text(text = type)

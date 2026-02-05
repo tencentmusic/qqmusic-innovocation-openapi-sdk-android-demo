@@ -37,7 +37,7 @@ ext {
 
     sdk_version = project.hasProperty('edge_version') && "${edge_version}" != ""
             ? "${edge_version}"
-            : "3.9.0"
+            : "4.0.0"
 
     println "apk demo sdk_version:$sdk_version"
 
@@ -53,7 +53,7 @@ ext {
     androidx_anno_version = "1.1.0"
     androidx_media_version = "1.0.0"
     google_material_version = "1.0.0"
-    common_util_version = "1.2.18.2-edge"
+    common_util_version = "1.2.19.4-edge"
     mmkv_version = "1.2.16"
     sdkmethodmonitor = "0.1.3"
 

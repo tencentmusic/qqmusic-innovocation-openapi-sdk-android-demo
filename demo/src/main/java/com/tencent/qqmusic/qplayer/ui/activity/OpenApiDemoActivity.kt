@@ -16,6 +16,8 @@ import com.tencent.qqmusic.ai.function.base.IAIFunction
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
+import com.tencent.qqmusic.openapisdk.model.AreaId
+import com.tencent.qqmusic.openapisdk.model.MusicSkillResult
 import com.tencent.qqmusic.openapisdk.model.MusicSkillSlotItem
 import com.tencent.qqmusic.openapisdk.model.SearchType
 import com.tencent.qqmusic.openapisdk.model.SongInfo
@@ -58,11 +60,15 @@ class OpenApiDemoActivity : AppCompatActivity() {
     private lateinit var param4: EditText
     private lateinit var param5: EditText
 
+    private lateinit var param6: EditText
+
     private var paramStr1: String? = null
     private var paramStr2: String? = null
     private var paramStr3: String? = null
     private var paramStr4: String? = null
     private var paramStr5: String? = null
+
+    private var paramStr6: String? = null
 
     // 用来在一键测试中，避免异步调用顺序混乱引起的逻辑错误
     private var createFolderId: String? = null
@@ -108,6 +114,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
         param3.visibility = View.GONE
         param4.visibility = View.GONE
         param5.visibility = View.GONE
+        param6.visibility = View.GONE
     }
 
     private fun fillDefaultParamIfNull(param: MethodNameWidthParam) {
@@ -128,12 +135,16 @@ class OpenApiDemoActivity : AppCompatActivity() {
             if (paramStr5 == null && defaultParam.size > 4) {
                 paramStr5 = defaultParam[4]
             }
+            if (paramStr6 == null && defaultParam.size > 5){
+                paramStr6 = defaultParam[5]
+            }
         } else {
             paramStr1 = null
             paramStr2 = null
             paramStr3 = null
             paramStr4 = null
             paramStr5 = null
+            paramStr6 = null
             val defaultParam = param.paramDefault
             if (defaultParam.isNotEmpty()) {
                 paramStr1 = defaultParam[0]
@@ -150,6 +161,9 @@ class OpenApiDemoActivity : AppCompatActivity() {
             if (defaultParam.size > 4) {
                 paramStr5 = defaultParam[4]
             }
+            if (defaultParam.size > 5){
+                paramStr6 = defaultParam[5]
+            }
         }
     }
 
@@ -159,6 +173,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
         paramStr3 = param3.text?.toString()
         paramStr4 = param4.text?.toString()
         paramStr5 = param5.text?.toString()
+        paramStr6 = param6.text?.toString()
         if (paramStr1.isNullOrEmpty()) {
             paramStr1 = null
         }
@@ -173,6 +188,9 @@ class OpenApiDemoActivity : AppCompatActivity() {
         }
         if (paramStr5.isNullOrEmpty()) {
             paramStr5 = null
+        }
+        if (paramStr6.isNullOrEmpty()){
+            paramStr6 = null
         }
     }
 
@@ -194,6 +212,8 @@ class OpenApiDemoActivity : AppCompatActivity() {
         param3 = findViewById(R.id.edt_param_3)
         param4 = findViewById(R.id.edt_param_4)
         param5 = findViewById(R.id.edt_param_5)
+        param6 = findViewById(R.id.edt_param_6)
+
         initMethodNameList()
         arrayAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, android.R.id.text1, methodNameWithParamList.map { it.name })
         spinner.adapter = arrayAdapter
@@ -354,6 +374,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
         param3.addTextChangedListener(edtWatch)
         param4.addTextChangedListener(edtWatch)
         param5.addTextChangedListener(edtWatch)
+        param6.addTextChangedListener(edtWatch)
     }
 
     private fun updateMethodKey(key: String?) {
@@ -389,6 +410,9 @@ class OpenApiDemoActivity : AppCompatActivity() {
         if (count >= 5) {
             param5.visibility = View.VISIBLE
         }
+        if (count >= 6) {
+            param6.visibility = View.VISIBLE
+        }
         methodParam.edtHint.forEachIndexed { index, hint ->
             val i = index + 1
             if (i == 1) {
@@ -405,6 +429,9 @@ class OpenApiDemoActivity : AppCompatActivity() {
             }
             if (i == 5) {
                 param5.hint = hint
+            }
+            if (i == 6) {
+                param6.hint = hint
             }
         }
     }
@@ -974,6 +1001,9 @@ class OpenApiDemoActivity : AppCompatActivity() {
         methodNameToBlock["musicSkillWithSlots"] = {
             testMusicSkill(it, "musicSkillWithSlots")
         }
+        methodNameToBlock["voiceSearch"] = {
+            testMusicSkill(it, "voiceSearch")
+        }
         methodNameToBlock["reportRecentPlay"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
@@ -1088,7 +1118,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
             val shelfId = paramStr1?.toIntOrNull() ?: 5317
             val contentSize = paramStr2?.toIntOrNull() ?: 8
             val lastContentId = paramStr3 ?: "879438977"
-            val areaId = paramStr4?.toIntOrNull() ?: com.tencent.qqmusic.openapisdk.model.AreaId.AreaHires
+            val areaId = paramStr4?.toIntOrNull() ?: AreaId.AreaHires
             openApi.fetchShelfContent(
                 shelfId = shelfId,
                 contentSize = contentSize,
@@ -1660,6 +1690,14 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
+                "voiceSearch",
+                listOf("意图", "槽位值(kv以:分隔，多个槽位值逗号分隔)", "原始语音", "当前在播歌曲id(可不传)", "返回数量（可不传）", "searchId（可不传）"),
+                 listOf("点歌播放", "歌手名:周杰伦,歌曲语言:中文", "播放感伤的歌曲", null, null, null)
+            )
+        )
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
                 "reportRecentPlay", listOf("歌曲id"), listOf("316868744")
             )
         )
@@ -1841,6 +1879,31 @@ class OpenApiDemoActivity : AppCompatActivity() {
                     paramStr5?.toInt() ?: 20,
                     callback = respCallback
                 )
+            }
+            "voiceSearch" -> {
+                val slotItem = mutableListOf<MusicSkillSlotItem>()
+                val kvStrList = paramStr2?.split(",") ?: emptyList()
+                for (kvStr in kvStrList) {
+                    val kv = kvStr.split(":")
+                    slotItem.add(
+                        MusicSkillSlotItem(kv.first(), kv.getOrNull(1) ?: "", kv.getOrNull(2)?.toIntOrNull() ?: 0)
+                    )
+                }
+                val slotList:List<MusicSkillSlotItem>? = slotItem.map { MusicSkillSlotItem(it.name,it.value,it.type) }
+                openApi.voiceSearch(
+                    intent = paramStr1 ?: "",
+                    slots = slotList,
+                    originQuestion = paramStr3 ?: "",
+                    currentSongId = paramStr4?.toLong(),
+                    num = paramStr5?.toInt() ?: 20,
+                    reportSearchId = paramStr6 ?: "",
+                    callback = object : OpenApiCallback<OpenApiResponse<MusicSkillResult?>> {
+                        override fun invoke(p1: OpenApiResponse<MusicSkillResult?>) {
+                            commonCallback(p1)
+                        }
+                    }
+                )
+
             }
         }
     }

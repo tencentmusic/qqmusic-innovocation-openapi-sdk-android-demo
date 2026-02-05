@@ -28,11 +28,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,9 +61,11 @@ import com.tencent.qqmusic.qplayer.utils.UiUtils
 
 private const val TAG = "AreaSectionDetailPage"
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AreaSectionDetailPageWithTitle(title:String, areaId: Int, viewModel: HomeViewModel){
-    Scaffold(topBar = { TopBar(title)}) {
+    Scaffold(topBar = { TopBar(title)},
+        modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
         AreaSectionDetailPage(areaId, viewModel)
     }
 }
@@ -138,7 +143,7 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
             val shelf: AreaShelf = areaShelves?.getOrNull(it) ?: return@items
             if (shelf.shelfItems.isEmpty()) return@items;
             val shelfItems: List<AreaShelfItem> = shelf.shelfItems
-            if(it==0){
+            if(it==0){ // 封面
                 Box(modifier = Modifier.height(100.dp)){
                     Image(
                         painter = rememberImagePainter(
@@ -180,7 +185,7 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
+                Text( // 运营标题
                     text = shelf.shelfTitle,
                     color = when (shelf.shelfType) {
                         AreaShelfType.AreaShelfType_Song -> Color.Red
@@ -240,10 +245,10 @@ fun AreaSectionDetailPage(areaId: Int, viewModel: HomeViewModel) {
                                     if (item.songInfo?.isLongAudioSong() == true) {
                                         PodcastItem(song = item.songInfo)
                                     } else {
-                                        Text(text = title, fontSize = 16.sp)
+                                        Text(text = title, fontSize = 16.sp, color =if (item.songInfo?.canPlay()==true) Color.Black else Color.Gray)
                                     }
 
-                                    Text(text = "Vip ：${if (item.songInfo?.vip == 1) "VIP" else "普通"}")
+                                    Text(text = "Vip ：${if (item.songInfo?.vip == 1) "VIP" else "普通"}", color =if (item.songInfo?.canPlay()==true) Color.Black else Color.Gray)
                                 }
                             }
                         }

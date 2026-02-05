@@ -17,7 +17,9 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.model.PlayerStyleData
 import com.tencent.qqmusic.openapisdk.model.StyleData
 import com.tencent.qqmusic.openapisdk.model.VipLevel
+import com.tencent.qqmusic.openapisdk.playerui.LyricStyleManager
 import com.tencent.qqmusic.openapisdk.playerui.PlayerStyleManager
+import com.tencent.qqmusic.openapisdk.playerui.data.StyleDataType
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.ui.activity.BaseActivity
@@ -27,34 +29,47 @@ import com.tencent.qqmusic.qplayer.ui.activity.BaseActivity
  */
 class PlayerStyleActivity : BaseActivity() {
 
-
-    private val openApiImpl = OpenApiSDK.getOpenApi()
-    private val customAdapter = CustomAdapter()
+    private val openApiImpl by lazy { OpenApiSDK.getOpenApi() }
+    private val mData = mutableListOf<PlayerStyleData>()
+    private var playerStyleAdapter: CustomAdapter? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player_style)
-        val recyclerView = findViewById<RecyclerView>(R.id.recycle_view)
-
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = customAdapter
+        val playerStyleRecyclerView = findViewById<RecyclerView>(R.id.player_style_recycle_view)
+        playerStyleAdapter = CustomAdapter(object : OnStyleClickListener {
+            override fun onStyleClick() {
+                mData.clear()
+                initData()
+            }
+        })
+        playerStyleRecyclerView.layoutManager = LinearLayoutManager(this)
+        playerStyleRecyclerView.adapter = playerStyleAdapter
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        initData()
     }
 
-    class CustomAdapter : RecyclerView.Adapter<CustomAdapter.ViewHolder>() {
+    private fun initData() {
+        openApiImpl.fetchPlayerStyleList {
+            MLog.i("PlayerStyleActivity", "styles $it")
+            it.data?.let { mData.addAll(it) } ?: run {}
+            playerStyleAdapter?.setData(mData)
+        }
+
+        openApiImpl.fetchPlayerImmersiveLyricList {
+            MLog.i("PlayerStyleActivity", "styles $it")
+            it.data?.let { mData.addAll(it) } ?: run {}
+            playerStyleAdapter?.setData(mData)
+        }
+    }
+
+    interface OnStyleClickListener {
+        fun onStyleClick()
+    }
+
+    class CustomAdapter(private val listener: OnStyleClickListener?) :
+        RecyclerView.Adapter<CustomAdapter.ViewHolder>() {
 
         private val list: MutableList<PlayerStyleData> = arrayListOf()
-
-        init {
-            initData()
-        }
-
-        fun initData() {
-            OpenApiSDK.getOpenApi().fetchPlayerStyleList {
-                MLog.i("PlayerStyleActivity", "styles $it")
-                it.data?.let { it1 -> setData(it1) } ?: run {
-                }
-            }
-        }
 
         fun setData(data: List<PlayerStyleData>) {
             list.clear()
@@ -81,6 +96,11 @@ class PlayerStyleActivity : BaseActivity() {
             return ViewHolder(view)
         }
 
+        private fun isUse(playerStyleData: PlayerStyleData): Boolean {
+            val id = if (StyleDataType.isLyricType(playerStyleData.type)) LyricStyleManager.getLyricStyle().id else PlayerStyleManager.getPlayerStyle().id
+            return playerStyleData.id == id
+        }
+
         // Replace the contents of a view (invoked by the layout manager)
         @SuppressLint("SetTextI18n")
         override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
@@ -89,8 +109,8 @@ class PlayerStyleActivity : BaseActivity() {
             // contents of the view with that element
             val playerStyleData = list[position]
 
-            viewHolder.textView.text = "${playerStyleData.name}-${playerStyleData.id}"
-            if (PlayerStyleManager.getPlayerStyle().id == playerStyleData.id) {
+            viewHolder.textView.text = "${playerStyleData.name}-${playerStyleData.id}-${playerStyleData.type}"
+            if (isUse(playerStyleData)) {
                 viewHolder.btnUse.text = "使用中"
                 viewHolder.btnUse.setTextColor(Color.GREEN)
                 if (playerStyleData.userProfit?.status == 2) {
@@ -111,9 +131,11 @@ class PlayerStyleActivity : BaseActivity() {
                 VipLevel.GreenVip -> {
                     "GreenVip"
                 }
+
                 VipLevel.SuperVip -> {
                     "SuperVip"
                 }
+
                 else -> {
                     ""
                 }
@@ -125,38 +147,76 @@ class PlayerStyleActivity : BaseActivity() {
                 }
 
                 val block = {
-                    PlayerStyleManager.setPlayerStyle(playerStyleData,
-                        object : PlayerStyleManager.PlayerStyleLoaderListener {
-                            override fun onStart(playerStyleData: PlayerStyleData) {
-                                MLog.i("PlayerStyleActivity", "onStart")
-                            }
-
-                            override fun onDownloading(
-                                playerStyleData: StyleData,
-                                progress: Float
-                            ) {
-                                AppScope.launchUI {
-                                    val progress = String.format("%.2f", progress)
-                                    viewHolder.btnUse.text = "下载中:$progress"
+                    if (StyleDataType.isLyricType(playerStyleData.type)) {
+                        LyricStyleManager.setLyricStyle(playerStyleData,
+                            object : PlayerStyleManager.PlayerStyleLoaderListener {
+                                override fun onStart(playerStyleData: PlayerStyleData) {
+                                    MLog.i("PlayerStyleActivity", "onStart")
                                 }
-                            }
 
-                            override fun onSuccess(styleData: StyleData) {
-                                MLog.i("PlayerStyleActivity", "setStyle success $playerStyleData")
-                                AppScope.launchUI {
-                                    ToastUtils.showShort("设置成功")
-                                    notifyDataSetChanged()
+                                override fun onDownloading(
+                                    playerStyleData: StyleData,
+                                    progress: Float
+                                ) {
+                                    AppScope.launchUI {
+                                        val progress = String.format("%.2f", progress)
+                                        viewHolder.btnUse.text = "下载中:$progress"
+                                    }
                                 }
-                            }
 
-                            override fun onFailed(
-                                playerStyleData: PlayerStyleData,
-                                errMsg: String?
-                            ) {
-                                ToastUtils.showShort("失败($errMsg)")
-                                MLog.i("PlayerStyleActivity", "setStyle fail $errMsg")
-                            }
-                        })
+                                override fun onSuccess(styleData: StyleData) {
+                                    MLog.i("PlayerStyleActivity", "setStyle success $playerStyleData")
+                                    AppScope.launchUI {
+                                        ToastUtils.showShort("设置成功")
+                                        notifyDataSetChanged()
+                                    }
+                                }
+
+                                override fun onFailed(
+                                    code: Int,
+                                    playerStyleData: PlayerStyleData,
+                                    errMsg: String?
+                                ) {
+                                    ToastUtils.showShort("失败($errMsg)")
+                                    MLog.i("PlayerStyleActivity", "setStyle fail $errMsg")
+                                }
+                            })
+                    } else {
+                        PlayerStyleManager.setPlayerStyle(playerStyleData,
+                            object : PlayerStyleManager.PlayerStyleLoaderListener {
+                                override fun onStart(playerStyleData: PlayerStyleData) {
+                                    MLog.i("PlayerStyleActivity", "onStart")
+                                }
+
+                                override fun onDownloading(
+                                    playerStyleData: StyleData,
+                                    progress: Float
+                                ) {
+                                    AppScope.launchUI {
+                                        val progress = String.format("%.2f", progress)
+                                        viewHolder.btnUse.text = "下载中:$progress"
+                                    }
+                                }
+
+                                override fun onSuccess(styleData: StyleData) {
+                                    MLog.i("PlayerStyleActivity", "setStyle success $playerStyleData")
+                                    AppScope.launchUI {
+                                        ToastUtils.showShort("设置成功")
+                                        notifyDataSetChanged()
+                                    }
+                                }
+
+                                override fun onFailed(
+                                    code: Int,
+                                    playerStyleData: PlayerStyleData,
+                                    errMsg: String?
+                                ) {
+                                    ToastUtils.showShort("失败($errMsg)")
+                                    MLog.i("PlayerStyleActivity", "setStyle fail $errMsg")
+                                }
+                            })
+                    }
+
                 }
 
                 //根据试用状态，领取试用逻辑
@@ -165,7 +225,7 @@ class PlayerStyleActivity : BaseActivity() {
                 } else {
                     OpenApiSDK.getOpenApi().openFreeLimitedTimeByPlayStyle(playerStyleData.id.toString()) {
                         if (it.data == true) {
-                            (viewHolder.bindingAdapter as CustomAdapter).initData()
+                            listener?.onStyleClick()
                             ToastUtils.showShort("领取成功")
                         } else {
                             ToastUtils.showShort("领取失败(${it.errorMsg})")

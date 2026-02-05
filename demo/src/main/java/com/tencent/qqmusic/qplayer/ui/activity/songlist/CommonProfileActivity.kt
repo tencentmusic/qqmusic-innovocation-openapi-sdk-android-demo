@@ -59,16 +59,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import coil.transform.RoundedCornersTransformation
@@ -80,6 +84,7 @@ import com.tencent.qqmusic.openapisdk.model.PlayParam
 import com.tencent.qqmusic.openapisdk.model.RecentPlayType
 import com.tencent.qqmusic.openapisdk.model.SingerDetail
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.playerinsight.util.coverErrorCode
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.core.player.playlist.MusicPlayList
 import com.tencent.qqmusic.qplayer.core.player.proxy.FromInfo
@@ -102,6 +107,7 @@ class CommonProfileActivity: ComponentActivity() {
 
     private val homeViewModel: HomeViewModel by viewModels()
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val args = Bundle().apply {
@@ -112,6 +118,7 @@ class CommonProfileActivity: ComponentActivity() {
         setContent {
             Scaffold(
                 topBar = { TopBar() },
+                modifier = Modifier.semantics{ testTagsAsResourceId=true },
                 bottomBar = { FloatingPlayerPage() }) {
                 MainView(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 70.dp))
             }
@@ -413,7 +420,7 @@ class CommonProfileActivity: ComponentActivity() {
             )
             val ret = OpenApiSDK.getPlayerApi().playSongs(playParam)
             if (ret != PlayDefine.PlayError.PLAY_ERR_NONE) {
-                UiUtils.showToast("播放失败:ret:${ret}")
+                UiUtils.showPlayErrToast(ret,songs.firstOrNull())
                 return
             } else {
                 UiUtils.showToast("开始全部播放")

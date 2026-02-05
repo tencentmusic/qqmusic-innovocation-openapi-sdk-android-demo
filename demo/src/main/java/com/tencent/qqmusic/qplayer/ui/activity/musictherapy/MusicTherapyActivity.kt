@@ -1,5 +1,6 @@
 package com.tencent.qqmusic.qplayer.ui.activity.musictherapy
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -31,10 +32,13 @@ import androidx.compose.material.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,12 +83,15 @@ class MusicTherapyActivity : ComponentActivity(), OnMusicTherapyStateListener {
         mSurface = null
     }
 
+    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
+    @OptIn(ExperimentalComposeUiApi::class)
     @Preview
     @Composable
     fun MusicTherapyView() {
         Scaffold(topBar = {
             TopBar("音乐疗愈")
-        }) {
+        },
+        modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
             ConstraintLayout(modifier = Modifier.fillMaxSize()) {
                 VideoPlayer()
                 AnimatedVisibility(visible = (musicTherapyViewModel.mvVid.value.isEmpty())) {
@@ -156,9 +163,9 @@ class MusicTherapyActivity : ComponentActivity(), OnMusicTherapyStateListener {
                     this.items(floatArray.size) { index ->
                         val volume = musicTherapyViewModel.volumeArray.value[index]
                         if (index == 0) {
-                            Text(text = "轻音乐音量调整:$volume")
+                            Text(text = "轻音乐音量调整:$volume", modifier = Modifier.background(color = Color.White))
                         } else {
-                            Text(text = "白噪音-${musicTherapyViewModel.therapyItem.value?.whiteVoiceList?.get(index - 1)?.title}音量调整:$volume")
+                            Text(text = "白噪音-${musicTherapyViewModel.therapyItem.value?.whiteVoiceList?.get(index - 1)?.title}音量调整:$volume", modifier = Modifier.background(color = Color.White))
                         }
                         val newValue = remember { mutableStateOf(volume) }
                         newValue.value = volume
@@ -189,7 +196,7 @@ class MusicTherapyActivity : ComponentActivity(), OnMusicTherapyStateListener {
         val (playButton, stopButton) = createRefs()
         Button(shape = RoundedCornerShape(40.dp),
             modifier = Modifier
-                .size(80.dp)
+                .size(80.dp).background(color = Color.Green)
                 .constrainAs(playButton) {
                     bottom.linkTo(parent.bottom, margin = 10.dp)
                     start.linkTo(parent.start)
@@ -225,7 +232,7 @@ class MusicTherapyActivity : ComponentActivity(), OnMusicTherapyStateListener {
                 .size(80.dp)
                 .constrainAs(stopButton) {
                     bottom.linkTo(parent.bottom, margin = 10.dp)
-                    start.linkTo(parent.start, margin = 10.dp)
+                    start.linkTo(playButton.end, margin = 10.dp)
                 },onClick = {
                 OpenApiSDK.getMusicTherapyApi().stop()
             }) {   Text(text = "停止播放") }
@@ -235,7 +242,7 @@ class MusicTherapyActivity : ComponentActivity(), OnMusicTherapyStateListener {
     private fun PageModeView() {
         ConstraintLayout {
             val (title, playMode, playScene, playDuration) = createRefs()
-            Text(text = "疗愈模式", modifier = Modifier.constrainAs(title) {
+            Text(text = "疗愈模式", modifier = Modifier.background(color = Color.White).constrainAs(title) {
                 start.linkTo(parent.start, margin = 10.dp)
             })
             LazyRow(modifier = Modifier.constrainAs(playMode) {
@@ -412,7 +419,7 @@ class MusicTherapyActivity : ComponentActivity(), OnMusicTherapyStateListener {
         onClick: (level: String) -> Unit
     ) {
         Column(modifier = modifier) {
-            Text(text = type, modifier = Modifier.padding(start = 10.dp))
+            Text(text = type, modifier = Modifier.padding(start = 10.dp).background(color = Color.White))
             LazyRow {
                 this.items(levelList.size) { index ->
                     val selected = selectedIndexList.contains(index)

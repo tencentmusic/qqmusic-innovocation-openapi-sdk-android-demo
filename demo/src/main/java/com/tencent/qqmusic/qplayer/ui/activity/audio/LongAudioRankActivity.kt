@@ -9,9 +9,12 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,13 +49,15 @@ class LongAudioRankActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
 //        val vm: LongAudioViewModel by viewModels()
         setContent {
 //            val vm: LongAudioViewModel = viewModel()
-            Scaffold(topBar = { TopBar("长音频排行榜") }) {
+            Scaffold(topBar = { TopBar("长音频排行榜") },
+                modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
                 val vm: LongAudioViewModel = viewModel()
                 Box(modifier = Modifier.fillMaxSize()) {
                     Text(text = "加载中")

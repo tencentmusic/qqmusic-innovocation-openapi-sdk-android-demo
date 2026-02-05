@@ -62,6 +62,8 @@ class FolderProfileModel(private val folderId: Long): ProfileDataModel<Folder>()
         OpenApiSDK.getOpenApi().fetchFolderDetail(folderId = "$folderId") { resp->
             if (resp.isSuccess()) {
                 _data.value = resp.data
+            }else{
+                UiUtils.showToast("fetchFolderDetail${resp.errorMsg?:" 接口请求失败 "}")
             }
         }
     }
@@ -88,6 +90,8 @@ class FolderSongListModel(private val folderId: Long, private val isMyLikeFolder
                     _total.value = resp.totalCount ?: 0
                     nextPage++
                     pagePassBack = resp.passBack ?: ""
+                }else{
+                    UiUtils.showToast("fetchSongOfMyLikeFolder${resp.errorMsg?:" 接口请求失败 "}")
                 }
             }
         } else {
@@ -101,6 +105,8 @@ class FolderSongListModel(private val folderId: Long, private val isMyLikeFolder
                     _total.value = resp.totalCount ?: 0
                     nextPage++
                     pagePassBack = resp.passBack ?: ""
+                }else{
+                    UiUtils.showToast("fetchSongOfFolder${resp.errorMsg?:" 接口请求失败 "}")
                 }
             }
         }
@@ -112,6 +118,8 @@ class SingerProfileModel(private val singerId: Long): ProfileDataModel<SingerDet
         OpenApiSDK.getOpenApi().fetchSingerDetail(singerId = singerId.toInt()) { resp->
             if (resp.isSuccess()) {
                 _data.value = resp.data
+            }else{
+                UiUtils.showToast("fetchSingerDetail${resp.errorMsg?:" 接口请求失败 "}")
             }
         }
     }
@@ -128,6 +136,8 @@ class SingerSongListModel(private val singerId: Long): ProfileDataListModel<Song
                 _hasMore.value = resp.hasMore
                 _total.value = resp.totalCount ?: 0
                 nextPage++
+            }else{
+                UiUtils.showToast("fetchSongOfSinger${resp.errorMsg?:" 接口请求失败 "}")
             }
         }
     }
@@ -144,6 +154,8 @@ class SingerAlbumListModel(private val singerId: Long): ProfileDataListModel<Alb
                 _hasMore.value = resp.hasMore
                 _total.value = resp.totalCount ?: 0
                 nextPage++
+            }else{
+                UiUtils.showToast("fetchAlbumOfSinger${resp.errorMsg?:" 接口请求失败 "}")
             }
         }
     }
@@ -155,6 +167,8 @@ class AlbumProfileModel(val albumId: Long): ProfileDataModel<Album>() {
         OpenApiSDK.getOpenApi().fetchAlbumDetail(albumId = albumId.toString()) { resp->
             if (resp.isSuccess()) {
                 _data.value = resp.data
+            }else{
+                UiUtils.showToast("fetchAlbumDetail${resp.errorMsg?:" 接口请求失败 "}")
             }
         }
     }
@@ -173,6 +187,8 @@ class AlbumSongListModel(val albumId: Long): ProfileDataListModel<SongInfo>() {
                 _total.intValue = resp.totalCount ?: 0
                 _order.intValue = resp.data?.orderBy.takeUnless { it == ORDER_DEFAULT } ?: ORDER_UNDEFINE
                 nextPage++
+            }else{
+                UiUtils.showToast("fetchSongOfAlbum${resp.errorMsg?:" 接口请求失败 "}")
             }
         }
     }

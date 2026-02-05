@@ -35,12 +35,14 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayerEvent
 import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyConfig
 import com.tencent.qqmusic.openapisdk.core.player.ai.OnVoicePlayListener
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.playerinsight.util.coverErrorCode
 import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.core.player.PlayErrorUtils
 import com.tencent.qqmusic.qplayer.core.player.proxy.FromInfo
 import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiAccompanyHelper
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -107,6 +109,8 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
 
     private val tryPauseFirst = sharedPreferences?.getBoolean("tryPauseFirst", false)
     val needFade = sharedPreferences?.getBoolean("needFadeWhenPlay", true) != false
+
+    val autoPlaySwitchQuality: Boolean = sharedPreferences?.getBoolean("autoPlaySwitchQuality", true) != false
 
     private fun initProgressChangeListener() {
         // 伴唱状态回调
@@ -385,20 +389,16 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                 val errorCode = playErrorData.code
                 Log.i(TAG, "onEvent: current error $errorCode")
                 if (currentSong?.canPlay() != true) {
-                    Toast.makeText(
-                        UtilContext.getApp(),
-                        currentSong?.unplayableMsg ?: "",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    if (errorCode == PlayDefine.PlayError.PLAY_ERR_CANNOT_PLAY){
+                        UiUtils.showToast("${errorCode},${currentSong?.unplayableMsg}")
+                    }else{
+                        UiUtils.showToast("${errorCode},${coverErrorCode(errorCode)}")
+                    }
                 } else {
                     val playError = PlayErrorUtils.convertToPlayErrorData(errorCode,playErrorData.subCode)
-                    Toast.makeText(
-                        UtilContext.getApp(),
-                        "code=${playError.code},msg=${playError.errorMsg},${playError.suggestion}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    UiUtils.showToast("code=${playError.code},msg=${playError.errorMsg},${playError.suggestion}")
                 }
-                setPlayState("播放错误(code=${errorCode})")
+                setPlayState("错误(code=${errorCode},msg=${currentSong?.unplayableMsg})")
                 resetPlayProgress()
             }
         }
