@@ -11,6 +11,9 @@ import com.tencent.qqmusic.openapisdk.model.SearchMVInfo
 import com.tencent.qqmusic.openapisdk.model.SearchType
 import com.tencent.qqmusic.openapisdk.model.Singer
 import com.tencent.qqmusic.openapisdk.model.SongInfo
+import com.tencent.qqmusic.openapisdk.model.StreamMusicSkillHistoryItem
+import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
+import com.tencent.qqmusic.qplayer.ui.activity.search.StreamSkillUiState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -156,5 +159,137 @@ class SearchViewModel: ViewModel() {
 
     fun loadMoreStateFlow(type: Int): StateFlow<Boolean> {
         return searchModels[type]?.loadMoreState as StateFlow<Boolean>
+    }
+
+    // ==================== streamMusicSkill 流式 AI 搜歌 ====================
+
+    private val _streamSkillState = MutableStateFlow(StreamSkillUiState())
+    val streamSkillState: StateFlow<StreamSkillUiState> = _streamSkillState.asStateFlow()
+
+    /** 当前轮询的 cancel 函数，非 null 表示正在进行中 */
+    private var cancelStreamSkill: (() -> Unit)? = null
+
+    fun startStreamMusicSkill(question: String) {
+        // 如果上一次还在进行中，先取消
+        cancelStreamSkill?.invoke()
+        cancelStreamSkill = null
+
+        // 记录用户发起提问时的时间戳
+        val questionTimestampMs = System.currentTimeMillis()
+
+        // 重置本次 UI 状态（保留历史，清空上一次展示内容）
+        _streamSkillState.update { current ->
+            current.copy(
+                isLoading = true,
+                streamingText = "",
+                songList = emptyList(),
+                errorMsg = "",
+                miscInfo = null,
+                textAtEnd = null,
+                openApiSearchType = null,
+                musicSkillRecommendation = null,
+                playInfoList = emptyList()
+            )
+        }
+
+        val history = _streamSkillState.value.history
+
+        cancelStreamSkill = OpenApiSDK.getOpenApi().streamMusicSkill(
+            originQuestion = question,
+            history = history,
+            currentSongId = PlayerObserver.currentSong?.songId,
+            callback = object : com.tencent.qqmusic.openapisdk.core.openapi.StreamMusicSkillCallback {
+
+                override fun onTextUpdate(text: String, msgType: Int, miscInfo: Map<String, String>?, openApiSearchType: String?) {
+                    _streamSkillState.update {
+                        it.copy(
+                            streamingText = text,
+                            lastMsgType = msgType,
+                            miscInfo = miscInfo,
+                            openApiSearchType = openApiSearchType
+                        )
+                    }
+                }
+
+                override fun onComplete(result: com.tencent.qqmusic.openapisdk.model.StreamMusicSkillResult) {
+                    // 将本次对话（用户提问 + AI 回复）追加到历史
+                    val newHistory = _streamSkillState.value.history.toMutableList().apply {
+                        // 用户提问条目（msgType=1）：使用发起请求时的时间戳，msgId 独立生成
+                        add(StreamMusicSkillHistoryItem(
+                            msgId = "${result.msgId}_user",
+                            timestampMs = questionTimestampMs,
+                            msgType = 1,
+                            text = question
+                        ))
+                        // AI 回复条目（msgType=2）：使用服务端返回的时间戳
+                        add(StreamMusicSkillHistoryItem(
+                            msgId = result.msgId,
+                            timestampMs = result.msgTimestampMs,
+                            msgType = 2,
+                            text = result.finalText,
+                            musicContent = result.musicContent
+                        ))
+                    }
+                    _streamSkillState.update {
+                        it.copy(
+                            isLoading = false,
+                            streamingText = result.finalText,
+                            songList = result.songList,
+                            history = newHistory,
+                            miscInfo = result.miscInfo,
+                            textAtEnd = result.textAtEnd,
+                            openApiSearchType = result.openApiSearchType,
+                            musicSkillRecommendation = result.musicContent?.musicSkillRecommendation,
+                            playInfoList = result.musicContent?.items?.map { it.playInfo } ?: emptyList()
+                        )
+                    }
+                    cancelStreamSkill = null
+                }
+
+                override fun onSafetyHit(hitType: Int, fallbackText: String?) {
+                    _streamSkillState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMsg = "安全拦截（hitType=$hitType）：${fallbackText ?: ""}"
+                        )
+                    }
+                    cancelStreamSkill = null
+                }
+
+                override fun onError(ret: Int, subRet: Int, msg: String?) {
+                    _streamSkillState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMsg = "请求失败 ret=$ret subRet=$subRet msg=$msg"
+                        )
+                    }
+                    cancelStreamSkill = null
+                }
+            }
+        )
+    }
+
+    /**
+     * 取消当前流式请求（同时通知后台 abortReason=1）
+     */
+    fun cancelStreamMusicSkill() {
+        cancelStreamSkill?.invoke()
+        cancelStreamSkill = null
+        _streamSkillState.update {
+            it.copy(isLoading = false, errorMsg = "已取消")
+        }
+    }
+
+    /**
+     * 清空多轮对话历史，开启新一轮对话
+     */
+    fun clearStreamHistory() {
+        cancelStreamMusicSkill()
+        _streamSkillState.update { StreamSkillUiState() }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        cancelStreamSkill?.invoke()
     }
 }

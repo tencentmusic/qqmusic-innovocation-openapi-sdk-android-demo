@@ -1,6 +1,7 @@
 package com.tencent.qqmusic.qplayer
 
 import android.app.Activity
+import com.tencent.qqmusic.openapisdk.core.PartnerDeviceTokenInfo
 
 class DefaultBaseFunction : IBaseFunction {
     override fun getAccount(): Account {
@@ -40,5 +41,9 @@ class DefaultBaseFunction : IBaseFunction {
 
     override fun getChannelId(): String {
         return ""
+    }
+
+    override fun getPartnerDeviceTokenInfo(): PartnerDeviceTokenInfo? {
+        return null
     }
 }

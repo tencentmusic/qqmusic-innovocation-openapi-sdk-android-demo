@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -39,7 +38,6 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.LoginApi
-import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.ui.activity.main.CopyableText
 import com.tencent.qqmusic.qplayer.ui.activity.main.TopBar
 import com.tencent.qqmusic.qplayer.utils.UiUtils

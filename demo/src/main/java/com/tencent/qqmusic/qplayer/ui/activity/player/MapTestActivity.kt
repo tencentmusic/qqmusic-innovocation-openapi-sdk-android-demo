@@ -555,7 +555,7 @@ class MapTestActivity : ComponentActivity() {
         }
 
         findViewById<Button>(R.id.btn_map_search_song).setOnClickListener {
-            OpenApiSDK.getOpenApi().search("周杰伦歌曲", SearchType.SONG, source = SongListItemType.SONG_LIST_ITEM_TYPE_VOICE_SEARCH) {
+            OpenApiSDK.getOpenApi().search("周杰伦歌曲", SearchType.SONG, source = SongListItemType.SONG_LIST_ITEM_TYPE_VOICE_SEARCH, excludeTypes = null) {
                 OpenApiSDK.getPlayerApi().playRadio(it.data?.songList, autoPlay = false)
                 UiUtils.showToast(
                     "第一首歌曲:《${it.data?.songList?.first()?.songName}》")

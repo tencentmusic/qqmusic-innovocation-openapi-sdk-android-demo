@@ -62,7 +62,6 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberImagePainter
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
-import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.openapisdk.model.PlayParam
 import com.tencent.qqmusic.openapisdk.ordersong.entity.RoomMemberInfo
@@ -87,7 +86,6 @@ fun OrderSongPage() {
 
     val viewModel: OrderSongViewModel = viewModel()
     viewModel.init()
-    viewModel.updateTestSongs()
 //    viewModel.queryRoom()
 
     var roomNameInput by remember { mutableStateOf("") }
@@ -138,15 +136,16 @@ fun OrderSongPage() {
                     )
                     IconButton(
                         onClick = {
-                            val addSongList = viewModel.updateTestSongs().map { it.songId }
-                            if (addSongList.isNotEmpty()) {
-                                initSongIdList += addSongList.joinToString(
-                                    separator = ",",
-                                    prefix = ","
-                                )
-                                viewModel.testSongList.clear()
+                            viewModel.getUpdateTestSongs { testSongs ->
+                                val addSongList = testSongs?.map { it.songId }
+                                addSongList?.let {
+                                    initSongIdList += it.joinToString(
+                                        separator = ",",
+                                        prefix = ","
+                                    )
+                                }
+                                initSongIdList = initSongIdList.removePrefix(",").removeSuffix(",")
                             }
-                            initSongIdList = initSongIdList.removePrefix(",").removeSuffix(",")
                         },
                         modifier = Modifier.align(Alignment.TopEnd)
                     ) {

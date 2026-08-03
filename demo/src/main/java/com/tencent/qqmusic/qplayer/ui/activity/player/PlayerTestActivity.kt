@@ -63,7 +63,7 @@ class PlayerTestActivity : ComponentActivity() {
         try {
             this.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
         } catch (e: Exception) {
-            QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
+            QLog.e(TAG, "getSharedPreferences error e = ${e.message}")
             null
         }
     }
@@ -246,13 +246,19 @@ class PlayerTestActivity : ComponentActivity() {
         }
 
         btnQuality.setOnClickListener {
-            QualityAlert.showQualityAlert(activity = this, isDownload = false, setBlock = {
-                OpenApiSDK.getPlayerApi().setPreferSongQuality(it)
-            }, refresh={
-                runOnUiThread {
-                    refresh()
-                }
-            })
+            QualityAlert.showQualityAlert(
+                activity = this,
+                isDownload = false,
+                setBlock = {
+                    OpenApiSDK.getPlayerApi().setPreferSongQuality(it)
+                },
+                refresh = {
+                    runOnUiThread {
+                        refresh()
+                    }
+                },
+                checkSongAvailability = false
+            )
         }
 
         btnUseDolby.setOnClickListener {

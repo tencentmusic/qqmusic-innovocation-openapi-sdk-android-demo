@@ -87,7 +87,7 @@ class PlayerVoyageActivity : BaseActivity() {
         }
     }
 
-    val viewModel = ViewModelProvider(this)[CustomPlayerViewMode::class.java]
+    val viewModel by lazy { ViewModelProvider(this)[CustomPlayerViewMode::class.java] }
 
     private val widget by lazy { VoyageMotionEffectWidget(viewModel, rootView = rootView.voyageView) }
 

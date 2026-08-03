@@ -23,4 +23,13 @@
     <string name="textViewSetting">其他设置:</string>
     <string name="btn_map_test_clear_all_cache">清理缓存</string>
     <string name="btn_map_test_rebuild">销毁SDK重新初始化</string>
+    <string name="long_audio_recent_album">专辑：%1$s(%2$s)</string>
+    <string name="long_audio_recent_time">最近播放：%1$s</string>
+    <string name="recent_play_all">最近播放全部</string>
+    <string name="recent_play_all_song_summary">已播歌曲</string>
+    <string name="recent_play_all_song_desc">歌曲数：%1$d</string>
+    <string name="recent_play_all_album_desc">专辑歌手：%1$s，歌曲数：%2$d</string>
+    <string name="recent_play_all_folder_desc">创建者：%1$s，歌曲数：%2$d</string>
+    <string name="recent_play_all_long_audio_desc">长音频：%1$s，作者：%2$s</string>
+    <string name="collected_singer_total_count">关注歌手总数：%1$d</string>
 </resources>

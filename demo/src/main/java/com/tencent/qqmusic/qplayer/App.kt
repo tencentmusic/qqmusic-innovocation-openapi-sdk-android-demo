@@ -10,13 +10,14 @@ import android.widget.Toast
 import androidx.annotation.Keep
 import androidx.lifecycle.Observer
 import com.tencent.qqmusic.innovation.common.logging.MLog
-import com.tencent.qqmusic.innovation.common.util.ToastUtils
+import com.tencent.qqmusic.openapisdk.business_common.event.event.DeviceTokenExpireEvent
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LogEvent
 import com.tencent.qqmusic.openapisdk.business_common.utils.ProcessUtil
 import com.tencent.qqmusic.openapisdk.core.DeviceType
 import com.tencent.qqmusic.openapisdk.core.IAPPCallback
 import com.tencent.qqmusic.openapisdk.core.InitConfig
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.ScreenName
 import com.tencent.qqmusic.openapisdk.core.network.INetworkCheckInterface
 import com.tencent.qqmusic.openapisdk.core.network.InitNetworkConfig
 import com.tencent.qqmusic.openapisdk.core.network.NetworkTimeoutConfig
@@ -30,10 +31,14 @@ import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.player.DefaultImageLoader
 import com.tencent.qqmusic.qplayer.utils.PrivacyManager
 import com.tencent.qqmusic.qplayer.utils.SettingsUtil
+import com.tencent.qqmusic.qplayer.utils.UiUtils
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlin.random.Random
 
 /**
  * Created by tannyli on 2021/8/31.
@@ -83,6 +88,8 @@ class App : Application() {
 
     companion object {
         private const val TAG = "App"
+        private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
         lateinit var context: Context
 
         @JvmStatic
@@ -92,9 +99,9 @@ class App : Application() {
             //按需初始化playerKit 播放器模块
             PlayerStyleManager.observeForever(Observer {
                 if (it.from == PlayerStyleManager.SET_STYLE_PERMISSION_DENIED) {
-                    ToastUtils.showLong("播放器样式权益已失效")
+                    UiUtils.showToast("播放器样式权益已失效",isLong = true)
                 } else if (it.from == PlayerStyleManager.SET_STYLE_DEFAULT_NULL) {
-                    ToastUtils.showLong("没有设置播放器样式")
+                    Log.i(TAG, "没有设置播放器样式")
                 }
                 MLog.i("PlayerStyleManager", "updatePlayerStyle $it， ")
             })
@@ -103,25 +110,34 @@ class App : Application() {
                 OpenApiSDK.addProvider(PlayerUIProvider())
             }
             OpenApiSDK.registerBusinessEventHandler {
-                when (it.code) {
-                    LogEvent.LogFileCanNotWrite -> {
-                        GlobalScope.launch(Dispatchers.Main) {
-                            delay(2000)
-                            Toast.makeText(context, "日志路径不可读写，使用默认路径", Toast.LENGTH_SHORT).show()
+                if (it is DeviceTokenExpireEvent) {
+                    val token = it.data as? String
+                    UiUtils.showToast("设备token过期：${token}", isLong = true)
+                    OpenApiSDK.updatePartnerDeviceToken("ss")
+                }else{
+                    when (it.code) {
+                        LogEvent.LogFileCanNotWrite -> {
+                            applicationScope.launch(Dispatchers.Main) {
+                                delay(2000)
+                                Toast.makeText(context, "日志路径不可读写，使用默认路径", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 }
             }
 
-            val sharedPreferences: SharedPreferences? = try {
-                context.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
-            } catch (e: Exception) {
-                QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
-                null
-            }
-
             BaseFunctionManager.proxy.initDebug(BuildConfig.IS_DEBUG)
 
+            val sharedPreferences: SharedPreferences? by lazy {
+                try {
+                    context.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+                } catch (e: Exception) {
+                    QLog.e(TAG, "getSharedPreferences error e = ${e.message}")
+                    null
+                }
+            }
+
+            val commonSwitch = sharedPreferences?.getBoolean("commonSwitch", true) ?: true
             val isUseForegroundService = sharedPreferences?.getBoolean("isUseForegroundService", true) ?: true
             val logFileDir = sharedPreferences?.getString("logFileDir", "")
             val savedTimeoutConfig = sharedPreferences?.getString("NetworkTimeoutConfig", "")
@@ -131,10 +147,12 @@ class App : Application() {
             val isMutiChannel = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S_V2
             MLog.i(TAG, "isMutiChannel:$isMutiChannel ,${Build.VERSION.SDK_INT}")
             val demoHardwareInfo = sharedPreferences?.getString("demoHardwareInfo", "L9") ?: "L9"
+            val demoScreenName = sharedPreferences?.getString("demoScreenName", ScreenName.CENTER_CONTROL) ?: ScreenName.CENTER_CONTROL
             val demoBrand = sharedPreferences?.getString("demoBrand", "Xiaomi") ?: "Xiaomi"
             val demoOpiDeviceId = sharedPreferences?.getString("demoOpiDeviceId", "123456789") ?: "123456789"
             val showAudioEffectToast = sharedPreferences?.getBoolean("demoAudioEffectToast", true) ?: true
             val printPlayStuckTrack = sharedPreferences?.getBoolean("demoPrintPlayStuckTrack",false)?:false
+            val demoEnableQuic = sharedPreferences?.getBoolean("demoEnableQuic", true) ?: true
             val initConfig = InitConfig(
                 context.applicationContext,
                 MustInitConfig.APP_ID,
@@ -147,12 +165,14 @@ class App : Application() {
                 this.deviceConfigInfo.apply {
                     this.brand = demoBrand
                     this.hardwareInfo = demoHardwareInfo
+                    this.screenName = demoScreenName
                     this.lowMemoryMode = lowMemoryMode
                     // 设置设备类型
                     this.deviceType = when (Md5Utils.getMD5String(MustInitConfig.APP_ID)) {
                         "a3ef4dd61511b86a1e288ed3df6223fb" -> DeviceType.PHONE
                         else -> DeviceType.CAR
                     }
+                    this.partnerDeviceTokenInfo = BaseFunctionManager.proxy.getPartnerDeviceTokenInfo()
                 }
                 this.insightConfig = CustomInsightConfig(true, showAudioEffectToast, printPlayStuckTrack)
                 this.enableBluetoothListener = false
@@ -164,7 +184,7 @@ class App : Application() {
                     this.accountMode = InitConfig.AccountMode.PARTNER_INDEPENDENT
                 }
                 if (sharedPreferences?.getBoolean("useCustomNetworkCheck", false) == true) {
-                    val networkStatus = sharedPreferences.getBoolean("networkAvailable", true)
+                    val networkStatus = sharedPreferences?.getBoolean("networkAvailable", true) ?: false
                     SettingsUtil.isNetworkAvailable = networkStatus
                     this.networkChecker = object : INetworkCheckInterface {
                         override fun isNetworkAvailable(): Boolean {
@@ -182,19 +202,35 @@ class App : Application() {
                 }
 
                 needWnsPushService = sharedPreferences?.getBoolean("enableWns", true) ?: true
-                initNetworkConfig = InitNetworkConfig(enableQuic = true)
+                initNetworkConfig = InitNetworkConfig(enableQuic = demoEnableQuic)
             }
-            val start = System.currentTimeMillis()
-            OpenApiSDK.init(initConfig)
-            OpenApiSDK.setAppForeground(true)
-            GlobalScope.launch(Dispatchers.Default) {
-                try {
-                    val enableLog = sharedPreferences?.getBoolean("enableLog", true) ?: true
-                    OpenApiSDK.getLogApi().setLogEnable(enableLog)
-                } catch (ignore: Exception) {
+            val useMainThread = Random.nextBoolean()
+            UiUtils.showToast(if (useMainThread) "使用主线程初始化" else "使用子线程初始化", isLong = true)
+            threadSwitch(useMainThread = useMainThread){
+                QLog.i(TAG, "useMainThread:${useMainThread},initConfig:${initConfig}")
+                val start = System.currentTimeMillis()
+                OpenApiSDK.init(initConfig)
+                Log.i(TAG, "init cost:${System.currentTimeMillis() - start}")
+                OpenApiSDK.getLoginApi().setEnableLoginToServer(commonSwitch)
+                applicationScope.launch(Dispatchers.Default) {
+                    try {
+                        val enableLog = sharedPreferences?.getBoolean("enableLog", true) ?: true
+                        OpenApiSDK.getLogApi().setLogEnable(enableLog)
+                    } catch (ignore: Exception) {
+                    }
                 }
             }
-            Log.i(TAG, "init cost:${System.currentTimeMillis() - start}")
+        }
+
+        fun threadSwitch(useMainThread: Boolean=true, callback: () -> Unit){
+            // 进程切换
+            if (useMainThread){
+                callback.invoke()
+            }else{
+                runBlocking(Dispatchers.Default) {
+                    callback.invoke()
+                }
+            }
         }
     }
 }

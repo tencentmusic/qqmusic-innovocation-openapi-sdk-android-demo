@@ -20,12 +20,9 @@ import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.model.SuperQualityType
 import com.tencent.qqmusic.openapisdk.model.VipType
 import com.tencent.qqmusic.playerinsight.util.coverErrorCode
-import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
-import com.tencent.qqmusic.qplayer.core.report.PlayErr
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerNewActivity
 import java.math.BigDecimal
@@ -41,11 +38,13 @@ import java.util.Calendar
 object UiUtils {
 
 
-    private val sharedPreferences: SharedPreferences? = try {
-        App.context.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
-    } catch (e: Exception) {
-        QLog.e("DebugScreen", "getSharedPreferences error e = ${e.message}")
-        null
+    private val sharedPreferences: SharedPreferences? by lazy {
+        try {
+            UtilContext.getApp().getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+        } catch (e: Exception) {
+            QLog.e("UiUtils", "getSharedPreferences error e = ${e.message}")
+            null
+        }
     }
 
     fun getFormatAccessLabel(info: SongInfo?, quality: Int, isDownload: Boolean = false): String {
@@ -202,6 +201,7 @@ object UiUtils {
             PlayerEnums.Quality.DTSX -> R.drawable.action_icon_dtsx
             PlayerEnums.Quality.VOYAGE -> R.drawable.voyage
             PlayerEnums.Quality.CUSTOM_QUALITY_1 -> R.drawable.icon_quality_custom1
+            PlayerEnums.Quality.NAC -> R.drawable.icon_quality_custom1  // NAC复用定制音质1图标
             else -> {
                 R.drawable.ic_lq
             }
@@ -348,12 +348,13 @@ object UiUtils {
             Quality.WANOS -> "Wanos"
             Quality.VOCAL_ACCOMPANY -> "伴唱"
             Quality.MASTER_TAPE -> "臻品母带"
-            Quality.MASTER_SR -> "臻品母带省流版"
+            Quality.MASTER_SR -> "母带省流版"
             Quality.VINYL -> "黑胶"
             Quality.DTSC -> "DTSC音质"
             Quality.DTSX -> "DTSX音质"
             Quality.VOYAGE -> "臻品乐航"
             Quality.CUSTOM_QUALITY_1 -> "定制音质1"
+            Quality.NAC -> "NAC"
             else -> "未知音质->Quality=${this}"
         }
     }
@@ -369,6 +370,7 @@ object UiUtils {
             SuperQualityType.QUALITY_TYPE_AI_LYRIC->"AI歌词背景"
             SuperQualityType.QUALITY_TYPE_VOYAGE->"臻品乐航"
             SuperQualityType.QUALITY_TYPE_CUSTOM_QUALITY_1->"定制音质1"
+            SuperQualityType.QUALITY_TYPE_NAC->"NAC"
             else -> "未知音质->$type"
         }
     }

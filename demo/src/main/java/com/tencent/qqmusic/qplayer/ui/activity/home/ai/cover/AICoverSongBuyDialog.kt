@@ -19,6 +19,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -144,8 +145,11 @@ fun AiCoverBuyPage(dataInfo: AICoverDataInfo?, backPrePage: () -> Unit) {
         mutableStateOf(ImageBitmap(1, 1))
     }
 
+    // 变调调节：范围 -3（降3调）到 3（升3调），默认 0（原调）
+    val userAdapterTone = remember { mutableIntStateOf(0) }
+
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
-        val (img, songName, singer, buyCover, payStatus, segs) = createRefs()
+        val (img, songName, singer, buyCover, payStatus, segs, toneRow) = createRefs()
         Image(
             painter = rememberImagePainter(dataInfo?.accInfo?.cover),
             "",
@@ -320,6 +324,46 @@ fun AiCoverBuyPage(dataInfo: AICoverDataInfo?, backPrePage: () -> Unit) {
                 Text(" 原价 ${(num.first ?: 0) / 100}  需支付 ${(num.second ?: 0) / 100} 元")
             }
         }
+        // 变调调节：点击选择 -3 ~ 3（独立于 segs，避免撑开 segs Column）
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+                .constrainAs(toneRow) {
+                    top.linkTo(segs.bottom)
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                }
+        ) {
+            Text("变调调节：", modifier = Modifier.padding(end = 6.dp))
+            val toneValues = listOf(-3, -2, -1, 0, 1, 2, 3)
+            toneValues.forEach { tone ->
+                val selected = userAdapterTone.value == tone
+                val label = when {
+                    tone == 0 -> "原调"
+                    tone > 0 -> "+$tone"
+                    else -> "$tone"
+                }
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 2.dp)
+                        .background(
+                            color = if (selected) Color(0xFF1AAD19) else Color(0xFFDDDDDD),
+                            shape = CircleShape
+                        )
+                        .clickable { userAdapterTone.value = tone }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = label,
+                        color = if (selected) Color.White else Color.Black
+                    )
+                }
+            }
+        }
+
+        // 删除原来 segs Column 内的变调调节
+        // （已在上面移出）
+
         val isRebuild = when (midProduce.value) {
             AICoverSongCreateType.SEG -> {
                 dataInfo?.makeInfo?.userSegUgcId?.isNotEmpty() ?: false
@@ -349,7 +393,7 @@ fun AiCoverBuyPage(dataInfo: AICoverDataInfo?, backPrePage: () -> Unit) {
                 aiViewModel.fetchAICoverWorkResp(
                     dataInfo?.accInfo?.songMid ?: "",
                     midProduce.value,
-                    0,
+                    userAdapterTone.value,
                     paytype.value,
                     voucherId.value
                 ) { oId, tId ->
@@ -361,7 +405,7 @@ fun AiCoverBuyPage(dataInfo: AICoverDataInfo?, backPrePage: () -> Unit) {
         }
         if (isRebuild) {
             Button(modifier = Modifier.constrainAs(buyCover) {
-                top.linkTo(segs.bottom)
+                top.linkTo(toneRow.bottom)
                 start.linkTo(parent.start)
                 end.linkTo(parent.end)
                 bottom.linkTo(parent.bottom)
@@ -369,21 +413,20 @@ fun AiCoverBuyPage(dataInfo: AICoverDataInfo?, backPrePage: () -> Unit) {
                 aiViewModel.fetchAICoverWorkResp(
                     dataInfo?.accInfo?.songMid ?: "",
                     midProduce.value,
-                    0,
+                    userAdapterTone.value,
                     AICoverCreatePayType.REBUILD,
                     voucherId.value
                 ) { oId, tId ->
                     orderId.value = oId ?: ""
                     taskIds.value = tId ?: ""
                 }
-
             }) {
                 Text("重新生成")
             }
         } else {
             if (paytype.value == AICoverCreatePayType.COUPON || paytype.value == AICoverCreatePayType.RIGHT) {
                 Button(modifier = Modifier.constrainAs(buyCover) {
-                    top.linkTo(segs.bottom)
+                    top.linkTo(toneRow.bottom)
                     start.linkTo(parent.start)
                     end.linkTo(parent.end)
                     bottom.linkTo(parent.bottom)
@@ -391,7 +434,7 @@ fun AiCoverBuyPage(dataInfo: AICoverDataInfo?, backPrePage: () -> Unit) {
                     aiViewModel.fetchAICoverWorkResp(
                         dataInfo?.accInfo?.songMid ?: "",
                         midProduce.value,
-                        0,
+                        userAdapterTone.value,
                         paytype.value,
                         voucherId.value
                     ) { oId, tId ->
@@ -407,7 +450,7 @@ fun AiCoverBuyPage(dataInfo: AICoverDataInfo?, backPrePage: () -> Unit) {
                     bitmap = image.value,
                     null,
                     modifier = Modifier.constrainAs(buyCover) {
-                        top.linkTo(segs.bottom)
+                        top.linkTo(toneRow.bottom)
                         start.linkTo(parent.start)
                         end.linkTo(parent.end)
                         bottom.linkTo(parent.bottom)
@@ -461,11 +504,11 @@ private fun SegPage(
             callback(type)
         }) {
         Row {
-            Text(data.name ?: "")
+            Text(data.name ?: "null")
             Text(data.tag ?: "")
         }
         Row {
-            Text(data.subText ?: "")
+            Text(data.subText ?: "null")
             Button({
                 scope.launch(Dispatchers.IO) {
                     var audioStatus = -1
@@ -475,11 +518,9 @@ private fun SegPage(
                             if (audioStatus == 3) {
                                 aiViewModel.playLink(it.audioLink ?: "", null, null, object : AICoverLinkPlayer.PlayEventListener {
                                     override fun onDownloadFailed(url: String?, result: DownloadResult?) {
-
                                     }
 
                                     override fun onDownloadSucceed(url: String?, result: DownloadResult?) {
-
                                     }
 
                                     override fun onDownloadProgress(url: String?, totalSize: Long, downSize: Long, writeSize: Long) {
@@ -516,4 +557,3 @@ private fun SegPage(
     }
 
 }
-

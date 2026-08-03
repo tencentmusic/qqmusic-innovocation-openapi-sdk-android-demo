@@ -237,7 +237,6 @@ data class SongQualityInfo(val songInfo: SongInfo, @Quality  val quality: Int){
             Quality.CUSTOM_QUALITY_1 -> {
                 canDownloadCustom1()
             }
-
             else -> {
                 false
             }

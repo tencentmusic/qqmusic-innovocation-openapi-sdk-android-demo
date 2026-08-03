@@ -1,5 +1,6 @@
 package com.tencent.qqmusic.qplayer.ui.activity.main
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -54,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.edit
-import com.tencent.qqmusic.innovation.common.util.Global
 import com.tencent.qqmusic.innovation.common.util.GsonHelper
 import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.innovation.common.util.UtilContext
@@ -63,7 +63,6 @@ import com.tencent.qqmusic.openapisdk.core.network.NetworkTimeoutConfig
 import com.tencent.qqmusic.openapisdk.core.player.transition.PlayerTransition
 import com.tencent.qqmusic.playerinsight.util.coverErrorCode
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.report.report.LaunchReport
 import com.tencent.qqmusic.qplayer.ui.activity.OpenApiDemoActivity
 import com.tencent.qqmusic.qplayer.ui.activity.SongCacheDemoActivity
@@ -82,6 +81,7 @@ import java.util.Locale
 
 class OtherActivity : ComponentActivity() {
 
+    @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
     @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -99,7 +99,7 @@ class OtherActivity : ComponentActivity() {
 fun OtherScreen() {
     val activity = LocalContext.current as Activity
     val sharedPreferences: SharedPreferences? = try {
-        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+        UtilContext.getApp().getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
     } catch (e: Exception) {
         QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
         null
@@ -113,6 +113,17 @@ fun OtherScreen() {
             .verticalScroll(state = rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+
+        val commonSwitch: MutableState<Boolean> = remember {
+            mutableStateOf(sharedPreferences?.getBoolean("commonSwitch",  true) != false)
+        }
+        SingleItem(title = "通用开关", item = if (commonSwitch.value) "开启" else "关闭") {
+            val nextBool = commonSwitch.value.not()
+            sharedPreferences?.edit { putBoolean("commonSwitch", nextBool) }
+            Toast.makeText(activity, "设置成功，重启生效", Toast.LENGTH_SHORT).show()
+            commonSwitch.value = nextBool
+        }
+
         SingleItem(title = "是否启用新版本播放页面", item = if (isUseNewPlayerPage.value) "新版播放页面" else "旧版播放页面") {
             val isNewPlayerPage: Boolean = UiUtils.getUseNewPlayPageValue()
             sharedPreferences?.edit { putBoolean("newPlayerPage", isNewPlayerPage.not()) }

@@ -149,7 +149,7 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
         })
         onVocalAccompanyStatusChange(
             OpenApiSDK.getVocalAccompanyApi().currentVocalRadio().value,
-            OpenApiSDK.getVocalAccompanyApi().isCurrentSongPlayWithVocalAccompany()
+            OpenApiSDK.getVocalAccompanyApi().isVocalAccompanyOpened()
         )
         OpenApiSDK.getVocalAccompanyApi().canTryVocalAccompany { canTry ->
             if (canTry) {

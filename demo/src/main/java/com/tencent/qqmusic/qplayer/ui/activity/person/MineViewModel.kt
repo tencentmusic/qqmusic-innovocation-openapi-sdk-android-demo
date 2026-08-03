@@ -4,9 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.SystemClock
 import android.util.Log
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.business_common.Global
 import com.tencent.qqmusic.openapisdk.business_common.event.event.LoginEvent
 import com.tencent.qqmusic.openapisdk.business_common.login.OpenIdInfo
@@ -17,12 +17,10 @@ import com.tencent.qqmusic.openapisdk.model.OperationsInfo
 import com.tencent.qqmusic.openapisdk.model.UserInfo
 import com.tencent.qqmusic.openapisdk.model.VipInfo
 import com.tencent.qqmusic.openapisdk.model.vip.CheckNeedRenewalInfo
-import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.lang.StringBuilder
 
 class MineViewModel : ViewModel() {
     private val TAG = "MineViewModel"
@@ -44,6 +42,8 @@ class MineViewModel : ViewModel() {
 
     val remindRenewalInfo = MutableStateFlow<CheckNeedRenewalInfo?>(null)
 
+    val vipRenewalDialogUrl = MutableStateFlow<String?>(null)
+
     init {
         OpenApiSDK.registerBusinessEventHandler { event ->
             when (event.code) {
@@ -56,6 +56,7 @@ class MineViewModel : ViewModel() {
                     _userVipInfo.value = null
                     _partnerAccountInfo.value = null
                     _limitFree.value = null
+                    vipRenewalDialogUrl.value = null
                 }
                 LoginEvent.UserVipInfoUpdate -> {
                     updateData()
@@ -78,12 +79,19 @@ class MineViewModel : ViewModel() {
                 // 仅用于测试
                 _loginInfo.value = Global.getLoginModuleApi().openIdInfo
                 _partnerAccountInfo.value = OpenApiSDK.getPartnerApi().queryThirdPartyAccountID()
+                if (it.isSuccess()) {
+                    refreshVipRenewalDialogInfo()
+                } else {
+                    Log.e(TAG, "get user info before vip renewal dialog failed: ${it.errorMsg}")
+                }
             })
-            val sharedPreferences: SharedPreferences? = try {
-                App.context.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
-            } catch (e: Exception) {
-                QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
-                null
+            val sharedPreferences: SharedPreferences? by lazy {
+                try {
+                    UtilContext.getApp().getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+                } catch (e: Exception) {
+                    QLog.e("MineViewModel", "getSharedPreferences error e = ${e.message}")
+                    null
+                }
             }
             val isPartnerAccountIndependent = sharedPreferences?.getBoolean("accountModePartner", false) ?: false
             // 第三方独立登录。获取会员的接口使用独立接口
@@ -110,6 +118,30 @@ class MineViewModel : ViewModel() {
             }
         }
     }
+
+    fun refreshVipRenewalDialogInfo(scene: String = "homepage_cold_start") {
+        viewModelScope.launch {
+            OpenApiSDK.getOpenApi().getVipRenewalDialogInfo(scene) { response ->
+                if (response.isSuccess()) {
+                    val url = response.data?.uriList
+                        ?.mapNotNull { item -> item.url?.takeIf { itemUrl -> itemUrl.isNotBlank() } }
+                        ?.firstOrNull()
+                    vipRenewalDialogUrl.value = url
+                    if (url == null) {
+                        Log.d(TAG, "getVipRenewalDialogInfo no url, skip dialog")
+                    }
+                } else {
+                    vipRenewalDialogUrl.value = null
+                    Log.e(TAG, "getVipRenewalDialogInfo error: ${response.errorMsg}")
+                }
+            }
+        }
+    }
+
+    fun clearVipRenewalDialogUrl() {
+        vipRenewalDialogUrl.value = null
+    }
+
 
     fun getLoginType(openIdInfo: OpenIdInfo?): String {
         return openIdInfo?.let {

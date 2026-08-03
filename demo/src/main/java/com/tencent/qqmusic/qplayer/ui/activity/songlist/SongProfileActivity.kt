@@ -63,7 +63,6 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
-import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
 import com.tencent.qqmusic.qplayer.ui.activity.main.CopyableText
 import com.tencent.qqmusic.qplayer.ui.activity.player.QualityAlert
@@ -262,20 +261,14 @@ fun SongRightView(songInfo: SongInfo, modifier: Modifier) {
             Text(text = "歌曲权限", fontSize = 20.sp, fontWeight = FontWeight.Bold)
             val msg = "纯人声:${songInfo.isForbidVocalAccomPureVocal().not()},纯伴奏:${songInfo.isForbidVocalAccomPureAccom().not()}"
             CopyableText(title = "伴唱限制", content = msg)
+            CopyableText(title = "播放权限", content = "全曲:${songInfo.playable==1},试听:${songInfo.tryPlayable==1}")
+            CopyableText(title = "受阻信息", content = "code:${songInfo.unplayableCode},msg:${songInfo.unplayableMsg}")
         }
     }
 }
 
 @Composable
 fun SongTagView(songInfo: SongInfo, modifier: Modifier) {
-    val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
-    val sharedPreferences: SharedPreferences? = try {
-        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
-    }
     Card(
         modifier = modifier.fillMaxWidth().wrapContentHeight(),
         elevation = 4.dp

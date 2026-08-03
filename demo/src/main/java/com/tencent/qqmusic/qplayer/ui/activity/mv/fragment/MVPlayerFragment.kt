@@ -3,10 +3,18 @@ package com.tencent.qqmusic.qplayer.ui.activity.mv.fragment
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.media.AudioAttributes
+import android.media.AudioAttributes.CONTENT_TYPE_MOVIE
+import android.media.AudioAttributes.CONTENT_TYPE_MUSIC
+import android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION
+import android.media.AudioAttributes.USAGE_ASSISTANCE_SONIFICATION
+import android.media.AudioAttributes.USAGE_MEDIA
+import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Surface
 import android.view.SurfaceHolder
@@ -41,7 +49,6 @@ import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.player.PlayerState
-import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
@@ -50,7 +57,6 @@ import com.tencent.qqmusic.qplayer.ui.activity.mv.MvBuyQRDialog
 import com.tencent.qqmusic.qplayer.ui.activity.mv.PlayerViewModel
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
@@ -104,7 +110,7 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
         try {
             this.activity?.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
         } catch (e: Exception) {
-            QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
+            QLog.e(TAG, "getSharedPreferences error e = ${e.message}")
             null
         }
     }
@@ -253,9 +259,11 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
     }
 
 
+    @SuppressLint("WrongConstant")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mPlayer = playerViewModel.mPlayer
+        mPlayer?.setAudioAttributes(AudioAttributes.Builder().setUsage(USAGE_MEDIA).setContentType(CONTENT_TYPE_MOVIE).build())
         mediaNetWork = playerViewModel.provider?.getMediaNetWorkImpl()
         AppScope.launchIO {
             try {
@@ -414,7 +422,6 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
             currentTime?.text = convertSecondsToMinutesSeconds(progress)
         }
     }
-
 
     private fun updateQualityText() {
         val real = mPlayer?.getCurrentQuality()

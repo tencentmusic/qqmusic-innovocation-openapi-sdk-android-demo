@@ -27,6 +27,8 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -77,7 +79,9 @@ class AboutActivity : ComponentActivity() {
 fun AboutScreen() {
     val tag = "AboutScreen"
     val activity = LocalContext.current as Activity
-    val sharedPreferences: SharedPreferences? = LocalContext.current.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+    val sharedPreferences: SharedPreferences? by lazy {
+        activity.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -99,8 +103,17 @@ fun AboutScreen() {
         EditorView(title = "车型(car_type)", content = sharedPreferences?.getString("demoHardwareInfo", "L9") ?: "L9"){
             sharedPreferences?.edit { putString("demoHardwareInfo", it) }
         }
+        EditorView(title = "屏幕名称(screen_id)", content = sharedPreferences?.getString("demoScreenName", "中控屏") ?: "中控屏"){
+            sharedPreferences?.edit { putString("demoScreenName", it) }
+        }
         EditorView(title = "品牌信息(brand)", content = sharedPreferences?.getString("demoBrand", "Xiaomi") ?: "Xiaomi"){
             sharedPreferences?.edit { putString("demoBrand", it) }
+        }
+        val isEnableQuic = remember { mutableStateOf(sharedPreferences?.getBoolean("demoEnableQuic", true) ?: true) }
+        ClickableView(title = "Quic协议", content = if(isEnableQuic.value) "开启" else "关闭") {
+            val shouldEnableQuic = isEnableQuic.value.not()
+            sharedPreferences?.edit { putBoolean("demoEnableQuic", shouldEnableQuic) }
+            isEnableQuic.value = shouldEnableQuic
         }
         // 内部方法 仅用于测试。谨慎调用
         CopyableItem(
@@ -306,6 +319,52 @@ fun EditorView(title: String, content: String, updateHandler: (String) -> Unit) 
                         }.setNegativeButton("取消", null)
                         .create()
                     inputDialog.show()
+                },
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                androidx.compose.material.Icon(
+                    imageVector = androidx.compose.material.icons.Icons.Default.Edit,
+                    contentDescription = "编辑",
+                    tint = Color.Gray
+                )
+            }
+        }
+        SelectionContainer {
+            Text(
+                text = content,
+                style = TextStyle(
+                    fontFamily = FontFamily.Default,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 16.sp,
+                    color = Color.Black
+                ),
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun ClickableView(title: String, content: String, onClick: () -> Unit) {
+    Column {
+        Row(
+            modifier = Modifier.padding(start = 16.dp, top = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                style = TextStyle(
+                    fontFamily = FontFamily.Default,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color.Black
+                )
+            )
+            IconButton(
+                onClick = {
+                    onClick.invoke()
+                    UiUtils.showToast("更新成功，重启生效")
                 },
                 modifier = Modifier.padding(start = 8.dp)
             ) {
