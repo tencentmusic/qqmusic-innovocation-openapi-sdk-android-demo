@@ -97,7 +97,8 @@ class PlayerStyleActivity : BaseActivity() {
         }
 
         private fun isUse(playerStyleData: PlayerStyleData): Boolean {
-            val id = if (StyleDataType.isLyricType(playerStyleData.type)) LyricStyleManager.getLyricStyle().id else PlayerStyleManager.getPlayerStyle().id
+            val id =
+                if (StyleDataType.isLyricType(playerStyleData.type)) LyricStyleManager.getLyricStyle().id else PlayerStyleManager.getPlayerStyle().id
             return playerStyleData.id == id
         }
 
@@ -109,7 +110,8 @@ class PlayerStyleActivity : BaseActivity() {
             // contents of the view with that element
             val playerStyleData = list[position]
 
-            viewHolder.textView.text = "${playerStyleData.name}-${playerStyleData.id}-${playerStyleData.type}"
+            viewHolder.textView.text =
+                "${playerStyleData.name}-${playerStyleData.id}-${playerStyleData.type}"
             if (isUse(playerStyleData)) {
                 viewHolder.btnUse.text = "使用中"
                 viewHolder.btnUse.setTextColor(Color.GREEN)
@@ -148,7 +150,8 @@ class PlayerStyleActivity : BaseActivity() {
 
                 val block = {
                     if (StyleDataType.isLyricType(playerStyleData.type)) {
-                        LyricStyleManager.setLyricStyle(playerStyleData,
+                        LyricStyleManager.setLyricStyle(
+                            playerStyleData,
                             object : PlayerStyleManager.PlayerStyleLoaderListener {
                                 override fun onStart(playerStyleData: PlayerStyleData) {
                                     MLog.i("PlayerStyleActivity", "onStart")
@@ -165,7 +168,10 @@ class PlayerStyleActivity : BaseActivity() {
                                 }
 
                                 override fun onSuccess(styleData: StyleData) {
-                                    MLog.i("PlayerStyleActivity", "setStyle success $playerStyleData")
+                                    MLog.i(
+                                        "PlayerStyleActivity",
+                                        "setStyle success $playerStyleData"
+                                    )
                                     AppScope.launchUI {
                                         ToastUtils.showShort("设置成功")
                                         notifyDataSetChanged()
@@ -182,7 +188,8 @@ class PlayerStyleActivity : BaseActivity() {
                                 }
                             })
                     } else {
-                        PlayerStyleManager.setPlayerStyle(playerStyleData,
+                        PlayerStyleManager.setPlayerStyle(
+                            playerStyleData,
                             object : PlayerStyleManager.PlayerStyleLoaderListener {
                                 override fun onStart(playerStyleData: PlayerStyleData) {
                                     MLog.i("PlayerStyleActivity", "onStart")
@@ -199,7 +206,10 @@ class PlayerStyleActivity : BaseActivity() {
                                 }
 
                                 override fun onSuccess(styleData: StyleData) {
-                                    MLog.i("PlayerStyleActivity", "setStyle success $playerStyleData")
+                                    MLog.i(
+                                        "PlayerStyleActivity",
+                                        "setStyle success $playerStyleData"
+                                    )
                                     AppScope.launchUI {
                                         ToastUtils.showShort("设置成功")
                                         notifyDataSetChanged()
@@ -214,23 +224,27 @@ class PlayerStyleActivity : BaseActivity() {
                                     ToastUtils.showShort("失败($errMsg)")
                                     MLog.i("PlayerStyleActivity", "setStyle fail $errMsg")
                                 }
+
+                                override fun onCancel(playerStyleData: PlayerStyleData) {
+                                    MLog.i("PlayerStyleActivity", "onCancel")
+                                }
                             })
                     }
-
                 }
 
                 //根据试用状态，领取试用逻辑
                 if (playerStyleData.canUse == true) {
                     block.invoke()
                 } else {
-                    OpenApiSDK.getOpenApi().openFreeLimitedTimeByPlayStyle(playerStyleData.id.toString()) {
-                        if (it.data == true) {
-                            listener?.onStyleClick()
-                            ToastUtils.showShort("领取成功")
-                        } else {
-                            ToastUtils.showShort("领取失败(${it.errorMsg})")
+                    OpenApiSDK.getOpenApi()
+                        .openFreeLimitedTimeByPlayStyle(playerStyleData.id.toString()) {
+                            if (it.data == true) {
+                                listener?.onStyleClick()
+                                ToastUtils.showShort("领取成功")
+                            } else {
+                                ToastUtils.showShort("领取失败(${it.errorMsg})")
+                            }
                         }
-                    }
                 }
             }
         }

@@ -29,12 +29,16 @@ import com.tencent.qqmusic.openapisdk.model.AreaId
 import com.tencent.qqmusic.openapisdk.model.AreaShelf
 import com.tencent.qqmusic.openapisdk.model.AreaShelfType
 import com.tencent.qqmusic.openapisdk.model.Banner
+import com.tencent.qqmusic.openapisdk.model.BannerPosition
 import com.tencent.qqmusic.openapisdk.model.BuyType
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.Folder
 import com.tencent.qqmusic.openapisdk.model.HomepageRecommendation
+import com.tencent.qqmusic.openapisdk.model.LongAudioItem
 import com.tencent.qqmusic.openapisdk.model.OtherPlatListeningList
 import com.tencent.qqmusic.openapisdk.model.RankGroup
+import com.tencent.qqmusic.openapisdk.model.RecentPlayAllItem
+import com.tencent.qqmusic.openapisdk.model.RecentPlayType
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.model.SuperQualityType
 import com.tencent.qqmusic.openapisdk.model.UserInfo
@@ -42,6 +46,9 @@ import com.tencent.qqmusic.openapisdk.model.vip.UnionVipOrderInfo
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicLong
 
@@ -55,7 +62,10 @@ class HomeViewModel : ViewModel() {
 
     var categories: List<Category> by mutableStateOf(emptyList())
     var recommendation: HomepageRecommendation by mutableStateOf(HomepageRecommendation(emptyList(), emptyList()))
-    var bannerConfig: List<Banner> by mutableStateOf(emptyList())
+    var bannerConfig: List<BannerPosition> by mutableStateOf(emptyList())
+    var selectedBannerPositionIndex: Int by mutableStateOf(0)
+    val selectedBanners: List<Banner>
+        get() = bannerConfig.getOrNull(selectedBannerPositionIndex)?.bannerItems ?: emptyList()
     var sceneCategories: List<Category> by mutableStateOf(emptyList())
     var rankGroups: MutableState<List<RankGroup>> = mutableStateOf(emptyList())
 
@@ -65,7 +75,8 @@ class HomeViewModel : ViewModel() {
 
     var recentAlbums: List<Album> by mutableStateOf(emptyList())
     var recentFolders: List<Folder> by mutableStateOf(emptyList())
-    var recentLongRadio: List<Album> by mutableStateOf(emptyList())
+    var recentAllItems: List<RecentPlayAllItem> by mutableStateOf(emptyList())
+    var recentLongRadio: List<LongAudioItem> by mutableStateOf(emptyList())
     var albumOfRecord = mutableStateOf(emptyList<Album>())
     val albumOfRecordHasMore = mutableStateOf(false)
     var songOfRecord = mutableStateOf<List<SongInfo>>(emptyList())
@@ -81,6 +92,9 @@ class HomeViewModel : ViewModel() {
     var userInfo = MutableLiveData<UserInfo?>()
 
     var longAudioCategoryPages: List<Category> by mutableStateOf(emptyList())
+
+    private val _collectedSingerTotalCount = MutableStateFlow<Int?>(null)
+    val collectedSingerTotalCount: StateFlow<Int?> = _collectedSingerTotalCount.asStateFlow()
 
     var aiFolder: List<Folder> by mutableStateOf(emptyList())
     var newAiFolder = SnapshotStateList<Folder>()
@@ -117,7 +131,6 @@ class HomeViewModel : ViewModel() {
 
     init {
         fetchHomeRecommend()
-        // 进来直接加载分类
         fetchCategory()
 
         OpenApiSDK.registerBusinessEventHandler(object : BusinessEventHandler {
@@ -127,12 +140,19 @@ class HomeViewModel : ViewModel() {
                         viewModelScope.launch(Dispatchers.IO) {
                             fetchHomeRecommend()
                             fetchCategory()
-                            fetchCollectedAlbum()
-                            fetchRecentAlbums()
                             fetchSceneCategory()
-                            fetchRecentFolders()
                             fetchRankGroup()
                             getFreeLimitedTimeWanosProfitInfo()
+                            fetchBuyRecordOfAlbum(false)
+                            fetchBuyRecordOfSong(false)
+                            fetchRecentAll()
+                            fetchRecentAlbums()
+                            fetchRecentFolders()
+                            fetchRecentLongRadios()
+                            fetchMineFolder()
+                            fetchCollectedFolder()
+                            fetchCollectedAlbum()
+                            fetchFavMVList()
                         }
                     }
                 }
@@ -201,6 +221,7 @@ class HomeViewModel : ViewModel() {
                 if (it.isSuccess()) {
                     it.data?.let { data ->
                         bannerConfig = data
+                        selectedBannerPositionIndex = 0
                     }
                 }
             }
@@ -343,6 +364,15 @@ class HomeViewModel : ViewModel() {
         }
     }
 
+    fun fetchRecentAll() {
+        OpenApiSDK.getOpenApi().fetchRecentPlayAll {
+            recentAllItems = if (it.isSuccess()) {
+                it.data ?: emptyList()
+            } else {
+                emptyList()
+            }
+        }
+    }
 
     fun fetchRecentFolders() {
         OpenApiSDK.getOpenApi().fetchRecentPlayFolder {
@@ -355,8 +385,8 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    fun fetchRecentLongRadios() {
-        OpenApiSDK.getOpenApi().fetchRecentPlayLongAudio {
+    fun fetchRecentLongRadios(type: Int = RecentPlayType.LONG_AUDIO_BOOK) {
+        val callback: OpenApiCallback<OpenApiResponse<List<LongAudioItem>>> = {
             if (it.isSuccess()) {
                 recentLongRadio = it.data ?: emptyList()
             } else {
@@ -364,15 +394,21 @@ class HomeViewModel : ViewModel() {
 
             }
         }
+        OpenApiSDK.getOpenApi().fetchRecentPlayLongAudioItem(type, callback = callback)
     }
 
     var currentPage = 0
-    fun fetchBuyRecordOfAlbum() {
+    fun fetchBuyRecordOfAlbum(loadMore: Boolean) {
+        if (!loadMore) {
+            currentPage = 0
+        }
         if (currentPage <= 50) {
             val dataList = mutableListOf<Album>()
-            dataList.addAll(albumOfRecord.value)
+            if (loadMore) {
+                dataList.addAll(albumOfRecord.value)
+            }
             OpenApiSDK.getOpenApi().fetchBuyRecord(BuyType.ALBUMS, currentPage, callback = {
-                if (it.isSuccess() && it.data?.albums?.isNotEmpty() == true) {
+                if (it.isSuccess()) {
                     val albums = it.data?.albums ?: emptyList()
                     dataList.addAll(albums)
                     albumOfRecord.value = dataList
@@ -386,11 +422,16 @@ class HomeViewModel : ViewModel() {
     }
 
     var currentPages = 0
-    fun fetchBuyRecordOfSong() {
+    fun fetchBuyRecordOfSong(loadMore: Boolean) {
+        if (!loadMore) {
+            currentPages = 0
+        }
         val dataLists = mutableListOf<SongInfo>()
         val nextPages = currentPages.toInt() + 1
         if (nextPages <= 50) {
-            dataLists.addAll(songOfRecord.value)
+            if (loadMore) {
+                dataLists.addAll(songOfRecord.value)
+            }
             OpenApiSDK.getOpenApi().fetchBuyRecord(BuyType.SONGS, page = nextPages, callback = {
                 if (it.isSuccess()) {
                     val songs = it.data?.songList ?: emptyList()
@@ -566,8 +607,10 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    fun pagingCollectedSinger() = Pager(PagingConfig(pageSize = 10)) {
-        OrderedSingerPagingSource()
+    fun pagingCollectedSinger() = Pager(PagingConfig(pageSize = 10, initialLoadSize = 10)) {
+        OrderedSingerPagingSource { totalCount ->
+            _collectedSingerTotalCount.value = totalCount
+        }
     }.flow.cachedIn(viewModelScope)
 
     fun cleanData(){

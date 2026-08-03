@@ -2,7 +2,6 @@ package com.tencent.qqmusic.qplayer.ui.activity.home
 
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,8 +22,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,9 +52,10 @@ import com.google.accompanist.pager.rememberPagerState
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.model.Banner
+import com.tencent.qqmusic.openapisdk.model.BannerPosition
 import com.tencent.qqmusic.openapisdk.model.Shelf
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
-import com.tencent.qqmusic.qplayer.ui.activity.home.ai.QrCodeDialog
+import com.tencent.qqmusic.qplayer.ui.activity.login.WebViewActivity
 import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import com.tencent.qqmusic.qplayer.utils.UiUtils
@@ -67,10 +72,14 @@ fun HomeRecommendPage(homeViewModel: HomeViewModel) {
             .verticalScroll(rememberScrollState())
     ) {
         Row {
-            homeViewModel.bannerConfig.let {
-                if (it.isNotEmpty()) {
-                    Banner(it)
-                }
+            val banners = homeViewModel.selectedBanners
+            if (banners.isNotEmpty()) {
+                Banner(
+                    items = banners,
+                    positions = homeViewModel.bannerConfig,
+                    selectedPositionIndex = homeViewModel.selectedBannerPositionIndex,
+                    onPositionSelected = { homeViewModel.selectedBannerPositionIndex = it }
+                )
             }
         }
         homeViewModel.recommendation.shelfList.forEach {
@@ -80,116 +89,176 @@ fun HomeRecommendPage(homeViewModel: HomeViewModel) {
     }
 }
 
+@Composable
+private fun BannerPositionSelector(
+    positions: List<BannerPosition>,
+    selectedIndex: Int,
+    onPositionSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedName = positions.getOrNull(selectedIndex)?.positionName ?: ""
+    Box(modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.Black.copy(alpha = 0.6f))
+                .clickable { expanded = true }
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = selectedName,
+                color = Color.White,
+                fontSize = 12.sp
+            )
+            Icon(
+                imageVector = Icons.Default.ArrowDropDown,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            positions.forEachIndexed { index, position ->
+                DropdownMenuItem(
+                    onClick = {
+                        expanded = false
+                        onPositionSelected(index)
+                    }
+                ) {
+                    Text(text = position.positionName)
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun Banner(
     items: List<Banner>,
+    positions: List<BannerPosition> = emptyList(),
+    selectedPositionIndex: Int = 0,
+    onPositionSelected: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
     autoScroll: Boolean = true,
     scrollDelay: Long = 3000L
 ) {
     val pagerState = rememberPagerState()
-    var showDialog by remember { mutableStateOf<Bitmap?>(null) }
-    var url by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
-    LaunchedEffect(pagerState) {
+    LaunchedEffect(pagerState, items) {
         if (autoScroll) {
             while (true) {
                 yield()
                 delay(scrollDelay)
-                pagerState.animateScrollToPage(
-                    page = if (pagerState.pageCount == 0) 0 else
-                        (pagerState.currentPage + 1) % items.size
-                )
+                if (items.isNotEmpty()) {
+                    pagerState.animateScrollToPage(
+                        page = (pagerState.currentPage + 1) % items.size
+                    )
+                }
             }
         }
     }
 
     Column(modifier = modifier) {
-        HorizontalPager(
-            count = items.size,
-            state = pagerState,
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(130.dp)
-        ) { page ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Gray)
-                    .clickable {
-                        if (items[page].url.isNullOrEmpty()) {
-                            UiUtils.showToast("url为空")
-                            return@clickable
-                        }
-                        AppScope.launchIO {
-                            val bitmap =
-                                UiUtils.generateQRCode(items[page].url)
-                            AppScope.launchUI {
-                                if (bitmap != null) {
-                                    url = items[page].url
-                                    showDialog = bitmap
-                                } else {
-                                    UiUtils.showToast("二维码生成失败")
-                                }
-                            }
-                        }
-                    }
-            ) {
-                Image(
-                    painter = rememberImagePainter(items[page].pic),
-                    contentDescription = null,
-                    contentScale = ContentScale.Inside,
+        ) {
+            HorizontalPager(
+                count = items.size,
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(MaterialTheme.shapes.medium)
-                )
-                Column (
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .padding(10.dp)){
-                    Text(
-                        text = "tag:" + (items[page].tag ?: ""),
-                        color = Color.Yellow,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = "标题:" + items[page].title,
-                        color = Color.Yellow,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
+                        .background(Color.Gray)
+                        .clickable { handleBannerClick(context, items[page]) }
+                ) {
+                    Image(
+                        painter = rememberImagePainter(items[page].pic),
+                        contentDescription = null,
+                        contentScale = ContentScale.Inside,
                         modifier = Modifier
-                            .padding(0.dp, 6.dp)
+                            .fillMaxSize()
+                            .clip(MaterialTheme.shapes.medium)
                     )
-                    Text(
-                        text = "描述:" + items[page].desc,
-                        color = Color.Yellow,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Normal,
-                    )
-                    // 类型: 1.歌曲  2.歌单  3.专辑  4.H5  5.排行榜  6.电台
-                    Text(
-                        text = "类型:${items[page].type}#" + when(items[page].type){
-                            1 -> "歌曲"
-                            2 -> "歌单"
-                            3 -> "专辑"
-                            4 -> "H5"
-                            5 -> "排行榜"
-                            6 -> "电台"
-                            else -> "未知type"
-                        },
-                        color = Color.Yellow,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Normal,
-                    )
-                    Text(
-                        text = "资源Id:" + items[page].contentId,
-                        color = Color.Yellow,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Normal,
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(10.dp)
+                    ) {
+                        Text(
+                            text = "tag:" + (items[page].tag ?: ""),
+                            color = Color.Yellow,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = "标题:" + items[page].title,
+                            color = Color.Yellow,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier
+                                .padding(0.dp, 6.dp)
+                        )
+                        Text(
+                            text = "描述:" + items[page].desc,
+                            color = Color.Yellow,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal,
+                        )
+                        // 类型: 1.歌曲  2.歌单  3.专辑  4.H5  5.排行榜  6.电台  7.H5收银台
+                        Text(
+                            text = "类型:${items[page].type}#" + when (items[page].type) {
+                                1 -> "歌曲"
+                                2 -> "歌单"
+                                3 -> "专辑"
+                                4 -> "H5"
+                                5 -> "排行榜"
+                                6 -> "电台"
+                                7 -> "H5收银台"
+                                else -> "未知type"
+                            },
+                            color = Color.Yellow,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal,
+                        )
+                        // 场景值：仅 type 为 7（H5收银台）时展示
+                        if (items[page].type == 7) {
+                            Text(
+                                text = "场景值:" + (items[page].scene ?: ""),
+                                color = Color.Yellow,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Normal,
+                            )
+                        }
+                        Text(
+                            text = "资源Id:" + items[page].contentId,
+                            color = Color.Yellow,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal,
+                        )
+                    }
                 }
+            }
+
+            if (positions.size > 1) {
+                BannerPositionSelector(
+                    positions = positions,
+                    selectedIndex = selectedPositionIndex,
+                    onPositionSelected = onPositionSelected,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                )
             }
         }
 
@@ -209,9 +278,96 @@ fun Banner(
             }
         }
     }
-    if (showDialog != null) {
-        QrCodeDialog(showDialog,
-            onDismiss = { showDialog = null }, url = url)
+}
+
+private fun handleBannerClick(context: android.content.Context, banner: Banner) {
+    when (banner.type) {
+        1 -> {
+            val songId = banner.contentId.toLongOrNull()
+            if (songId != null) {
+                AppScope.launchIO {
+                    OpenApiSDK.getOpenApi().fetchSongInfoBatch(listOf(songId)) { songInfoList ->
+                        if (songInfoList.isSuccess() && songInfoList.data != null) {
+                            val songs = songInfoList.data!!
+                            val result = OpenApiSDK.getPlayerApi().playSongs(songs, 0)
+                            if (result != 0) {
+                                AppScope.launchUI {
+                                    val msg = if (result == PlayDefine.PlayError.PLAY_ERR_CANNOT_PLAY && songs.isNotEmpty()) {
+                                        "播放失败 错误码：$result， 错误信息：${songs[0].unplayableMsg}"
+                                    } else {
+                                        "播放失败 错误码：$result"
+                                    }
+                                    UiUtils.showToast(msg)
+                                }
+                            }
+                        } else {
+                            AppScope.launchUI {
+                                UiUtils.showToast("获取歌曲信息失败")
+                            }
+                        }
+                    }
+                }
+            } else {
+                UiUtils.showToast("歌曲ID无效")
+            }
+        }
+        2 -> {
+            if (banner.contentId.isNotEmpty()) {
+                context.startActivity(
+                    Intent(context, SongListActivity::class.java)
+                        .putExtra(SongListActivity.KEY_FOLDER_ID, banner.contentId)
+                )
+            } else {
+                UiUtils.showToast("歌单ID为空")
+            }
+        }
+        3 -> {
+            if (banner.contentId.isNotEmpty()) {
+                context.startActivity(
+                    Intent(context, SongListActivity::class.java)
+                        .putExtra(SongListActivity.KEY_ALBUM_ID, banner.contentId)
+                )
+            } else {
+                UiUtils.showToast("专辑ID为空")
+            }
+        }
+        4, 7 -> {
+            val url = banner.url
+            if (!url.isNullOrEmpty()) {
+                WebViewActivity.start(context, url)
+            } else {
+                UiUtils.showToast("url为空")
+            }
+        }
+        5 -> {
+            val rankId = banner.contentId.toIntOrNull()
+            if (rankId != null) {
+                context.startActivity(
+                    Intent(context, SongListActivity::class.java)
+                        .putExtra(SongListActivity.KEY_RANK_ID, rankId)
+                )
+            } else {
+                UiUtils.showToast("排行榜ID无效")
+            }
+        }
+        6 -> {
+            if (banner.contentId.isNotEmpty()) {
+                context.startActivity(
+                    Intent(context, SongListActivity::class.java)
+                        .putExtra(SongListActivity.KEY_FOLDER_ID, banner.contentId)
+                )
+            } else {
+                UiUtils.showToast("电台ID为空")
+            }
+        }
+        else -> {
+            val url = banner.url
+            if (!url.isNullOrEmpty()) {
+                WebViewActivity.start(context, url)
+            } else {
+                UiUtils.showToast("未知类型: ${banner.type}")
+            }
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 package com.tencent.qqmusic.qplayer
 
 import android.app.Activity
+import com.tencent.qqmusic.openapisdk.core.PartnerDeviceTokenInfo
 
 interface IBaseFunction {
     fun getAccount(): Account
@@ -13,4 +14,5 @@ interface IBaseFunction {
     fun gotoDebugActivity(activity: Activity)
     fun initDebug(isDebug: Boolean)
     fun getChannelId(): String
+    fun getPartnerDeviceTokenInfo():PartnerDeviceTokenInfo?
 }

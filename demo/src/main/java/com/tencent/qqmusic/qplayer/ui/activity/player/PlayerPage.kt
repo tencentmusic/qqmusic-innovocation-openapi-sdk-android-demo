@@ -1,34 +1,32 @@
 package com.tencent.qqmusic.qplayer.ui.activity.player
 
-//import com.tencent.qqmusic.qplayer.ui.activity.lyric.LyricActivity
 import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.magnifier
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -53,7 +51,6 @@ import com.tencent.qqmusic.innovation.common.util.ToastUtils
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums
-import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
@@ -67,6 +64,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.songlist.SongListActivity
 import com.tencent.qqmusic.qplayer.ui.activity.ui.QQMusicSlider
 import com.tencent.qqmusic.qplayer.ui.activity.ui.Segment
 import com.tencent.qqmusic.qplayer.utils.UiUtils
+import com.tencent.qqmusic.qplayer.utils.UiUtils.getQualityName
 import kotlin.concurrent.thread
 
 
@@ -81,8 +79,10 @@ private const val TAG = "PlayerPage"
 @Composable
 fun PlayerScreen(observer: PlayerObserver) {
     Scaffold(topBar = { TopBar(title = "播放页") },
-        modifier = Modifier.semantics{ testTagsAsResourceId=true }) {
-        PlayerPage(observer)
+        modifier = Modifier.semantics{ testTagsAsResourceId=true }) { paddingValues ->
+        Column(modifier = Modifier.padding(paddingValues)) {
+            PlayerPage(observer)
+        }
     }
 }
 
@@ -180,19 +180,17 @@ fun PlayerPage(observer: PlayerObserver) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-
             // 播放品质
-            Image(
-                painter = painterResource(id = UiUtils.getQualityIcon(quality)),
-                contentDescription = null,
-                colorFilter = if (quality == Quality.MASTER_SR || quality == Quality.SQ_SR) ColorFilter.tint(
-                    Color.Blue,
-                    BlendMode.SrcAtop
-                ) else null,
+            Box(
                 modifier = Modifier
-                    .size(50.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFF2F3F5))
+                    .height(30.dp)
+                    .wrapContentWidth()
+                    .padding(horizontal = 15.dp)
                     .clickable {
                         tryPauseFirst()
                         QualityAlert.showQualityAlert(
@@ -206,8 +204,15 @@ fun PlayerPage(observer: PlayerObserver) {
                             refresh = {
                                 quality = it
                             })
-                    }
-            )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = quality?.getQualityName() ?: "音质",
+                    fontSize = 12.sp,
+                    color = Color(0xFF333333)
+                )
+            }
 
             val downloadIcon = if (currSong != null && OpenApiSDK.getDownloadApi().isSongDownloaded(currSong)) {
                 R.drawable.icon_song_info_item_more_downloaded
@@ -578,8 +583,10 @@ fun PlayerPage(observer: PlayerObserver) {
 @Preview
 @Composable
 fun PreviewPlayerScreen() {
-    Scaffold {
-        val observer = PlayerObserver
-        PlayerPage(observer)
+    Scaffold { paddingValues ->
+        Column(modifier = Modifier.padding(paddingValues)) {
+            val observer = PlayerObserver
+            PlayerPage(observer)
+        }
     }
 }

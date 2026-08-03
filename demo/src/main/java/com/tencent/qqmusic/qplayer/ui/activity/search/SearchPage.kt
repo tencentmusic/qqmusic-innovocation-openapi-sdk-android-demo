@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Card
+import androidx.compose.material.Button
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalContentColor
@@ -91,6 +93,9 @@ private val tabList = listOf(
 var searchInput by mutableStateOf("")
 var currentTab by mutableStateOf(0)
 
+/** 顶部模式切换：false=普通搜索，true=AI搜歌 */
+var isAiSearchMode by mutableStateOf(false)
+
 enum class PageState {
     HOT_KEY,
     SMART_SEARCH,
@@ -108,6 +113,33 @@ fun SearchPage(searchViewModel: SearchViewModel) {
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // ---- 顶部模式切换：普通搜索 / AI搜歌 ----
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            listOf("普通搜索", "AI搜歌").forEachIndexed { index, label ->
+                val selected = if (index == 0) !isAiSearchMode else isAiSearchMode
+                Button(
+                    onClick = { isAiSearchMode = index == 1 },
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                    colors = androidx.compose.material.ButtonDefaults.buttonColors(
+                        backgroundColor = if (selected) Color(0xFF1976D2) else Color.LightGray
+                    ),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Text(text = label, color = if (selected) Color.White else Color.DarkGray, fontSize = 13.sp)
+                }
+            }
+        }
+
+        // ---- 根据模式展示不同内容 ----
+        if (isAiSearchMode) {
+            StreamMusicSkillPage(viewModel = searchViewModel)
+            return@Column
+        }
 
         val smartKey = remember {
             SnapshotStateList<String>()

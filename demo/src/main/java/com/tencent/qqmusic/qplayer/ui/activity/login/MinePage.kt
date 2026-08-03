@@ -60,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -73,13 +74,17 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.login.AuthType
 import com.tencent.qqmusic.openapisdk.core.openapi.EditFolderParam
 import com.tencent.qqmusic.openapisdk.core.player.PlayerEnums.Quality
+import com.tencent.qqmusic.openapisdk.model.RecentPlayType
 import com.tencent.qqmusic.openapisdk.model.folder.FolderTagCategory
 import com.tencent.qqmusic.openapisdk.model.folder.FolderTagItem
+import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.BaseFunctionManager
 import com.tencent.qqmusic.qplayer.ui.activity.LoadMoreItem
 import com.tencent.qqmusic.qplayer.ui.activity.MustInitConfig
 import com.tencent.qqmusic.qplayer.ui.activity.PartnerLoginActivity
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
+import com.tencent.qqmusic.qplayer.ui.activity.audio.LongAudioRecentPlayListPage
+import com.tencent.qqmusic.qplayer.ui.activity.audio.RecentPlayAllPage
 import com.tencent.qqmusic.qplayer.ui.activity.folder.FolderListPage
 import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MVResDetailPage
@@ -258,6 +263,7 @@ fun LoginBotton(activity: Activity, mineViewModel: MineViewModel, info: MutableS
 @OptIn(ExperimentalPagerApi::class)
 @Composable
 fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
+    val recentPlayAllTitle = stringResource(R.string.recent_play_all)
     // 定义分类
     val categories = mapOf(
         "自建歌单" to listOf(
@@ -274,10 +280,12 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
             "收藏有声播客"
         ),
         "最近播放" to listOf(
+            recentPlayAllTitle,
             "最近播放单曲",
             "最近播放专辑",
             "最近播放歌单",
-            "最近播放长音频"
+            "最近播放长音频",
+            "最近播放播客"
         ),
         "本地" to listOf(
             "已下载歌曲"
@@ -300,7 +308,8 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
         derivedStateOf { categories[selectedCategory] ?: emptyList() }
     }
     // 避免多次创建PagingSource
-    val orderedSingerPagingSource by lazy { viewModel.pagingCollectedSinger() }
+    val orderedSingerPagingSource = remember(viewModel) { viewModel.pagingCollectedSinger() }
+    val collectedSingerTotalCount by viewModel.collectedSingerTotalCount.collectAsState()
 
     val pagerState = rememberPagerState()
     val composableScope = rememberCoroutineScope()
@@ -380,7 +389,7 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
                 }
 
                 "自建歌单列表" -> {
-                    viewModel.fetchMineFolder()
+                    LaunchedEffect(Unit) { viewModel.fetchMineFolder() }
                     Column(modifier = Modifier.fillMaxSize()) {
                         NewFolder(viewModel)
                         FolderListPage(viewModel.mineFolders)
@@ -388,18 +397,23 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
                 }
 
                 "收藏的MV" -> {
-                    viewModel.fetchFavMVList()
+                    LaunchedEffect(Unit) { viewModel.fetchFavMVList() }
                     MVResDetailPage(viewModel.mvFavList)
                 }
 
                 "收藏专辑" -> {
-                    viewModel.fetchCollectedAlbum()
+                    LaunchedEffect(Unit) { viewModel.fetchCollectedAlbum() }
                     AlbumListPage(viewModel.favAlbums)
                 }
 
                 "收藏歌单" -> {
-                    viewModel.fetchCollectedFolder()
+                    LaunchedEffect(Unit) { viewModel.fetchCollectedFolder() }
                     FolderListPage(viewModel.favFolders)
+                }
+
+                recentPlayAllTitle -> {
+                    LaunchedEffect(Unit) { viewModel.fetchRecentAll() }
+                    RecentPlayAllPage(items = viewModel.recentAllItems)
                 }
 
                 "最近播放单曲" -> {
@@ -407,39 +421,44 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
                 }
 
                 "最近播放专辑" -> {
-                    viewModel.fetchRecentAlbums()
+                    LaunchedEffect(Unit) { viewModel.fetchRecentAlbums() }
                     AlbumListPage(albums = viewModel.recentAlbums)
                 }
 
                 "最近播放歌单" -> {
                     // 最近播放（歌单）
-                    viewModel.fetchRecentFolders()
+                    LaunchedEffect(Unit) { viewModel.fetchRecentFolders() }
                     FolderListPage(folders = viewModel.recentFolders)
                 }
 
                 "最近播放长音频" -> {
-                    viewModel.fetchRecentLongRadios()
-                    AlbumListPage(albums = viewModel.recentLongRadio)
+                    LaunchedEffect(Unit) { viewModel.fetchRecentLongRadios() }
+                    LongAudioRecentPlayListPage(items = viewModel.recentLongRadio)
+                }
+
+                "最近播放播客" -> {
+                    LaunchedEffect(Unit) { viewModel.fetchRecentLongRadios(RecentPlayType.LONG_AUDIO_BLOG) }
+                    LongAudioRecentPlayListPage(items = viewModel.recentLongRadio)
                 }
 
                 "已购数专" -> {
                     LaunchedEffect(Unit) {
-                        viewModel.fetchBuyRecordOfAlbum()
+                        viewModel.fetchBuyRecordOfAlbum(false)
                     }
                     val payedAlbums = remember { viewModel.albumOfRecord }
                     val loadMoreItem = LoadMoreItem(viewModel.albumOfRecordHasMore) {
-                        viewModel.fetchBuyRecordOfAlbum()
+                        viewModel.fetchBuyRecordOfAlbum(true)
                     }
                     BuyAlbumPage(albums = payedAlbums.value, loadMoreItem = loadMoreItem)
                 }
 
                 "已购单曲" -> {
                     LaunchedEffect(Unit) {
-                        viewModel.fetchBuyRecordOfSong()
+                        viewModel.fetchBuyRecordOfSong(false)
                     }
                     val payedSong = remember { viewModel.songOfRecord }
                     val loadMoreItem = LoadMoreItem(viewModel.songOfRecordHasMore) {
-                        viewModel.fetchBuyRecordOfSong()
+                        viewModel.fetchBuyRecordOfSong(true)
                     }
                     SongListPage(songs = payedSong.value, needPlayer = false, loadMoreItem = loadMoreItem)
                 }
@@ -453,17 +472,17 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
                 }
 
                 "收藏有声专辑" -> {
-                    viewModel.fetchCollectedAlbum(1)
+                    LaunchedEffect(Unit) { viewModel.fetchCollectedAlbum(1) }
                     AlbumListPage(viewModel.favAlbums)
                 }
 
                 "收藏有声播客" -> {
-                    viewModel.fetchCollectedAlbum(2)
+                    LaunchedEffect(Unit) { viewModel.fetchCollectedAlbum(2) }
                     AlbumListPage(viewModel.favAlbums)
                 }
 
                 "订阅歌手" -> {
-                    singerPage(orderedSingerPagingSource)
+                    singerPage(orderedSingerPagingSource, collectedSingerTotalCount)
                 }
 
                 "已下载歌曲" -> {
@@ -481,7 +500,7 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
                 }
 
                 "其他端播放列表" -> {
-                    viewModel.fetchOtherFlatPlayList()
+                    LaunchedEffect(Unit) { viewModel.fetchOtherFlatPlayList() }
                     Column {
                         val songOfOther = viewModel.songOfOther
                         if (songOfOther.playList.isNullOrEmpty()) {
@@ -496,7 +515,7 @@ fun MineSongList(activity: Activity, viewModel: HomeViewModel) {
                 }
 
                 "联合会员订单列表" -> {
-                    viewModel.fetchAllUnionVipOrderList()
+                    LaunchedEffect(Unit) { viewModel.fetchAllUnionVipOrderList() }
                     Column {
                         val orderList = viewModel.unionVipOrderList.value
                         if (orderList.isNullOrEmpty()) {

@@ -86,6 +86,7 @@ import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiListenTogetherActiv
 import com.tencent.qqmusic.qplayer.ui.activity.download.DownloadActivity
 import com.tencent.qqmusic.qplayer.ui.activity.musictherapy.MusicTherapyActivity
 import com.tencent.qqmusic.qplayer.ui.activity.player.voyage.PlayerVoyageActivity
+import com.tencent.qqmusic.qplayer.utils.SettingsUtil
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusic.qplayer.utils.UiUtils.getProfitTypeName
 import com.tencent.qqmusic.qplayer.utils.UiUtils.getSuperQualityTypeName
@@ -645,6 +646,7 @@ fun PlayControlArea() {
             onClick = {
                 if (UiUtils.isStrInt(usage.text) && UiUtils.isStrInt(contentType.text)) {
                     val ret = OpenApiSDK.getPlayerApi().setAudioUsageAndContentType(usage.text.toInt(), contentType.text.toInt())
+                    SettingsUtil.isCreateAudioTrack = false
                     Log.d(TAG, "setAudioUsageAndContentType, ret: $ret")
                 } else {
                     UiUtils.showToast("该参数必须输入整数！")

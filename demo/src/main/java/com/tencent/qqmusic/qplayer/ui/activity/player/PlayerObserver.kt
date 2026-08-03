@@ -38,9 +38,9 @@ import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.playerinsight.util.coverErrorCode
 import com.tencent.qqmusic.qplayer.App
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
+import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.player.PlayErrorUtils
 import com.tencent.qqmusic.qplayer.core.player.proxy.FromInfo
-import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.ui.activity.aiaccompany.AiAccompanyHelper
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
@@ -97,11 +97,13 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
     var largeModelEffectEvent: LargeModelEffectEvent? by mutableStateOf(null)
 
     private var doSomething:Pair<Int,()->Any?>? = null
-    val sharedPreferences: SharedPreferences? = try {
-        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
-    } catch (e: Exception) {
-        Log.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
-        null
+    val sharedPreferences: SharedPreferences? by lazy {
+        try {
+            UtilContext.getApp().getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+        } catch (e: Exception) {
+            QLog.e("DebugScreen", "getSharedPreferences error e = ${e.message}")
+            null
+        }
     }
 
     private var pendingStartPlay: Boolean = false
@@ -370,8 +372,7 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
                     val size = arg.getInt(PlayerEvent.Key.API_EVENT_KEY_PLAY_LIST_SIZE, 0)
                     Log.d(TAG, "API_EVENT_RESTORE_PLAY_LIST_END: size=$size")
                     if (size > 0) {
-                        val sp = App.context.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
-                        pendingStartPlay = sp?.getBoolean("launch_auto_play", true)  ?: true
+                        pendingStartPlay = sharedPreferences?.getBoolean("launch_auto_play", true)  ?: true
                     } else {
                         pendingStartPlay = false
                     }

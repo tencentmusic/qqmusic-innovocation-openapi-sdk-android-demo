@@ -41,6 +41,7 @@ class SongListActivity : ComponentActivity() {
         const val KEY_SONG = "song_id"
         const val KEY_RANK_ID = "rank_id"
         const val KEY_SOURCE = "source"
+        const val KEY_RECENT_PLAY_SONG = "recent_play_song"
 
         const val KEY_CATEGORY_IDS = "category_ids"
 
@@ -68,6 +69,10 @@ class SongListActivity : ComponentActivity() {
 
     private val rankId by lazy {
         intent.getIntExtra(KEY_RANK_ID, 0)
+    }
+
+    private val isRecentPlaySong by lazy {
+        intent.getBooleanExtra(KEY_RECENT_PLAY_SONG, false)
     }
 
     private val categoryIds by lazy {
@@ -146,6 +151,8 @@ class SongListActivity : ComponentActivity() {
                 )
             } else if (songId != 0L) {
                 SongListScreen(songListViewModel.pagingSongIds(listOf(songId)))
+            } else if (isRecentPlaySong) {
+                SongListScreen(songListViewModel.pagingRecentSong())
             } else if (rankId != 0) {
                 SongListScreen(songListViewModel.pagingRankSongList(rankId))
             } else if (categoryIds.isNotEmpty()) {

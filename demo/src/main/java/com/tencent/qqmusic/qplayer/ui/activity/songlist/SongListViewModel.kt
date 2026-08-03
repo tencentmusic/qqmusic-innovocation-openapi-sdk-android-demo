@@ -12,6 +12,7 @@ import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.Category
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.baselib.util.JobDispatcher
+import com.tencent.qqmusic.qplayer.ui.activity.home.RecentSongPagingSource
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayListPagingSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -53,6 +54,10 @@ class SongListViewModel : ViewModel() {
 
     fun pagingSongIds(songIds: List<Long>) = Pager(PagingConfig(pageSize = 50, prefetchDistance = 10, initialLoadSize = 50)) {
         SongListPagingSource(emptyList(), songIds)
+    }.flow
+
+    fun pagingRecentSong() = Pager(PagingConfig(pageSize = 50, prefetchDistance = 10, initialLoadSize = 50)) {
+        RecentSongPagingSource()
     }.flow
 
     fun pagingSongListSongs(songList: List<SongInfo>) = Pager(PagingConfig(pageSize = 50, prefetchDistance = 10, initialLoadSize = 50)) {

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
 import android.text.TextUtils
+import android.util.AttributeSet
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -40,8 +41,10 @@ import com.lyricengine.base.Lyric
 import com.lyricengine.widget.LyricScrollView
 import com.lyricengine.widget.LyricUIState
 import com.lyricengine.widget.LyricViewParams
+import com.tencent.qqmusic.innovation.common.logging.MLog
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
+import com.tencent.qqmusic.openapisdk.core.view.lyric.QMLyricView
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.core.internal.lyric.LyricLoadInterface
@@ -249,6 +252,7 @@ fun lyric(
         mutableStateOf(
             LyricScrollView(activity, null).apply {
                 setSingeMode(LyricViewParams.SINGLE_STATE_FIRST)
+                setDefaultTips("暂无歌词")
                 setSingleLine(true)
                 setFontSize(fontSize.dp.value.toInt())
                 setColor(android.graphics.Color.parseColor("#30888888"))
@@ -281,7 +285,7 @@ fun lyric(
 
     val listener: LyricLoadInterface by remember {
         mutableStateOf(object : LyricLoadInterface {
-            override fun onLoadSuc(lyric: Lyric, transLyric: Lyric, romaLyric: Lyric, state: Int, lyricStartTime: Long) {
+            override fun onLoadSuc(lyric: Lyric?, transLyric: Lyric?, romaLyric: Lyric?, state: Int, lyricStartTime: Long) {
                 lyricView.setLyric(lyric, transLyric, romaLyric, state)
             }
 

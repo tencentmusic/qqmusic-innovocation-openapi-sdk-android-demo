@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
@@ -76,7 +77,7 @@ fun singerPage(list: List<Singer>, loadMoreItem: LoadMoreItem? = null) {
 }
 
 @Composable
-fun singerPage(flow: Flow<PagingData<Singer>>) {
+fun singerPage(flow: Flow<PagingData<Singer>>, totalCount: Int? = null) {
     val singers = flow.collectAsLazyPagingItems()
     ConstraintLayout(modifier = Modifier.fillMaxSize()) {
         val (folder) = createRefs()
@@ -88,6 +89,14 @@ fun singerPage(flow: Flow<PagingData<Singer>>) {
             val activity = LocalContext.current as Activity
 
             LazyColumn(state = rememberLazyListState(), modifier = Modifier.fillMaxSize()) {
+                totalCount?.let { count ->
+                    item {
+                        Text(
+                            text = stringResource(R.string.collected_singer_total_count, count),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        )
+                    }
+                }
                 this@LazyColumn.itemsIndexed(singers) { index, singer ->
                     singer ?: return@itemsIndexed
                     Box(modifier = Modifier

@@ -19,6 +19,7 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
 import com.tencent.qqmusic.openapisdk.model.AreaId
 import com.tencent.qqmusic.openapisdk.model.MusicSkillResult
 import com.tencent.qqmusic.openapisdk.model.MusicSkillSlotItem
+import com.tencent.qqmusic.openapisdk.model.RecentPlayType
 import com.tencent.qqmusic.openapisdk.model.SearchType
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.model.vip.CashierCreateOrderItem
@@ -84,6 +85,8 @@ class OpenApiDemoActivity : AppCompatActivity() {
     }
     private var displayMode = true
     private var waitCallbackLatch = CountDownLatch(0)
+    private var totalRequestCount = 0
+    private var receivedCallbackCount = java.util.concurrent.atomic.AtomicInteger(0)
 
     private inner class MethodNameWidthParam(
         val name: String,
@@ -102,6 +105,8 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 if (!data.isSuccess()) {
                     errorOpiNameAndMsg.add("${methodName}: ${data.errorMsg}")
                 }
+                val received = receivedCallbackCount.incrementAndGet()
+                Log.d(TAG, "一键测试回调进度: $received/$totalRequestCount, 接口=$methodName, 成功=${data.isSuccess()}")
                 waitCallbackLatch.countDown()
             }
         }
@@ -295,7 +300,10 @@ class OpenApiDemoActivity : AppCompatActivity() {
                 createdFolderDeleted = false
                 createdFolderDeleted = false
                 val keys = methodNameToBlock.keys
+                totalRequestCount = keys.size
+                receivedCallbackCount.set(0)
                 waitCallbackLatch = CountDownLatch(keys.size)
+                Log.d(TAG, "一键测试 开始发出请求, 总接口数: $totalRequestCount")
                 for (name in keys) {
                     var methodWithParam: MethodNameWidthParam? = null
                     for (param in methodNameWithParamList) {
@@ -327,28 +335,27 @@ class OpenApiDemoActivity : AppCompatActivity() {
                         block?.invoke(methodWithParam!!)
                     } catch (e: Exception) {
                         Log.e(TAG, "invoke method, name=$name", e)
+                        waitCallbackLatch.countDown()
                     }
                 }
-                val ret = waitCallbackLatch.await(30, TimeUnit.SECONDS)
-                val text = if (ret) {
+                waitCallbackLatch.await()
+                val totalTime = System.currentTimeMillis() - startTime
+                val text = buildString {
+                    append("\n总耗时: ${totalTime / 1000}s ${totalTime % 1000}ms 总发出: $totalRequestCount, 收到回调: ${receivedCallbackCount.get()}\n")
                     if (errorOpiNameAndMsg.isNotEmpty()) {
-                        buildString {
-                            append("失败的接口: \n")
-                            for (name in errorOpiNameAndMsg) {
-                                append(name).append("\n")
-                            }
+                        append("失败的接口: \n")
+                        for (name in errorOpiNameAndMsg) {
+                            append(name).append("\n")
                         }
-                    } else {
-                        "所有接口已通"
+                    }else {
+                        append("所有接口已通\n")
                     }
-                } else {
-                    "接口调用超时，联系开发处理"
                 }
                 runOnUiThread {
                     displayTv.text = text
                 }
                 displayMode = true
-                Log.d(TAG, "请求所有接口 end, 总耗时: ${(System.currentTimeMillis() - startTime).div(1000)}s")
+                Log.d(TAG, "请求所有接口 end, 总发出: $totalRequestCount, 收到回调: ${receivedCallbackCount.get()}, 总耗时: ${totalTime / 1000}s ${totalTime % 1000}ms")
             }
         }
 
@@ -637,7 +644,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
             openApi.fetchJustListenRank { rank ->
                 if (rank.isSuccess()) {
                     rank.data?.getOrNull(0)?.songList?.subList(0, 50)?.let {
-                        songList ->
+                            songList ->
                         openApi.fetchFreeSongInfoList(
                             songList,
                             callback = commonCallback
@@ -967,6 +974,13 @@ class OpenApiDemoActivity : AppCompatActivity() {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
             openApi.fetchRecentPlayLongAudio(commonCallback)
+        }
+        methodNameToBlock["fetchRecentPlayLongAudioItem"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            val type = paramStr1?.toIntOrNull() ?: RecentPlayType.LONG_AUDIO_BOOK
+            val updateTime = paramStr2?.toLongOrNull() ?: 0
+            openApi.fetchRecentPlayLongAudioItem(type, updateTime, commonCallback)
         }
 
         methodNameToBlock["deleteRecentPlay"] = {
@@ -1654,6 +1668,13 @@ class OpenApiDemoActivity : AppCompatActivity() {
         )
         methodNameWithParamList.add(
             MethodNameWidthParam(
+                "fetchRecentPlayLongAudioItem",
+                listOf("播放类型:12:长音频听书(有声节目),14:长音频播客", "最后更新时间"),
+                listOf("${RecentPlayType.LONG_AUDIO_BOOK}", "0")
+            )
+        )
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
                 "fetchRecentPlaySong", listOf("最后更新时间"), listOf("0")
             )
         )
@@ -1692,7 +1713,7 @@ class OpenApiDemoActivity : AppCompatActivity() {
             MethodNameWidthParam(
                 "voiceSearch",
                 listOf("意图", "槽位值(kv以:分隔，多个槽位值逗号分隔)", "原始语音", "当前在播歌曲id(可不传)", "返回数量（可不传）", "searchId（可不传）"),
-                 listOf("点歌播放", "歌手名:周杰伦,歌曲语言:中文", "播放感伤的歌曲", null, null, null)
+                listOf("点歌播放", "歌手名:周杰伦,歌曲语言:中文", "播放感伤的歌曲", null, null, null)
             )
         )
 

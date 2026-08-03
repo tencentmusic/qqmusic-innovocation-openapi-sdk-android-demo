@@ -3,31 +3,30 @@ package com.tencent.qqmusic.qplayer.ui.activity.home.other.ordersong
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.tencent.qqmusic.innovation.common.util.UtilContext
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
+import com.tencent.qqmusic.openapisdk.hologram.OrderSongProvider
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.openapisdk.ordersong.IOrderSongApi
 import com.tencent.qqmusic.openapisdk.ordersong.OnRoomChangeListener
-import com.tencent.qqmusic.openapisdk.hologram.OrderSongProvider
 import com.tencent.qqmusic.openapisdk.ordersong.RoomConnectStatus
 import com.tencent.qqmusic.openapisdk.ordersong.RoomEvent
 import com.tencent.qqmusic.openapisdk.ordersong.entity.RoomInfo
 import com.tencent.qqmusic.openapisdk.ordersong.entity.RoomSongInfo
 import com.tencent.qqmusic.openapisdk.ordersong.entity.UpdateOperType
 import com.tencent.qqmusic.openapisdk.ordersong.entity.UpdateRoomSongListResp
-import com.tencent.qqmusic.openapisdk.ordersong.report.OrderSongManager
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
-import com.tencent.qqmusic.qplayer.core.player.proxy.SPBridgeProxy
 import com.tencent.qqmusic.qplayer.openapi.network.NetworkClient.onReturn
 import com.tencent.qqmusic.qplayer.utils.UiUtils
-import kotlin.random.Random
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class OrderSongViewModel: ViewModel() {
 
@@ -40,13 +39,13 @@ class OrderSongViewModel: ViewModel() {
     var roomSongList: List<RoomSongInfo> by mutableStateOf(listOf())
     var roomConnectedStatus: RoomConnectStatus? by mutableStateOf(null)
 
-    val testSongList = arrayListOf<SongInfo>()
-
-    val sharedPreferences: SharedPreferences? = try {
-        SPBridgeProxy.getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
-    } catch (e: Exception) {
-        QLog.e("DebugScreen", "getSharedPreferences error e = ${e.message}")
-        null
+    val sharedPreferences: SharedPreferences? by lazy {
+        try {
+            UtilContext.getApp().getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+        } catch (e: Exception) {
+            QLog.e(TAG, "getSharedPreferences error e = ${e.message}")
+            null
+        }
     }
 
     val enableTDE = sharedPreferences?.getBoolean("enableTdeEnv", false) ?: false
@@ -172,34 +171,48 @@ class OrderSongViewModel: ViewModel() {
         }.filterNotNull()
     }
 
-    fun updateTestSongs():List<SongInfo> {
-        if (testSongList.isEmpty()){
-            OpenApiSDK.getOpenApi().fetchPersonalRecommendSong {
-                getRequestResult(it, "添加歌曲id")
-                if (it.isSuccess()) {
-                    testSongList.clear()
-                    it.data?.let { songs ->
-                        testSongList.addAll(songs)
-                    }
+
+    fun getUpdateTestSongs(callback: (List<SongInfo>?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val resp = OpenApiSDK.getOpenApi().blockingGet {
+                    OpenApiSDK.getOpenApi().fetchPersonalRecommendSong(callback = it)
                 }
+                getRequestResult(resp, "添加歌曲id")
+                if (resp.isSuccess()) {
+                    callback(resp.data)
+                } else {
+                    callback(emptyList())
+                }
+            } catch (e: Exception) {
+                QLog.e(TAG, "getUpdateTestSongs error: ${e.message}")
+                callback(null)
             }
         }
-        return testSongList
     }
 
+
+
     @RequiresApi(Build.VERSION_CODES.N)
-    fun addRandomSong(isBatch:Boolean=false, isReTry: Boolean=false) {
-        if (testSongList.isEmpty() && isReTry.not()) {
-            updateTestSongs().apply { addRandomSong(isBatch=isBatch, isReTry=true) }
-        }else{
-            val songIdsToAdd = if (isBatch) testSongList.map { it.songId } else listOf(testSongList.random().songId)
-            addSongList(songIdsToAdd){ resp ->
-                if (resp.isSuccess()){
-                    testSongList.removeIf { it.songId in songIdsToAdd }
+    fun addRandomSong(isBatch: Boolean = false) {
+        getUpdateTestSongs { testSongList ->
+            if(testSongList.isNullOrEmpty()){
+                UiUtils.showToast("网络异常，请重试")
+                return@getUpdateTestSongs
+            }
+            val songIdsToAdd = if (isBatch) {
+                testSongList.map { it.songId }
+            } else {
+                listOf(testSongList.random().songId)
+            }
+            addSongList(songIdsToAdd) { resp ->
+                if (resp.isSuccess().not()) {
+                    UiUtils.showToast("网络异常，请重试")
                 }
             }
         }
     }
+
 
     fun addSongList(songs: List<Long>, callback: (OpenApiResponse<UpdateRoomSongListResp>) -> Unit){
         getOrderSongApi()?.addSongToPlayList(songListToAdd=songs) { resp ->
@@ -235,23 +248,6 @@ class OrderSongViewModel: ViewModel() {
                 onRoomSongChange(it.data?.songListAfterUpdate)
             }
         }
-    }
-
-    fun test() {
-        OpenApiSDK.getPlayerApi().playSongs(testSongList)
-    }
-
-    fun testUpdate() {
-        val song = testSongList.removeAt(Random.nextInt(testSongList.size - 1))
-        Log.d("keyao", "delete song: ${song.songName}")
-        OpenApiSDK.getPlayerApi().updatePlayList(testSongList)
-    }
-
-    fun testDeleteCur() {
-        val curSong = OpenApiSDK.getPlayerApi().getCurrentSongInfo()
-        testSongList.remove(curSong)
-        Log.d("keyao", "delete song: ${curSong?.songName}")
-        OpenApiSDK.getPlayerApi().updatePlayList(testSongList)
     }
 
     private fun getOrderSongApi(): IOrderSongApi? {

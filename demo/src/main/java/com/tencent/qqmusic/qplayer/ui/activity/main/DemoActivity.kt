@@ -36,6 +36,7 @@ import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.Button
 import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
@@ -54,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -96,11 +98,13 @@ import com.tencent.qqmusic.qplayer.ui.activity.home.HomeViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.home.RemindRenewalDialog
 import com.tencent.qqmusic.qplayer.ui.activity.home.VIPSuccessDialog
 import com.tencent.qqmusic.qplayer.ui.activity.mv.MvBuyQRDialog.showTextDialog
+import com.tencent.qqmusic.qplayer.ui.activity.login.WebViewActivity
 import com.tencent.qqmusic.qplayer.ui.activity.person.MineViewModel
 import com.tencent.qqmusic.qplayer.ui.activity.player.FloatingPlayerPage
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver
 import com.tencent.qqmusic.qplayer.utils.PerformanceHelper
 import com.tencent.qqmusic.qplayer.utils.PrivacyManager
+import com.tencent.qqmusic.qplayer.utils.SettingsUtil
 import com.tencent.qqmusic.qplayer.utils.UiUtils.getQualityName
 import com.tencent.qqmusic.qzdownloader.utils.FileUtils
 import kotlinx.coroutines.delay
@@ -221,11 +225,13 @@ class DemoActivity : BaseComposeActivity() {
 
 
     private fun initPlay() {
-        val sharedPreferences: SharedPreferences? = try {
-            getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
-        } catch (e: Exception) {
-            QLog.e("OtherScreen", "getSharedPreferences error e = ${e.message}")
-            null
+        val sharedPreferences: SharedPreferences? by lazy {
+            try {
+                getSharedPreferences("OpenApiSDKEnv", Context.MODE_PRIVATE)
+            } catch (e: Exception) {
+                QLog.e(TAG, "getSharedPreferences error e = ${e.message}")
+                null
+            }
         }
         OpenApiSDK.getPlayerApi().setEnableCallStateListener(false)
         OpenApiSDK.getPlayerApi().setSDKSpecialNeedInterface(object : ISDKSpecialNeedInterface() {
@@ -306,6 +312,9 @@ class DemoActivity : BaseComposeActivity() {
             ): AudioTrack? {
                 if (PlayerObserver.mCurrentQuality == Quality.DOLBY || PlayerObserver.mCurrentQuality == Quality.GALAXY) {
                     Log.i(TAG, "createAudioTrack multi channel. quality:${PlayerObserver.mCurrentQuality}, channelMask:$channelMask")
+                }
+                if (!SettingsUtil.isCreateAudioTrack) {
+                    return null
                 }
 
                 val attributes = AudioAttributes.Builder()
@@ -392,6 +401,29 @@ fun loginExpiredDialog(showDialog: Boolean, setShowDialog: (Boolean) -> Unit) {
             }
         }
     }
+}
+
+@Composable
+fun RenewalDialogConfirmDialog(
+    url: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "\u50ac\u8d39\u5f39\u7a97") },
+        text = { Text(text = "\u5df2\u7ecf\u83b7\u53d6\u5230\u50ac\u8d39\u5f39\u7a97\u94fe\u63a5\uff0c\u662f\u5426\u5c55\u793a\uff1f\n\n$url") },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("\u786e\u5b9a")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("\u53d6\u6d88")
+            }
+        }
+    )
 }
 
 @RequiresApi(Build.VERSION_CODES.N)
@@ -497,6 +529,14 @@ fun BottomNavigationBar(navController: NavController) {
 @Composable
 fun MainScreen(homeViewModel: HomeViewModel = viewModel(), mineViewModel: MineViewModel = viewModel()) {
     val navController = rememberNavController()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        if (OpenApiSDK.getLoginApi().hasLogin()) {
+            mineViewModel.updateData()
+        }
+    }
+
 
     val (showDialog, setShowDialog) = remember { mutableStateOf(false) }
     DisposableEffect(Unit) {
@@ -528,6 +568,20 @@ fun MainScreen(homeViewModel: HomeViewModel = viewModel(), mineViewModel: MineVi
                 showRenewalDialog = false
             }
         }
+    }
+
+    val vipRenewalDialogUrl = mineViewModel.vipRenewalDialogUrl.collectAsState().value?.takeIf { it.isNotBlank() }
+    vipRenewalDialogUrl?.let { url ->
+        RenewalDialogConfirmDialog(
+            url = url,
+            onConfirm = {
+                WebViewActivity.start(context, url)
+                mineViewModel.clearVipRenewalDialogUrl()
+            },
+            onDismiss = {
+                mineViewModel.clearVipRenewalDialogUrl()
+            }
+        )
     }
 
     ConstraintLayout(

@@ -416,7 +416,7 @@ fun AiSongItem(aiCoverDataInfo: AICoverDataInfo, isPersonal: Boolean = false, na
                     else -> "未知"
                 }
                 Text("作品品质 $text")
-
+                Text("变调值 ${aiCoverDataInfo.userAdaptTone}")
                 Text(
                     "创作时间 ${
                         SimpleDateFormat(
