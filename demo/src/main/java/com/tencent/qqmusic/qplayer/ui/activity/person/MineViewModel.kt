@@ -162,6 +162,13 @@ class MineViewModel : ViewModel() {
         } ?: "未知"
     }
 
+    /**
+     * 获取当前扫码登录来源APP，非扫码登录返回null
+     */
+    fun getScanLoginAppText(): String? {
+        return OpenApiSDK.getLoginApi().getScanLoginApp()?.desc
+    }
+
 
     fun getVipText(vipInfo: VipInfo?): List<String> {
         val ret = mutableListOf<String>()

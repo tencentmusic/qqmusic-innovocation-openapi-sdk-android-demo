@@ -13,14 +13,16 @@ import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.AppCompatSeekBar
+import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.player.ChorusModeOperationResult
 import com.tencent.qqmusic.openapisdk.core.player.OnVocalAccompanyStatusChangeListener
-import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyErrorStatus
+import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyType
 import com.tencent.qqmusic.openapisdk.core.player.VocalPercent
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.utils.UiUtils
@@ -35,8 +37,15 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
 
     private val vocalAccompanyButton: Button by lazy { findViewById(R.id.vocalAccompany) }
     private val vocalAccompanySeekbar: AppCompatSeekBar by lazy { findViewById(R.id.seekbar) }
+    private val vocalAccompanyTypeSwitch: SwitchCompat by lazy {
+        findViewById(R.id.vocalAccompanyType)
+    }
+    private val chorusModeSwitch: SwitchCompat by lazy { findViewById(R.id.chorusMode) }
     private val backButton : ImageButton by lazy { findViewById(R.id.btn_back) }
-
+    private var chorusModeOperating = false
+    private var updatingChorusModeSwitch = false
+    // 仅在当前实例内记录上次成功设置的连续伴唱进度，退出页面后重新使用 SDK 默认值。
+    private var vocalAccompanyProgress: Int? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -75,20 +84,52 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
             }
 
         })
+        val vocalAccompanyApi = OpenApiSDK.getVocalAccompanyApi()
+        if (vocalAccompanyProgress == null) {
+            vocalAccompanyProgress = vocalAccompanyApi.currentVocalRadio().value
+        }
         vocalAccompanyButton.setOnClickListener {
-            val isVocalAccompanyOpened = OpenApiSDK.getVocalAccompanyApi().isVocalAccompanyOpened()
+            val isVocalAccompanyOpened = vocalAccompanyApi.isVocalAccompanyOpened()
             val result = if (isVocalAccompanyOpened) {
-                OpenApiSDK.getVocalAccompanyApi().disableVocalAccompany()
+                vocalAccompanyApi.disableVocalAccompany()
             } else {
-                OpenApiSDK.getVocalAccompanyApi().enableVocalAccompany()
+                vocalAccompanyApi.setInitialVocalRadio(vocalAccompanyProgress!!)
+                vocalAccompanyApi.enableVocalAccompany()
             }
-            if (result != VocalAccompanyErrorStatus.SUCCESS) {
+            if (!result.isSuccess()) {
                 UiUtils.showToast(result.msg)
             } else {
                 onVocalAccompanyStatusChange(
-                    OpenApiSDK.getVocalAccompanyApi().currentVocalRadio().value,
+                    vocalAccompanyProgress!!,
                     !isVocalAccompanyOpened
                 )
+            }
+        }
+        setupChorusModeSwitch()
+        var isUpdatingVocalAccompanyType = false
+        vocalAccompanyTypeSwitch.isChecked =
+            vocalAccompanyApi.currentVocalAccompanyType() == VocalAccompanyType.GALAXY
+        updateVocalAccompanyTypeSwitchText(vocalAccompanyTypeSwitch.isChecked)
+        vocalAccompanyTypeSwitch.setOnCheckedChangeListener { _, useGalaxy ->
+            if (isUpdatingVocalAccompanyType) {
+                return@setOnCheckedChangeListener
+            }
+            val type = if (useGalaxy) {
+                VocalAccompanyType.GALAXY
+            } else {
+                VocalAccompanyType.STEREO
+            }
+            val result = vocalAccompanyApi.setVocalAccompanyType(type)
+            if (result.isSuccess()) {
+                updateVocalAccompanyTypeSwitchText(useGalaxy)
+                UiUtils.showToast(
+                    "设置伴唱类型：${vocalAccompanyTypeName(type)}"
+                )
+            } else {
+                isUpdatingVocalAccompanyType = true
+                vocalAccompanyTypeSwitch.isChecked = !useGalaxy
+                isUpdatingVocalAccompanyType = false
+                UiUtils.showToast(result.msg)
             }
         }
         queryTryVocalAccompany()
@@ -102,15 +143,10 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
             setPadding(8, 4, 8, 4)
         }
         (vocalAccompanySeekbar.parent as? ViewGroup)?.addView(progressTextView)
-
-        var closeVocalPercent = OpenApiSDK.getVocalAccompanyApi().currentVocalRadio()
-        var realVocalPercent = OpenApiSDK.getVocalAccompanyApi().currentVocalValue()
+        var realVocalPercent = vocalAccompanyProgress!!
         vocalAccompanySeekbar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
             @SuppressLint("SetTextI18n")
             override fun onProgressChanged(seekbar: SeekBar?, progress: Int, fromUser: Boolean) {
-                closeVocalPercent =
-                    OpenApiSDK.getVocalAccompanyApi().convertToCloseVocalRadio(progress)
-
                 // 更新进度显示
                 realVocalPercent = progress
                 progressTextView.text =
@@ -136,10 +172,12 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
             }
 
             override fun onStopTrackingTouch(seekbar: SeekBar?) {
-                val result = OpenApiSDK.getVocalAccompanyApi().adjustVocalRadio(realVocalPercent)
-                UiUtils.showToast("code=${result.code},msg=${result.msg}", isLong = true)
-                if (!result.isSuccess()) {
-                    seekbar?.progress = (OpenApiSDK.getVocalAccompanyApi().currentVocalValue())
+                val result = vocalAccompanyApi.adjustVocalRadio(realVocalPercent)
+                if (result.isSuccess()) {
+                    vocalAccompanyProgress = realVocalPercent
+                } else {
+                    UiUtils.showToast(result.msg)
+                    seekbar?.progress = vocalAccompanyProgress!!
                 }
                 // 延迟隐藏进度文本
                 progressTextView.postDelayed({
@@ -148,8 +186,8 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
             }
         })
         onVocalAccompanyStatusChange(
-            OpenApiSDK.getVocalAccompanyApi().currentVocalRadio().value,
-            OpenApiSDK.getVocalAccompanyApi().isVocalAccompanyOpened()
+            vocalAccompanyProgress!!,
+            vocalAccompanyApi.isVocalAccompanyOpened()
         )
         OpenApiSDK.getVocalAccompanyApi().canTryVocalAccompany { canTry ->
             if (canTry) {
@@ -164,7 +202,7 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
                             dialog.dismiss()
                             OpenApiSDK.getVocalAccompanyApi()
                                 .fetchVocalAccompanyTrialBenefits { tryResult ->
-                                    if (tryResult == VocalAccompanyErrorStatus.SUCCESS) {
+                                    if (tryResult.isSuccess()) {
                                         UiUtils.showToast("领取伴唱试用权益成功")
                                     } else {
                                         UiUtils.showToast("领取伴唱试用权益失败：${tryResult.msg}")
@@ -176,16 +214,87 @@ class LyricNewActivity : FragmentActivity(), OnVocalAccompanyStatusChangeListene
         }
     }
 
-    private fun queryTryVocalAccompany() {
-        if (OpenApiSDK.getPlayerApi().getCurrentSongInfo()?.canTryVocalAccompany() == true) {
-            UiUtils.showToast("当前歌曲拥有伴唱试用权益")
-        } else {
-            UiUtils.showToast("当前歌曲没有伴唱试用权益")
+    override fun onResume() {
+        super.onResume()
+        syncChorusModeSwitchState()
+    }
+
+    private fun setupChorusModeSwitch() {
+        syncChorusModeSwitchState()
+        chorusModeSwitch.setOnCheckedChangeListener { _, enable ->
+            if (updatingChorusModeSwitch || chorusModeOperating) {
+                return@setOnCheckedChangeListener
+            }
+            val chorusModeApi = OpenApiSDK.getChorusModeApi()
+            if (enable) {
+                chorusModeOperating = true
+                syncChorusModeSwitchState()
+                chorusModeApi.enableChorusMode { result ->
+                    runOnUiThread {
+                        chorusModeOperating = false
+                        syncChorusModeSwitchState()
+                        if (result == ChorusModeOperationResult.SUCCESS) {
+                            val message = if (chorusModeApi.isCurrentSongPlayingInChorusMode()) {
+                                "副歌模式已开启，当前歌曲开始挑战"
+                            } else {
+                                "副歌模式已开启，下一首开始挑战"
+                            }
+                            UiUtils.showToast(message)
+                        } else {
+                            UiUtils.showToast(result.message)
+                        }
+                    }
+                }
+            } else {
+                val result = chorusModeApi.disableChorusMode()
+                syncChorusModeSwitchState()
+                if (result == ChorusModeOperationResult.SUCCESS) {
+                    UiUtils.showToast("副歌模式已关闭")
+                } else {
+                    UiUtils.showToast(result.message)
+                }
+            }
         }
+    }
+
+    private fun syncChorusModeSwitchState() {
+        val enabled = OpenApiSDK.getChorusModeApi().isChorusModeEnabled()
+        updatingChorusModeSwitch = true
+        chorusModeSwitch.isChecked = enabled
+        updatingChorusModeSwitch = false
+        chorusModeSwitch.isEnabled = !chorusModeOperating
+        chorusModeSwitch.text = when {
+            chorusModeOperating -> "唱副歌模式（正在开启）"
+            enabled -> "唱副歌模式（已开启）"
+            else -> "唱副歌模式（已关闭）"
+        }
+    }
+
+    private fun queryTryVocalAccompany() {
+        val vocalAccompanyApi = OpenApiSDK.getVocalAccompanyApi()
+        val type = vocalAccompanyApi.currentVocalAccompanyType()
+        val songInfo = OpenApiSDK.getPlayerApi().getCurrentSongInfo()
+        val canTry = if (type == VocalAccompanyType.GALAXY) {
+            songInfo?.canTryGalaxyVocalAccompany() == true
+        } else {
+            songInfo?.canTryVocalAccompany() == true
+        }
+        UiUtils.showToast("当前歌曲${if (canTry) "拥有" else "没有"}${vocalAccompanyTypeName(type)}试用权益")
+    }
+
+    private fun updateVocalAccompanyTypeSwitchText(useGalaxy: Boolean) {
+        vocalAccompanyTypeSwitch.text = if (useGalaxy) "全景声伴唱" else "立体声伴唱"
+    }
+
+    private fun vocalAccompanyTypeName(type: VocalAccompanyType): String {
+        return if (type == VocalAccompanyType.GALAXY) "全景声伴唱" else "立体声伴唱"
     }
 
     override fun onVocalAccompanyStatusChange(vocalScale: Int, enable: Boolean) {
         runOnUiThread {
+            if (enable) {
+                vocalAccompanyProgress = vocalScale
+            }
             if (enable) {
                 vocalAccompanyButton.text = "关闭伴唱"
             } else {

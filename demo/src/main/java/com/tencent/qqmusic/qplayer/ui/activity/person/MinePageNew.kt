@@ -78,7 +78,11 @@ fun MinePageNew(model: MineViewModel) {
                         Text(text = "开始时间：${model.getVipTimeStartText(vip)}")
                         Text(text = "结束时间：${model.getVipEndTimeText(vip)}")
                     }
-                    Text(text = "登录方式：${model.getLoginType(model.loginInfo.collectAsState().value)}")
+                    val scanAppText = model.getScanLoginAppText()
+                    Text(
+                        text = "登录方式：${model.getLoginType(model.loginInfo.collectAsState().value)}" +
+                            if (scanAppText.isNullOrEmpty()) "" else "($scanAppText)"
+                    )
                     val partnerIdInfo = model.partnerAccountInfo.collectAsState().value ?: ""
                     if (partnerIdInfo.isNullOrEmpty().not()) {
                         Text(text = "已登录第三方帐号 id：$partnerIdInfo")

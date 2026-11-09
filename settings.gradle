@@ -1,3 +1,13 @@
+pluginManagement {
+    repositories {
+        // 腾讯云 Maven 镜像
+        maven { url 'https://mirrors.tencent.com/nexus/repository/maven-public/' }
+        // Gradle 插件门户（兜底，本地开发可用）
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
 rootProject.name = "QPlay Edge (Demo)"
 include ':demo'
 
@@ -31,6 +41,4 @@ if (useSdkSource) {
     }
 }
 include ':base'
-if (ext.useDebugInfoSource) {
-    include ':debuginfo'
-}
+ext.useDebugInfoSource = false // public blacklist

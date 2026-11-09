@@ -29,6 +29,7 @@ import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.core.internal.lyric.LyricLoadInterface
 import com.tencent.qqmusic.qplayer.ui.activity.player.CustomVisualizer
 import com.tencent.qqmusic.qplayer.ui.activity.player.DemoEffectViewModel
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import com.tencent.qqmusictvsdk.internal.lyric.LyricManager
 
 
@@ -102,10 +103,10 @@ class PlayerNewViewWidget(private val viewModel: PlayerViewModel, private val co
         }
 
         playButtonPre.setOnClickListener {
-            playAPI.prev()
+            UiUtils.showPlayErrToast(playAPI.prev())
         }
         playButtonNext.setOnClickListener {
-            playAPI.next()
+            UiUtils.showPlayErrToast(playAPI.next())
         }
         val seekBar: SeekBar? = container.findViewById<SeekBar>(R.id.seek_bar)
         val songNameView = container.findViewById<TextView>(R.id.song_name)

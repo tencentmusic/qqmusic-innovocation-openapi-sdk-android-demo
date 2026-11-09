@@ -310,8 +310,9 @@ class DemoActivity : BaseComposeActivity() {
                 transferMode: Int,
                 sessionId: Int
             ): AudioTrack? {
-                if (PlayerObserver.mCurrentQuality == Quality.DOLBY || PlayerObserver.mCurrentQuality == Quality.GALAXY) {
-                    Log.i(TAG, "createAudioTrack multi channel. quality:${PlayerObserver.mCurrentQuality}, channelMask:$channelMask")
+                val channelCount = Integer.bitCount(channelMask)
+                if (channelCount > 8 || PlayerObserver.mCurrentQuality == Quality.DOLBY || PlayerObserver.mCurrentQuality == Quality.GALAXY) {
+                    Log.i(TAG, "createAudioTrack quality:${PlayerObserver.mCurrentQuality}, channelCount:$channelCount, channelMask:$channelMask, sampleRate:$sampleRate")
                 }
                 if (!SettingsUtil.isCreateAudioTrack) {
                     return null

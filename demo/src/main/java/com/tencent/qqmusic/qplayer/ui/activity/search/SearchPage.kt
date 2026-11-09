@@ -23,6 +23,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -31,6 +33,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.LocalContentColor
+import androidx.compose.material.RadioButton
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import androidx.compose.material.TabRowDefaults
@@ -54,6 +57,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -63,6 +67,7 @@ import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.pagerTabIndicatorOffset
 import com.google.accompanist.pager.rememberPagerState
+import com.tencent.qqmusic.openapisdk.core.openapi.CompanyReportSearch
 import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.Folder
 import com.tencent.qqmusic.openapisdk.model.LyricInfo
@@ -139,6 +144,48 @@ fun SearchPage(searchViewModel: SearchViewModel) {
         if (isAiSearchMode) {
             StreamMusicSkillPage(viewModel = searchViewModel)
             return@Column
+        }
+
+        var searchFrom by remember { mutableStateOf(searchViewModel.searchFrom) }
+        TextField(
+            value = searchFrom,
+            onValueChange = {
+                searchFrom = it
+                searchViewModel.searchFrom = it
+            },
+            label = { Text("搜索来源（选填）") },
+            placeholder = { Text("留空自动识别，可输入 voice_assistant、bluetooth 等") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        var isCompanyReportSearch by remember { mutableStateOf(searchViewModel.isCompanyReportSearch) }
+        Text("车企搜索标记（默认否）")
+        Row(
+            modifier = Modifier.fillMaxWidth().selectableGroup(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            listOf(
+                CompanyReportSearch.NO to "否（0）",
+                CompanyReportSearch.YES to "是（1）"
+            ).forEach { (value, label) ->
+                Row(
+                    modifier = Modifier
+                        .selectable(
+                            selected = isCompanyReportSearch == value,
+                            onClick = {
+                                isCompanyReportSearch = value
+                                searchViewModel.isCompanyReportSearch = value
+                            },
+                            role = Role.RadioButton
+                        )
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(selected = isCompanyReportSearch == value, onClick = null)
+                    Text(label)
+                }
+            }
         }
 
         val smartKey = remember {

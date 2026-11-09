@@ -3,6 +3,7 @@ package com.tencent.qqmusic.qplayer.ui.activity.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
+import com.tencent.qqmusic.openapisdk.core.openapi.CompanyReportSearch
 import com.tencent.qqmusic.openapisdk.model.Album
 import com.tencent.qqmusic.openapisdk.model.Folder
 import com.tencent.qqmusic.openapisdk.model.HotKey
@@ -27,6 +28,8 @@ const val SEARCH_PAGE_NUM = 20
 class SearchModel<T>(val type: Int) {
     private val _dataList = mutableListOf<T>()
     val dataList: List<T> = _dataList
+    private var searchFrom: String? = null
+    private var isCompanyReportSearch: CompanyReportSearch? = null
     private var nextPage: Int = 0
     private var keyword: String = ""
 
@@ -36,9 +39,11 @@ class SearchModel<T>(val type: Int) {
     private val _loadMoreState = MutableStateFlow(false)
     val loadMoreState = _loadMoreState.asStateFlow()
 
-    fun search(keyword: String) {
+    fun search(keyword: String, searchFrom: String?, isCompanyReportSearch: CompanyReportSearch?) {
         clear()
         this.keyword = keyword
+        this.searchFrom = searchFrom
+        this.isCompanyReportSearch = isCompanyReportSearch
         loadMore()
     }
 
@@ -46,7 +51,10 @@ class SearchModel<T>(val type: Int) {
     private fun transResult(result: List<Any>): List<T> { return result as List<T> }
 
     fun loadMore() {
-        OpenApiSDK.getOpenApi().search(keyword, type, nextPage, SEARCH_PAGE_NUM) { resp->
+        OpenApiSDK.getOpenApi().search(
+            keyword, type, nextPage, SEARCH_PAGE_NUM,
+            searchFrom = searchFrom, isCompanyReportSearch = isCompanyReportSearch
+        ) { resp->
             if (resp.isSuccess()) {
                 when (type) {
                     SearchType.SONG -> {
@@ -71,7 +79,7 @@ class SearchModel<T>(val type: Int) {
                         resp.data?.albumList?.let { _dataList.addAll(transResult(it)) }
                     }
                 }
-                nextPage = (resp.page ?: nextPage) + 1
+                nextPage = (resp.page ?: 0) + 1
                 _dataStateFlow.update { ArrayList(_dataList) }
                 _loadMoreState.update { resp.hasMore }
             }
@@ -93,6 +101,9 @@ val HOTKEY_TYPE_LIST = listOf("热门搜索",
 )
 
 class SearchViewModel: ViewModel() {
+
+    var searchFrom: String = ""
+    var isCompanyReportSearch: CompanyReportSearch = CompanyReportSearch.NO
 
     private var keyword: String = ""
 
@@ -137,7 +148,11 @@ class SearchViewModel: ViewModel() {
             }
             this.keyword = keyword
         }
-        searchModels[type]?.search(keyword)
+        searchModels[type]?.search(
+            keyword,
+            searchFrom.takeIf { it.isNotEmpty() },
+            isCompanyReportSearch
+        )
     }
 
     fun smartSearchKey(key: String, callback: ((List<String>) -> Unit)?) {

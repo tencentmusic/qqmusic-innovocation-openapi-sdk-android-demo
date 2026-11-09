@@ -49,6 +49,28 @@
         android:layout_marginBottom="@dimen/dp100"
         android:text="开启伴唱" />
 
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/vocalAccompanyType"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@id/vocalAccompany"
+        android:layout_alignParentStart="true"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="8dp"
+        android:text="立体声伴唱"
+        android:textColor="@color/white" />
+
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/chorusMode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/vocalAccompany"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:text="唱副歌模式（已关闭）"
+        android:textColor="@color/white" />
+
     <androidx.appcompat.widget.AppCompatSeekBar
         android:id="@+id/seekbar"
         style="@style/CustomSeekbarStyle"

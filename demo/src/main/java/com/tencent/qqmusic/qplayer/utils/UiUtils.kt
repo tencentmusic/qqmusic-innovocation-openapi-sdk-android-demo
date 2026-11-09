@@ -104,6 +104,15 @@ object UiUtils {
     fun showPlayErrToast(errCode:Int, currSongInfo: SongInfo?=null){
         when(errCode){
             PlayDefine.PlayError.PLAY_ERR_NONE -> return
+            PlayDefine.PlayError.PLAY_ERR_CHORUS_MODE_SONG_NOT_SUPPORT -> {
+                showToast("当前歌曲暂不支持副歌模式")
+            }
+            PlayDefine.PlayError.PLAY_ERR_CHORUS_MODE_SONG_AUTO_SKIPPED -> {
+                showToast("当前歌曲不支持副歌模式，已自动跳过")
+            }
+            PlayDefine.PlayError.PLAY_ERR_CHORUS_MODE_NO_SUPPORTED_SONG -> {
+                showToast("当前播放列表暂无支持唱副歌的歌曲")
+            }
             PlayDefine.PlayError.PLAY_ERR_CANNOT_PLAY -> {
                 val songInfo = currSongInfo?: OpenApiSDK.getPlayerApi().getCurrentSongInfo()
                 val msg = if(songInfo?.unplayableMsg.isNullOrEmpty()){
@@ -182,7 +191,8 @@ object UiUtils {
                 R.drawable.action_icon_galaxy_quality
             }
 
-            PlayerEnums.Quality.VOCAL_ACCOMPANY -> {
+            PlayerEnums.Quality.VOCAL_ACCOMPANY,
+            PlayerEnums.Quality.GALAXY_VOCAL_ACCOMPANY -> {
                 R.drawable.action_icon_quality_va
             }
 
@@ -347,6 +357,7 @@ object UiUtils {
             Quality.DOLBY -> "杜比全景声"
             Quality.WANOS -> "Wanos"
             Quality.VOCAL_ACCOMPANY -> "伴唱"
+            Quality.GALAXY_VOCAL_ACCOMPANY -> "全景声伴唱"
             Quality.MASTER_TAPE -> "臻品母带"
             Quality.MASTER_SR -> "母带省流版"
             Quality.VINYL -> "黑胶"
@@ -366,6 +377,7 @@ object UiUtils {
             SuperQualityType.QUALITY_TYPE_GALAXY->"臻品全景声权益"
             SuperQualityType.QUALITY_TYPE_MASTERTAPE->"臻品母带权益"
             SuperQualityType.QUALITY_TYPE_ACCOM->"伴唱权益"
+            SuperQualityType.QUALITY_TYPE_GALAXY_ACCOM->"全景声伴唱权益"
             SuperQualityType.QUALITY_TYPE_WANOS->"Wanos权益"
             SuperQualityType.QUALITY_TYPE_AI_LYRIC->"AI歌词背景"
             SuperQualityType.QUALITY_TYPE_VOYAGE->"臻品乐航"
@@ -382,6 +394,7 @@ object UiUtils {
             ProfitInfo.QUALITY_TYPE_GALAXY->"臻品全景声权益"
             ProfitInfo.QUALITY_TYPE_MASTERTAPE->"臻品母带/省流权益"
             ProfitInfo.QUALITY_TYPE_ACCOM->"伴唱权益"
+            ProfitInfo.QUALITY_TYPE_GALAXY_ACCOM->"全景声伴唱权益"
             ProfitInfo.MUSIC_THERAPY_TYPE->"疗愈权益"
             ProfitInfo.MUSIC_VOYAGE->"臻品乐航"
             ProfitInfo.SOUND_EFFECT_TYPE->"音效权益"

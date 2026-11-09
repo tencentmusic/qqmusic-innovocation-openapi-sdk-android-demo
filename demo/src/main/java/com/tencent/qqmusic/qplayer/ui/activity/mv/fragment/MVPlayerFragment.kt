@@ -99,6 +99,8 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
     private var mediaNetWork: IEdgeMediaNetWork? = null
     private var mPlayer: IEdgeMediaPlayer? = null
     private var currentPlayState: PlayerState? = null
+    // Use the latest intent for both the button label and its action during async transitions.
+    private var pauseRequested = false
 
     private var buffering: Boolean = false
 
@@ -353,11 +355,17 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
             }
         }
         playButton = view.findViewById<Button>(R.id.play)?.apply {
+            text = if (pauseRequested) "播放" else "暂停"
             setOnClickListener {
-                if (mPlayer?.isPlaying() == true) {
-                    mPlayer?.pause()
+                MLog.d(TAG, "[playButton] text=${playButton?.text} isPlaying=${mPlayer?.isPlaying()} pauseRequested=$pauseRequested")
+                if (!pauseRequested) {
+                    pauseRequested = true
+                    mPlayer?.pause(needFade = true)
+                    playButton?.text = "播放"
                 } else {
-                    mPlayer?.play()
+                    pauseRequested = false
+                    mPlayer?.play(needFade = true)
+                    playButton?.text = "暂停"
                 }
             }
         }
@@ -456,6 +464,10 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
 
     private fun startPlayVideo(mediaResDetail: MediaResDetail?) {
         AppScope.launchUI {
+            if (mediaResDetail?.vid != mPlayer?.getCurrentMediaRes()?.vid) {
+                pauseRequested = false
+                playButton?.text = "暂停"
+            }
             mPlayer?.setMediaRes(mediaResDetail)
             mPlayer?.setSurface(surfaceView)
             updateMVView(mediaResDetail)
@@ -524,8 +536,14 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
 
     private fun handleState(state: PlayerState) {
         AppScope.launchUI {
+            when (state) {
+                PlayerState.ERROR, PlayerState.STOPPED, PlayerState.RELEASED,
+                PlayerState.PLAYBACK_COMPLETED -> pauseRequested = true
+                else -> Unit
+            }
             muteButton?.text = if ((mPlayer?.isMute() == true).not()) "静音" else "解除静音"
-            playButton?.text = if (mPlayer?.isPlaying() == true) "暂停" else "播放"
+            playButton?.text = if (pauseRequested) "播放" else "暂停"
+            MLog.d(TAG, "[playButtonState] state=$state isPlaying=${mPlayer?.isPlaying()} pauseRequested=$pauseRequested text=${playButton?.text}")
         }
         if (state != PlayerState.SEEK_COMPLETED) {
             currentPlayState = state
@@ -546,7 +564,10 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
                 PerformanceHelper.monitorMvPlay(TAG)
                 updateMVView()
                 loadingText?.isVisible = false
-                mPlayer?.play()
+                if (!pauseRequested) {
+                    // Use the SDK default fade duration; do not override it in the demo.
+                    mPlayer?.play(needFade = true)
+                }
             }
 
 
@@ -583,8 +604,10 @@ class MVPlayerFragment(viewModelStoreOwner: ViewModelStoreOwner) : Fragment() {
 
     override fun onPause() {
         super.onPause()
+        pauseRequested = true
         if (mPlayer?.isPlaying() == true) {
-            mPlayer?.pause()
+            playButton?.text = "播放"
+            mPlayer?.pause(needFade = true)
         }
     }
 
