@@ -389,6 +389,13 @@ object PlayerObserver : OnVocalAccompanyStatusChangeListener {
             GlobalScope.launch(Dispatchers.Main) {
                 val errorCode = playErrorData.code
                 Log.i(TAG, "onEvent: current error $errorCode")
+                if (errorCode == PlayDefine.PlayError.PLAY_ERR_CHORUS_MODE_SONG_NOT_SUPPORT ||
+                    errorCode == PlayDefine.PlayError.PLAY_ERR_CHORUS_MODE_SONG_AUTO_SKIPPED ||
+                    errorCode == PlayDefine.PlayError.PLAY_ERR_CHORUS_MODE_NO_SUPPORTED_SONG
+                ) {
+                    UiUtils.showPlayErrToast(errorCode, currentSong)
+                    return@launch
+                }
                 if (currentSong?.canPlay() != true) {
                     if (errorCode == PlayDefine.PlayError.PLAY_ERR_CANNOT_PLAY){
                         UiUtils.showToast("${errorCode},${currentSong?.unplayableMsg}")

@@ -359,7 +359,7 @@ fun PlayerPage(observer: PlayerObserver) {
                 },
                 fontFamily = FontFamily.Monospace
             )
-            val onlyTryPlay = currSong?.canPlayTry() == true && !currSong.canPlayWhole()
+            val onlyTryPlay = currSong?.isNoLoginSong() == true || (currSong?.canPlayTry() == true && !currSong.canPlayWhole())
             val tryBegin = if (onlyTryPlay) currSong?.tryBegin?.toFloat() ?: 0F else currSong?.chorusBegin?.toFloat() ?: 0F
             val tryEnd = if (onlyTryPlay) currSong?.tryEnd?.toFloat() ?: 0F else currSong?.chorusEnd?.toFloat() ?: 0F
             val segments = mutableListOf<Segment>().apply {
@@ -389,7 +389,8 @@ fun PlayerPage(observer: PlayerObserver) {
                     observer.isSeekBarTracking = false
                     thread {
                         var seekPosition = observer.seekPosition.toInt()
-                        if (onlyTryPlay && (seekPosition < (currSong?.tryBegin ?: 0) || seekPosition > (currSong?.tryEnd ?: 0))) {
+                        val inTryRange = seekPosition in (currSong?.tryBegin ?: 0)..(currSong?.tryEnd ?: 0)
+                        if (onlyTryPlay && !inTryRange) {
                             seekPosition = currSong?.tryBegin ?: 0
                             AppScope.launchUI {
                                 Toast.makeText(activity, "完整播放受限，将播放试听片段", Toast.LENGTH_SHORT).show()
@@ -484,6 +485,7 @@ fun PlayerPage(observer: PlayerObserver) {
                             Log.d(TAG, "prev, ret=$ret")
                             if (ret != 0) {
                                 observer.playStateText = "上一曲失败(ret=$ret)"
+                                UiUtils.showPlayErrToast(ret)
                             }
                         }
                     }
@@ -542,6 +544,7 @@ fun PlayerPage(observer: PlayerObserver) {
                             Log.d(TAG, "next, ret=$ret")
                             if (ret != 0) {
                                 observer.playStateText = "下一曲失败(ret=$ret)"
+                                UiUtils.showPlayErrToast(ret)
                             }
                         }
                     }

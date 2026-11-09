@@ -206,6 +206,7 @@ fun DetailPage(observer: PlayerObserver? = null) {
                 }
             }
             Column(modifier = Modifier.padding(top = 20.dp, bottom = 10.dp)) {
+                Text(text = "免登录片段策略 ： ${songInfo?.isNoLoginSong() == true}")
                 Text(text = "试听位置 ： ${convertTime(songInfo?.tryBegin?.toLong()?.div(1000) ?: 0L)}~${convertTime(songInfo?.tryEnd?.toLong()?.div(1000) ?: 0L)}")
                 Text(text = "副歌位置 ： ${convertTime(songInfo?.chorusBegin?.toLong()?.div(1000) ?: 0L)}~${convertTime(songInfo?.chorusEnd?.toLong()?.div(1000) ?: 0L)}")
             }

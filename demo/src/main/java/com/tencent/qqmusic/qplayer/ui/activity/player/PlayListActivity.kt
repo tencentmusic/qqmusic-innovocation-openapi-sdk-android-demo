@@ -36,6 +36,7 @@ import com.tencent.qqmusic.openapisdk.core.player.PlayerEvent
 import com.tencent.qqmusic.openapisdk.model.SongInfo
 import com.tencent.qqmusic.qplayer.R
 import com.tencent.qqmusic.qplayer.ui.activity.player.PlayerObserver.tryPauseFirst
+import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -197,9 +198,12 @@ class PlayListActivity : ComponentActivity() {
                                 item.first.select = item.first.select.not()
                                 count.value++
                             } else {
-                                tryPauseFirst()
                                 val index = songList.indexOf(item)
-                                OpenApiSDK.getPlayerApi().playPos(index)
+                                if (index != OpenApiSDK.getPlayerApi().getCurPlayPos()) {
+                                    tryPauseFirst()
+                                }
+                                val result = OpenApiSDK.getPlayerApi().playPos(index)
+                                UiUtils.showPlayErrToast(result, item.second)
                             }
                         }) {
                             Row(modifier = Modifier.height(45.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -522,7 +522,7 @@ fun itemUI(params: PlayListParams) {
                     )
                     ShowIconWithPriority(
                         songInfo = songInfo,
-                        qualityPriority = listOf(Quality.VOCAL_ACCOMPANY)
+                        qualityPriority = listOf(Quality.GALAXY_VOCAL_ACCOMPANY, Quality.VOCAL_ACCOMPANY)
                     )
                     val pd = android.graphics.Color.parseColor("#1FCF91")
                     if (songInfo.isAISong()) {

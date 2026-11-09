@@ -129,6 +129,7 @@ fun SongInfo.hasUrl(@Quality quality:Int): Boolean{
         Quality.DOLBY -> this.hasLinkDolby()
         Quality.HIRES -> this.hasLinkHiRes()
         Quality.VOCAL_ACCOMPANY -> this.hasLinkVocalAccompany()
+        Quality.GALAXY_VOCAL_ACCOMPANY -> this.getSongQuality(quality)?.hasLink() == true
         Quality.EXCELLENT -> false
         Quality.GALAXY -> if (this.isGalaxyEffectType()) false else this.hasLinkGalaxy()
         Quality.WANOS,

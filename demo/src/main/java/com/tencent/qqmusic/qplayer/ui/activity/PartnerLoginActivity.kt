@@ -87,7 +87,7 @@ fun PartnerLoginPage(impl: IPartnerLogin? = null, sharedPreferences: SharedPrefe
     ConstraintLayout(modifier = Modifier
         .fillMaxSize()
         .verticalScroll(state = rememberScrollState())) {
-        val (appIdView, appAccountView, appTokenView, loginView, writeAccount, bindView, deleteView, queryView, queryAccountIdView, resultView) = createRefs()
+        val (appIdView, appAccountView, appTokenView, loginView, writeAccount, bindView, deleteView, queryView, queryByQQMusicView, queryAccountIdView, resultView, queryResultView) = createRefs()
         TextField(value = appId.value, onValueChange = {
             appId.value = it
         }, label = { Text(text = "AppId") }, modifier = Modifier
@@ -180,7 +180,7 @@ fun PartnerLoginPage(impl: IPartnerLogin? = null, sharedPreferences: SharedPrefe
                     cbForceBind.value
                 ) { response -> result.value = "ret: ${response?.ret} msg : ${response?.errorMsg} bindAccountID: ${response?.data}" }
             }, modifier = Modifier.fillMaxSize()
-                ) {
+        ) {
                 Text(text = "绑定音乐帐号")
             }
         }
@@ -219,22 +219,38 @@ fun PartnerLoginPage(impl: IPartnerLogin? = null, sharedPreferences: SharedPrefe
 
         Button(onClick = {
             result.value = execute
-            result.value = "当前登录帐号的ID 是  ${impl?.queryThirdPartyAccountID()}"
+            impl?.queryThirdPartyAccountBindStateByQQMusicAccount { response ->
+                result.value = "ret: ${response?.ret} msg : ${response?.errorMsg}  bindAccountID: ${response?.data}"
+            }
+        }, modifier = Modifier
+            .padding(start = 30.dp, top = 30.dp, end = 30.dp)
+            .height(60.dp)
+            .constrainAs(queryByQQMusicView) {
+                width = Dimension.fillToConstraints
+                start.linkTo(queryView.start)
+                end.linkTo(queryView.end)
+                top.linkTo(queryView.bottom)
+            }) {
+            Text(text = "使用Q音登录态查询绑定状态")
+        }
+
+        Button(onClick = {
+            result.value = execute
+            result.value = "当前登录账号的ID 是  ${impl?.queryThirdPartyAccountID()}"
         }, modifier = Modifier
             .padding(start = 30.dp, top = 30.dp, end = 30.dp)
             .height(60.dp)
             .constrainAs(queryAccountIdView) {
                 width = Dimension.fillToConstraints
-                start.linkTo(queryView.start)
-                end.linkTo(queryView.end)
-                top.linkTo(queryView.bottom)
+                start.linkTo(queryByQQMusicView.start)
+                end.linkTo(queryByQQMusicView.end)
+                top.linkTo(queryByQQMusicView.bottom)
             }) {
             Text(text = "查询当前第三方帐号ID")
         }
 
         Button(onClick = {
             result.value = execute
-            impl?.enableRestoreLogin(true)
             impl?.thirdPartyAccountLogin(appId.value, token.value, accountId.value
             ) { response -> result.value = "ret: ${response?.ret} msg : ${response?.errorMsg}" }
         }, modifier = Modifier
@@ -249,6 +265,14 @@ fun PartnerLoginPage(impl: IPartnerLogin? = null, sharedPreferences: SharedPrefe
             Text(text = "登录第三方帐号")
         }
 
+        Text(text = result.value, modifier = Modifier
+            .padding(10.dp)
+            .constrainAs(queryResultView) {
+                top.linkTo(loginView.bottom)
+                start.linkTo(parent.start)
+                end.linkTo(parent.end)
+                width = Dimension.fillToConstraints
+            })
     }
 }
 

@@ -78,6 +78,7 @@
         <activity
             android:name=".ui.activity.main.PlayProcessReportTestActivity"/>
         <activity android:name=".ui.activity.main.OtherActivity" />
+        <activity android:name=".ui.activity.main.CommerceTestActivity" />
         <activity android:name=".ui.activity.main.AboutActivity" />
         <activity android:name=".ui.activity.area.AreaListActivity" />
         <activity android:name=".ui.activity.audio.LongAudioRankActivity" />

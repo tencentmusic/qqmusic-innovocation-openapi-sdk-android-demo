@@ -70,7 +70,7 @@ import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiCallback
 import com.tencent.qqmusic.openapisdk.core.openapi.OpenApiResponse
 import com.tencent.qqmusic.openapisdk.core.player.PlayCallback
 import com.tencent.qqmusic.openapisdk.core.player.PlayDefine
-import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyConfig
+import com.tencent.qqmusic.openapisdk.core.player.VocalAccompanyType
 import com.tencent.qqmusic.openapisdk.core.player.VocalPercent
 import com.tencent.qqmusic.openapisdk.model.PlaySpeedType
 import com.tencent.qqmusic.openapisdk.model.SuperQualityType
@@ -543,11 +543,7 @@ fun PlayControlArea() {
             Switch(
                 checked = PlayerObserver.vocalAccompanyConfig.replay,
                 onCheckedChange = {
-                    val vocalAccompanyConfig = VocalAccompanyConfig(
-                        PlayerObserver.vocalAccompanyConfig.defaultVocalPercent,
-                        it,
-                        PlayerObserver.vocalAccompanyConfig.keepPlayStateWhenVocalStateChange
-                    )
+                    val vocalAccompanyConfig = PlayerObserver.vocalAccompanyConfig.copy(replay = it)
                     PlayerObserver.vocalAccompanyConfig = vocalAccompanyConfig
                     OpenApiSDK.getVocalAccompanyApi().saveDefaultVocalAccompanyConfig(vocalAccompanyConfig)
                 })
@@ -566,8 +562,7 @@ fun PlayControlArea() {
             Switch(
                 checked = PlayerObserver.vocalAccompanyConfig.keepPlayStateWhenVocalStateChange,
                 onCheckedChange = {
-                    val vocalAccompanyConfig =
-                        VocalAccompanyConfig(PlayerObserver.vocalAccompanyConfig.defaultVocalPercent, PlayerObserver.vocalAccompanyConfig.replay, it)
+                    val vocalAccompanyConfig = PlayerObserver.vocalAccompanyConfig.copy(keepPlayStateWhenVocalStateChange = it)
                     PlayerObserver.vocalAccompanyConfig = vocalAccompanyConfig
                     OpenApiSDK.getVocalAccompanyApi().saveDefaultVocalAccompanyConfig(vocalAccompanyConfig)
                 })
@@ -583,9 +578,8 @@ fun PlayControlArea() {
                 value = PlayerObserver.vocalAccompanyConfig.defaultVocalPercent.value.toFloat(),
                 valueRange = VocalPercent.min.value.toFloat()..VocalPercent.max.value.toFloat(),
                 onValueChange = {
-                    val vocalAccompanyConfig = VocalAccompanyConfig(
-                        OpenApiSDK.getVocalAccompanyApi().convertToCloseVocalRadio(it.toInt()), PlayerObserver.vocalAccompanyConfig.replay,
-                        PlayerObserver.vocalAccompanyConfig.keepPlayStateWhenVocalStateChange
+                    val vocalAccompanyConfig = PlayerObserver.vocalAccompanyConfig.copy(
+                        defaultVocalPercent = OpenApiSDK.getVocalAccompanyApi().convertToCloseVocalRadio(it.toInt())
                     )
                     PlayerObserver.vocalAccompanyConfig = vocalAccompanyConfig
                     OpenApiSDK.getVocalAccompanyApi().saveDefaultVocalAccompanyConfig(PlayerObserver.vocalAccompanyConfig)
@@ -599,6 +593,63 @@ fun PlayControlArea() {
                 text = "默认比例: ${PlayerObserver.vocalAccompanyConfig.defaultVocalPercent.value}",
                 fontFamily = FontFamily.Monospace
             )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "默认使用全景声伴唱（无资源降级立体声）",
+                fontFamily = FontFamily.Monospace
+            )
+            Switch(
+                checked = PlayerObserver.vocalAccompanyConfig.defaultVocalAccompanyType == VocalAccompanyType.GALAXY,
+                onCheckedChange = { useGalaxy ->
+                    val type = if (useGalaxy) VocalAccompanyType.GALAXY else VocalAccompanyType.STEREO
+                    val result = OpenApiSDK.getVocalAccompanyApi().setVocalAccompanyType(type)
+                    PlayerObserver.vocalAccompanyConfig =
+                        OpenApiSDK.getVocalAccompanyApi().currentVocalAccompanyConfig()
+                    UiUtils.showToast("设置伴唱类型：${type.name}，${result.msg}")
+                }
+            )
+        }
+        Text(
+            text = "当前实际伴唱类型：${OpenApiSDK.getVocalAccompanyApi().currentPlayingVocalAccompanyType().name}",
+            modifier = Modifier.padding(start = 20.dp),
+            fontFamily = FontFamily.Monospace
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Button(onClick = {
+                val type = OpenApiSDK.getVocalAccompanyApi().currentVocalAccompanyType()
+                val isTrying = OpenApiSDK.getVocalAccompanyApi()
+                    .isFreeLimitedTimeForVocalAccompany(type)
+                UiUtils.showToast("${type.name} 正在试用：$isTrying")
+            }) {
+                Text("查询当前试用状态")
+            }
+            Button(onClick = {
+                val type = OpenApiSDK.getVocalAccompanyApi().currentVocalAccompanyType()
+                OpenApiSDK.getVocalAccompanyApi().canTryVocalAccompany(type) { canTry ->
+                    UiUtils.showToast("${type.name} 可领取试用：$canTry")
+                }
+            }) {
+                Text("查询当前伴唱试用")
+            }
+            Button(onClick = {
+                val type = OpenApiSDK.getVocalAccompanyApi().currentVocalAccompanyType()
+                OpenApiSDK.getVocalAccompanyApi().fetchVocalAccompanyTrialBenefits(type) { result ->
+                    UiUtils.showToast("领取 ${type.name} 伴唱试用：${result.msg}")
+                }
+            }) {
+                Text("领取当前伴唱试用")
+            }
         }
 
         Divider(thickness = 3.dp, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))

@@ -21,6 +21,7 @@ ext {
             useSdkSource = localProperties.getProperty("useSdkSource", "false").toBoolean()
         }
         if (useSdkSource) {
+            maven { url 'https://mirrors.cloud.tencent.com/nexus/repository/maven-public/'}
             maven { url 'https://mirrors.tencent.com/nexus/repository/maven-public/' }
             maven { url "https://mirrors.tencent.com/repository/maven/QQMusicSnapshots" }
             maven { url "https://mirrors.tencent.com/repository/maven/QQMusicRelease" }

@@ -15,6 +15,7 @@ import com.tencent.qqmusic.openapisdk.core.player.musictherapy.AIMusicTherapyPar
 import com.tencent.qqmusic.openapisdk.hologram.EdgeMvProvider
 import com.tencent.qqmusic.openapisdk.model.musictherapy.MusicTherapyListData
 import com.tencent.qqmusic.player.PlayerState
+import com.tencent.qqmusic.qplayer.MvPlayerDebugSettings
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.core.player.proxy.PlayStateProxyHelper

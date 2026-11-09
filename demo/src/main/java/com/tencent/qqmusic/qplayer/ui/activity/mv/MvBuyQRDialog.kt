@@ -13,16 +13,13 @@ import kotlinx.coroutines.delay
 
 object MvBuyQRDialog {
 
-    fun showQRCodeDialog(context: Context, qrCodeContent: String?, block: (() -> Unit)?) {
+    fun showQRCodeDialog(context: Context, qrCodeContent: String?, title: String = "二维码展示", block: (() -> Unit)?) {
         AppScope.launchUI {
             // 生成二维码图片
             val qrCodeBitmap = generateQRCode(qrCodeContent)
             // 创建AlertDialog
             val builder = AlertDialog.Builder(context)
-            builder.setTitle("二维码展示")
-            builder.setOnDismissListener {
-                block?.invoke()
-            }
+            builder.setTitle(title)
             // 设置AlertDialog的布局
             val qrCodeImageView = ImageView(context)
             qrCodeImageView.setImageBitmap(qrCodeBitmap)
@@ -40,8 +37,7 @@ object MvBuyQRDialog {
                     UiUtils.showToast("链接已复制")
                 }
                 builder.setPositiveButton("打开网页") { _, _ ->
-                    /* 打开网页 */
-                    WebViewActivity.start(context, it)
+                    block?.invoke()
                 }
             }
             // 显示AlertDialog

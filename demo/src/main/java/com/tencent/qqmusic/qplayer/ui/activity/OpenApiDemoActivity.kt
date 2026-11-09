@@ -456,6 +456,15 @@ class OpenApiDemoActivity : AppCompatActivity() {
     }
 
     private fun setupMethodNameToBlock() {
+        methodNameToBlock["exchangeCode"] = {
+            val commonCallback = CallbackWithName(it)
+            fillDefaultParamIfNull(it)
+            OpenApiSDK.getLoginApi().exchangeCode(
+                targetAppId = paramStr1 ?: "",
+                callback = commonCallback
+            )
+        }
+
         methodNameToBlock["fetchAreaSectionByShelfTypes"] = {
             val commonCallback = CallbackWithName(it)
             fillDefaultParamIfNull(it)
@@ -1233,6 +1242,14 @@ class OpenApiDemoActivity : AppCompatActivity() {
     }
 
     private fun initMethodNameList() {
+
+        methodNameWithParamList.add(
+            MethodNameWidthParam(
+                "exchangeCode",
+                listOf("目标短 appid（必传）"),
+                listOf(null)
+            )
+        )
 
         methodNameWithParamList.add(
             MethodNameWidthParam(

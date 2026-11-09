@@ -15,6 +15,7 @@ import com.tencent.qqmusic.edgemv.impl.GetMVRecommendCmd
 import com.tencent.qqmusic.edgemv.impl.SpecialArea
 import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.hologram.EdgeMvProvider
+import com.tencent.qqmusic.qplayer.MvPlayerDebugSettings
 import com.tencent.qqmusic.qplayer.baselib.util.AppScope
 import com.tencent.qqmusic.qplayer.utils.UiUtils
 import kotlinx.coroutines.flow.MutableStateFlow

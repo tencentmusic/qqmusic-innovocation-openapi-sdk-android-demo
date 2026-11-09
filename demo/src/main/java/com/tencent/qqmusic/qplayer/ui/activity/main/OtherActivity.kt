@@ -62,6 +62,7 @@ import com.tencent.qqmusic.openapisdk.core.OpenApiSDK
 import com.tencent.qqmusic.openapisdk.core.network.NetworkTimeoutConfig
 import com.tencent.qqmusic.openapisdk.core.player.transition.PlayerTransition
 import com.tencent.qqmusic.playerinsight.util.coverErrorCode
+import com.tencent.qqmusic.qplayer.MvPlayerDebugSettings
 import com.tencent.qqmusic.qplayer.baselib.util.QLog
 import com.tencent.qqmusic.qplayer.report.report.LaunchReport
 import com.tencent.qqmusic.qplayer.ui.activity.OpenApiDemoActivity
@@ -462,6 +463,24 @@ fun OtherScreen() {
         }
         SingleItem(title = "智能混音AutoMix", item = autoMixNameMap.getOrDefault(currAutoMixStatus.value,"未知")) {
             showAutoMixDialog = true
+        }
+
+        var isAudioFirstModeEnabled by remember {
+            mutableStateOf(MvPlayerDebugSettings.audioFirstModeEnabled)
+        }
+
+        SingleItem(
+            title = "ThumbPlayer Audio优先模式",
+            item = if (isAudioFirstModeEnabled) "开启" else "关闭"
+        ) {
+            val enabled = !isAudioFirstModeEnabled
+            MvPlayerDebugSettings.audioFirstModeEnabled = enabled
+            isAudioFirstModeEnabled = enabled
+            Toast.makeText(
+                activity,
+                "Audio优先模式已${if (enabled) "开启" else "关闭"}，退出播放页后重新进入生效",
+                Toast.LENGTH_LONG
+            ).show()
         }
 
         Button(onClick = {

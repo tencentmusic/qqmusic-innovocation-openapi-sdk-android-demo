@@ -10,10 +10,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.widget.NestedScrollView
 import android.widget.Toast
+import com.bumptech.glide.Glide
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.tencent.qqmusic.openapisdk.business_common.utils.Utils
@@ -224,6 +226,9 @@ object QualityAlert {
             displayQualities
         }
 
+        // 一次性拉取品质展示信息（服务端缓存 → 本地持久化 → 硬编码兜底），用于弹窗文案与图标
+        val qualityDisplayInfo = OpenApiSDK.getOpenApi().getQualityDisplayInfo(sortedQualities)
+
         sortedQualities.forEach { quality ->
             val hasQuality = if (checkSongAvailability && curSong != null) {
                 playerApi.getSongHasQuality(curSong, quality)
@@ -231,8 +236,11 @@ object QualityAlert {
                 true
             }
             val isCurrentQuality = quality == currentQuality
-            val displayName = quality.getQualityName()
-            val subtitle = getQualitySubtitle(quality, curSong, isDownload, checkSongAvailability)
+            val displayInfo = qualityDisplayInfo[quality]
+            // 文案优先取服务端下发的 title/subTitle，未下发时回退到本地逻辑
+            val displayName = displayInfo?.title?.takeIf { it.isNotBlank() } ?: quality.getQualityName()
+            val subtitle = displayInfo?.subTitle?.takeIf { it.isNotBlank() }
+                ?: getQualitySubtitle(quality, curSong, isDownload, checkSongAvailability)
             val accessTags = getAccessTags(quality, curSong, isDownload, checkSongAvailability)
 
             val itemView = buildQualityItem(
@@ -241,7 +249,8 @@ object QualityAlert {
                 subtitle = subtitle,
                 hasQuality = hasQuality,
                 isCurrentQuality = isCurrentQuality,
-                accessTags = accessTags
+                accessTags = accessTags,
+                iconUrls = displayInfo?.icons.orEmpty(),
             ) {
                 dialog.dismiss()
                 thread {
@@ -302,6 +311,7 @@ object QualityAlert {
         hasQuality: Boolean,
         isCurrentQuality: Boolean,
         accessTags: List<AccessTag> = emptyList(),
+        iconUrls: List<String> = emptyList(),
         onClick: () -> Unit
     ): View {
         val itemLayout = LinearLayout(activity).apply {
@@ -339,6 +349,19 @@ object QualityAlert {
             })
         }
         nameRow.addView(nameText)
+
+        // 展示品质图标（来自 getQualityDisplayInfo 的 icons）
+        iconUrls.forEach { iconUrl ->
+            if (iconUrl.isBlank()) return@forEach
+            val iconView = ImageView(activity).apply {
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                layoutParams = LinearLayout.LayoutParams(18.dp(activity), 18.dp(activity)).apply {
+                    marginStart = 4.dp(activity)
+                }
+            }
+            Glide.with(activity).load(iconUrl).into(iconView)
+            nameRow.addView(iconView)
+        }
 
         // 添加权限标签（VIP / SVIP 等）
         accessTags.forEach { tag ->
